@@ -49,11 +49,12 @@ export default function Jobs() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      setIsDialogOpen(false);
       toast({
         title: "Success",
         description: "Job created successfully",
       });
+      // Close dialog after toast to ensure proper sequencing
+      setTimeout(() => setIsDialogOpen(false), 100);
     },
     onError: () => {
       toast({
