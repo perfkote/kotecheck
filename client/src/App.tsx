@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Dashboard from "@/pages/Dashboard";
 import Customers from "@/pages/Customers";
 import Jobs from "@/pages/Jobs";
+import Services from "@/pages/Services";
 import Estimates from "@/pages/Estimates";
 import Notes from "@/pages/Notes";
 
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/customers" component={Customers} />
       <Route path="/jobs" component={Jobs} />
+      <Route path="/services" component={Services} />
       <Route path="/estimates" component={Estimates} />
       <Route path="/notes" component={Notes} />
     </Switch>

@@ -25,17 +25,31 @@ export const jobs = pgTable("jobs", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const services = pgTable("services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const estimates = pgTable("estimates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  jobId: varchar("job_id").references(() => jobs.id),
-  customerId: varchar("customer_id").notNull().references(() => customers.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  items: text("items").notNull(),
-  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
-  tax: numeric("tax", { precision: 10, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+  customerName: text("customer_name").notNull(),
+  phone: text("phone").notNull(),
+  date: timestamp("date").notNull().defaultNow(),
+  desiredFinishDate: timestamp("desired_finish_date"),
+  total: numeric("total", { precision: 10, scale: 2 }).notNull().default("0"),
   status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const estimateServices = pgTable("estimate_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  estimateId: varchar("estimate_id").notNull().references(() => estimates.id, { onDelete: "cascade" }),
+  serviceId: varchar("service_id").notNull().references(() => services.id),
+  serviceName: text("service_name").notNull(),
+  servicePrice: numeric("service_price", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -63,7 +77,24 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
+export const insertServiceSchema = createInsertSchema(services).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  category: z.enum(["powder", "ceramic", "prep"]),
+  price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
+});
+
 export const insertEstimateSchema = createInsertSchema(estimates).omit({
+  id: true,
+  createdAt: true,
+  total: true,
+}).extend({
+  date: z.coerce.date().optional(),
+  desiredFinishDate: z.coerce.date().optional(),
+});
+
+export const insertEstimateServiceSchema = createInsertSchema(estimateServices).omit({
   id: true,
   createdAt: true,
 });
@@ -129,8 +160,14 @@ export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 export type CreateJobWithCustomer = z.infer<typeof createJobWithCustomerSchema>;
 
+export type InsertService = z.infer<typeof insertServiceSchema>;
+export type Service = typeof services.$inferSelect;
+
 export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 export type Estimate = typeof estimates.$inferSelect;
+
+export type InsertEstimateService = z.infer<typeof insertEstimateServiceSchema>;
+export type EstimateService = typeof estimateServices.$inferSelect;
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;

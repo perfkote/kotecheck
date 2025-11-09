@@ -1,4 +1,4 @@
-import { Users, Briefcase, FileText, StickyNote, LayoutDashboard } from "lucide-react";
+import { Users, Briefcase, FileText, StickyNote, LayoutDashboard, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,11 @@ const items = [
     title: "Jobs",
     url: "/jobs",
     icon: Briefcase,
+  },
+  {
+    title: "Services",
+    url: "/services",
+    icon: Settings,
   },
   {
     title: "Estimates",

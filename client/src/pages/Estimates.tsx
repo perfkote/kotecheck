@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Estimate, Customer } from "@shared/schema";
+import type { Estimate } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, Eye, Send, MoreVertical } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, Search, Settings } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Estimates() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,18 +14,9 @@ export default function Estimates() {
     queryKey: ["/api/estimates"],
   });
 
-  const { data: customers = [] } = useQuery<Customer[]>({
-    queryKey: ["/api/customers"],
-  });
-
-  const estimatesWithCustomers = estimates.map(estimate => ({
-    ...estimate,
-    customerName: customers.find(c => c.id === estimate.customerId)?.name || "Unknown",
-  }));
-
-  const filteredEstimates = estimatesWithCustomers.filter(estimate =>
-    estimate.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    estimate.customerName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredEstimates = estimates.filter(estimate =>
+    estimate.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    estimate.phone.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -40,15 +25,23 @@ export default function Estimates() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-semibold">Estimates</h1>
           <p className="text-muted-foreground mt-1">Create and manage customer estimates</p>
         </div>
-        <Button data-testid="button-new-estimate">
-          <Plus className="w-4 h-4 mr-2" />
-          New Estimate
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/services">
+            <Button variant="outline" data-testid="button-manage-services">
+              <Settings className="w-4 h-4 mr-2" />
+              Manage Services
+            </Button>
+          </Link>
+          <Button data-testid="button-new-estimate">
+            <Plus className="w-4 h-4 mr-2" />
+            New Estimate
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -66,50 +59,52 @@ export default function Estimates() {
 
       <div className="grid grid-cols-1 gap-4">
         {filteredEstimates.length === 0 ? (
-          <Card className="p-8">
-            <p className="text-muted-foreground text-center">No estimates yet</p>
+          <Card className="p-12 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Plus className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">No estimates yet</h3>
+                <p className="text-muted-foreground mt-1">
+                  Create your first estimate to get started. Make sure to set up your services first!
+                </p>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Link href="/services">
+                  <Button variant="outline">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Services
+                  </Button>
+                </Link>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Estimate
+                </Button>
+              </div>
+            </div>
           </Card>
         ) : (
           filteredEstimates.map((estimate) => (
-            <Card key={estimate.id} className="p-6" data-testid={`card-estimate-${estimate.id}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <h3 className="text-lg font-medium">{estimate.title}</h3>
-                    <StatusBadge status={estimate.status} type="estimate" />
+            <Card key={estimate.id} className="p-6 hover-elevate" data-testid={`card-estimate-${estimate.id}`}>
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <div>
+                    <h3 className="font-semibold text-lg">{estimate.customerName}</h3>
+                    <p className="text-muted-foreground">{estimate.phone}</p>
                   </div>
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <span>{estimate.customerName}</span>
-                    <span>{new Date(estimate.createdAt).toLocaleDateString()}</span>
-                    <span className="font-medium text-foreground">${estimate.total}</span>
+                  <div className="text-sm text-muted-foreground">
+                    <span>Date: {new Date(estimate.date).toLocaleDateString()}</span>
+                    {estimate.desiredFinishDate && (
+                      <span className="ml-4">
+                        Desired Finish: {new Date(estimate.desiredFinishDate).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" data-testid={`button-view-${estimate.id}`}>
-                    <Eye className="w-4 h-4 mr-2" />
-                    View
-                  </Button>
-                  {estimate.status === "draft" && (
-                    <Button size="sm" data-testid={`button-send-${estimate.id}`}>
-                      <Send className="w-4 h-4 mr-2" />
-                      Send
-                    </Button>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" data-testid={`button-menu-${estimate.id}`}>
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
-                      <DropdownMenuItem data-testid="menu-duplicate">Duplicate</DropdownMenuItem>
-                      <DropdownMenuItem data-testid="menu-download">Download PDF</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" data-testid="menu-delete">
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">${parseFloat(estimate.total).toFixed(2)}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Total</div>
                 </div>
               </div>
             </Card>

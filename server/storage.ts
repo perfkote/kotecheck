@@ -3,14 +3,20 @@ import { db } from "./db";
 import { 
   customers,
   jobs,
+  services,
   estimates,
+  estimateServices,
   notes,
   type Customer, 
   type InsertCustomer, 
   type Job, 
-  type InsertJob, 
+  type InsertJob,
+  type Service,
+  type InsertService,
   type Estimate, 
-  type InsertEstimate, 
+  type InsertEstimate,
+  type EstimateService,
+  type InsertEstimateService,
   type Note, 
   type InsertNote 
 } from "@shared/schema";
@@ -30,11 +36,22 @@ export interface IStorage {
   updateJob(id: string, job: Partial<InsertJob>): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
 
+  getService(id: string): Promise<Service | undefined>;
+  getAllServices(): Promise<Service[]>;
+  getServicesByCategory(category: string): Promise<Service[]>;
+  createService(service: InsertService): Promise<Service>;
+  updateService(id: string, service: Partial<InsertService>): Promise<Service | undefined>;
+  deleteService(id: string): Promise<boolean>;
+
   getEstimate(id: string): Promise<Estimate | undefined>;
   getAllEstimates(): Promise<Estimate[]>;
   createEstimate(estimate: InsertEstimate): Promise<Estimate>;
   updateEstimate(id: string, estimate: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   deleteEstimate(id: string): Promise<boolean>;
+
+  getEstimateServices(estimateId: string): Promise<EstimateService[]>;
+  addEstimateService(estimateService: InsertEstimateService): Promise<EstimateService>;
+  removeEstimateService(id: string): Promise<boolean>;
 
   getNote(id: string): Promise<Note | undefined>;
   getAllNotes(): Promise<Note[]>;
@@ -120,15 +137,21 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertJob,
         trackingId,
+        price: insertJob.price.toString(),
       })
       .returning();
     return job;
   }
 
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
+    const { price, ...rest } = updates;
+    const dbUpdates = {
+      ...rest,
+      ...(price !== undefined && { price: price.toString() }),
+    };
     const [job] = await db
       .update(jobs)
-      .set(updates)
+      .set(dbUpdates)
       .where(eq(jobs.id, id))
       .returning();
     return job || undefined;
@@ -136,6 +159,49 @@ export class DatabaseStorage implements IStorage {
 
   async deleteJob(id: string): Promise<boolean> {
     const result = await db.delete(jobs).where(eq(jobs.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getService(id: string): Promise<Service | undefined> {
+    const [service] = await db.select().from(services).where(eq(services.id, id));
+    return service || undefined;
+  }
+
+  async getAllServices(): Promise<Service[]> {
+    return await db.select().from(services);
+  }
+
+  async getServicesByCategory(category: string): Promise<Service[]> {
+    return await db.select().from(services).where(eq(services.category, category));
+  }
+
+  async createService(insertService: InsertService): Promise<Service> {
+    const [service] = await db
+      .insert(services)
+      .values({
+        ...insertService,
+        price: insertService.price.toString(),
+      })
+      .returning();
+    return service;
+  }
+
+  async updateService(id: string, updates: Partial<InsertService>): Promise<Service | undefined> {
+    const { price, ...rest } = updates;
+    const dbUpdates = {
+      ...rest,
+      ...(price !== undefined && { price: price.toString() }),
+    };
+    const [service] = await db
+      .update(services)
+      .set(dbUpdates)
+      .where(eq(services.id, id))
+      .returning();
+    return service || undefined;
+  }
+
+  async deleteService(id: string): Promise<boolean> {
+    const result = await db.delete(services).where(eq(services.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
@@ -167,6 +233,26 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEstimate(id: string): Promise<boolean> {
     const result = await db.delete(estimates).where(eq(estimates.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getEstimateServices(estimateId: string): Promise<EstimateService[]> {
+    return await db.select().from(estimateServices).where(eq(estimateServices.estimateId, estimateId));
+  }
+
+  async addEstimateService(insertEstimateService: InsertEstimateService): Promise<EstimateService> {
+    const [estimateService] = await db
+      .insert(estimateServices)
+      .values({
+        ...insertEstimateService,
+        servicePrice: insertEstimateService.servicePrice.toString(),
+      })
+      .returning();
+    return estimateService;
+  }
+
+  async removeEstimateService(id: string): Promise<boolean> {
+    const result = await db.delete(estimateServices).where(eq(estimateServices.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 

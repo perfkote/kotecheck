@@ -1,7 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCustomerSchema, insertJobSchema, insertEstimateSchema, insertNoteSchema } from "@shared/schema";
+import { 
+  insertCustomerSchema, 
+  insertJobSchema, 
+  insertServiceSchema,
+  insertEstimateSchema,
+  insertEstimateServiceSchema,
+  insertNoteSchema 
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Customer routes
@@ -168,6 +175,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Service routes
+  app.get("/api/services", async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      const services = category
+        ? await storage.getServicesByCategory(category)
+        : await storage.getAllServices();
+      res.json(services);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch services" });
+    }
+  });
+
+  app.get("/api/services/:id", async (req, res) => {
+    try {
+      const service = await storage.getService(req.params.id);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json(service);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service" });
+    }
+  });
+
+  app.post("/api/services", async (req, res) => {
+    try {
+      const validated = insertServiceSchema.parse(req.body);
+      const service = await storage.createService(validated);
+      res.status(201).json(service);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid service data" });
+    }
+  });
+
+  app.patch("/api/services/:id", async (req, res) => {
+    try {
+      const validated = insertServiceSchema.partial().parse(req.body);
+      const service = await storage.updateService(req.params.id, validated);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json(service);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid service data" });
+    }
+  });
+
+  app.delete("/api/services/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteService(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete service" });
+    }
+  });
+
   // Estimate routes
   app.get("/api/estimates", async (req, res) => {
     try {
@@ -222,6 +289,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete estimate" });
+    }
+  });
+
+  // Estimate Services routes
+  app.get("/api/estimates/:estimateId/services", async (req, res) => {
+    try {
+      const services = await storage.getEstimateServices(req.params.estimateId);
+      res.json(services);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch estimate services" });
+    }
+  });
+
+  app.post("/api/estimates/:estimateId/services", async (req, res) => {
+    try {
+      const validated = insertEstimateServiceSchema.parse({
+        ...req.body,
+        estimateId: req.params.estimateId,
+      });
+      const estimateService = await storage.addEstimateService(validated);
+      
+      // Recalculate total for the estimate
+      const allServices = await storage.getEstimateServices(req.params.estimateId);
+      const total = allServices.reduce((sum, s) => sum + parseFloat(s.servicePrice), 0);
+      // Update total directly via database query (bypass schema validation)
+      const { db } = await import("./db");
+      const { estimates } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(estimates)
+        .set({ total: total.toString() })
+        .where(eq(estimates.id, req.params.estimateId));
+      
+      res.status(201).json(estimateService);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid estimate service data" });
+    }
+  });
+
+  app.delete("/api/estimates/:estimateId/services/:serviceId", async (req, res) => {
+    try {
+      const success = await storage.removeEstimateService(req.params.serviceId);
+      if (!success) {
+        return res.status(404).json({ error: "Estimate service not found" });
+      }
+      
+      // Recalculate total for the estimate
+      const allServices = await storage.getEstimateServices(req.params.estimateId);
+      const total = allServices.reduce((sum, s) => sum + parseFloat(s.servicePrice), 0);
+      // Update total directly via database query (bypass schema validation)
+      const { db } = await import("./db");
+      const { estimates } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(estimates)
+        .set({ total: total.toString() })
+        .where(eq(estimates.id, req.params.estimateId));
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete estimate service" });
     }
   });
 
