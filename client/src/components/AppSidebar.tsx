@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-import logoImage from "@assets/D5869495-F57C-4813-B71F-28380A406027_1762673544366.png";
+import logoImage from "@assets/Transparent Logo_1762705947779.jpeg";
 
 const items = [
   {
@@ -54,7 +54,7 @@ export function AppSidebar() {
           <div className="px-4 py-6">
             <img 
               src={logoImage} 
-              alt="Kote Check" 
+              alt="Coat Check" 
               className="w-full h-auto"
               data-testid="img-logo"
             />
