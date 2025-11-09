@@ -67,11 +67,65 @@ export const insertNoteSchema = createInsertSchema(notes).omit({
   createdAt: true,
 });
 
+// Extended schema for creating jobs with optional new customer
+export const createJobWithCustomerSchema = insertJobSchema
+  .omit({ customerId: true })
+  .extend({
+    // Make customerId optional for new customer creation
+    customerId: z.string().optional(),
+    // Allow creating a new customer inline
+    customerName: z.string().optional(),
+    customerEmail: z.string().email().optional().or(z.literal("")),
+    customerPhone: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+  // Trim string fields
+  if (data.customerName) {
+    data.customerName = data.customerName.trim();
+  }
+  if (data.customerEmail) {
+    data.customerEmail = data.customerEmail.trim();
+  }
+  if (data.customerPhone) {
+    data.customerPhone = data.customerPhone.trim();
+  }
+  
+  // Enforce XOR: either customerId OR customerName, not both
+  const hasCustomerId = Boolean(data.customerId);
+  const hasCustomerName = Boolean(data.customerName && data.customerName.length > 0);
+  
+  if (!hasCustomerId && !hasCustomerName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either select an existing customer or provide a new customer name",
+      path: ["customerId"],
+    });
+  }
+  
+  if (hasCustomerId && hasCustomerName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Cannot provide both an existing customer ID and a new customer name",
+      path: ["customerId"],
+    });
+  }
+  
+  // If creating a new customer, require a non-empty name
+  if (hasCustomerName && data.customerName!.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Customer name cannot be empty",
+      path: ["customerName"],
+    });
+  }
+});
+
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
 
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
+export type CreateJobWithCustomer = z.infer<typeof createJobWithCustomerSchema>;
 
 export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 export type Estimate = typeof estimates.$inferSelect;

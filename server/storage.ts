@@ -18,6 +18,7 @@ import {
 export interface IStorage {
   getCustomer(id: string): Promise<Customer | undefined>;
   getAllCustomers(): Promise<Customer[]>;
+  findCustomerByName(name: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
   deleteCustomer(id: string): Promise<boolean>;
@@ -51,6 +52,13 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCustomers(): Promise<Customer[]> {
     return await db.select().from(customers);
+  }
+
+  async findCustomerByName(name: string): Promise<Customer | undefined> {
+    const normalizedName = name.trim().toLowerCase();
+    const allCustomers = await db.select().from(customers);
+    const customer = allCustomers.find(c => c.name.toLowerCase() === normalizedName);
+    return customer || undefined;
   }
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {

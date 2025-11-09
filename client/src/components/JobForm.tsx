@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertJobSchema } from "@shared/schema";
+import { createJobWithCustomerSchema } from "@shared/schema";
 import { z } from "zod";
 import {
   Form,
@@ -20,8 +21,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type FormData = z.infer<typeof insertJobSchema>;
+type FormData = z.infer<typeof createJobWithCustomerSchema>;
 
 interface JobFormProps {
   onSubmit: (data: FormData) => void;
@@ -31,16 +47,39 @@ interface JobFormProps {
 }
 
 export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: JobFormProps) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
   const form = useForm<FormData>({
-    resolver: zodResolver(insertJobSchema),
+    resolver: zodResolver(createJobWithCustomerSchema),
     defaultValues: defaultValues || {
       customerId: "",
+      customerName: "",
       title: "",
       description: "",
       status: "pending",
       priority: "medium",
     },
   });
+
+  // Filter customers based on search
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  // Check if search matches any existing customer exactly
+  const exactMatch = customers.find(
+    (c) => c.name.toLowerCase() === searchValue.trim().toLowerCase()
+  );
+
+  // Show create option if there's search text and no exact match
+  const showCreateOption = searchValue.trim().length > 0 && !exactMatch;
+
+  // Get selected customer name for display
+  const selectedCustomer = customers.find(
+    (c) => c.id === form.watch("customerId")
+  );
+  const displayValue = selectedCustomer?.name || form.watch("customerName") || "";
 
   return (
     <Form {...form}>
@@ -49,22 +88,83 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
           control={form.control}
           name="customerId"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>Customer</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger data-testid="select-customer">
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="justify-between"
+                      data-testid="button-select-customer"
+                    >
+                      {displayValue || "Select or create a customer..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search or type new customer name..."
+                      value={searchValue}
+                      onValueChange={setSearchValue}
+                      data-testid="input-search-customer"
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {searchValue.trim().length > 0
+                          ? "No customers found. Press Enter to create a new one."
+                          : "Start typing to create a new customer..."}
+                      </CommandEmpty>
+                      {filteredCustomers.length > 0 && (
+                        <CommandGroup heading="Existing Customers">
+                          {filteredCustomers.map((customer) => (
+                            <CommandItem
+                              key={customer.id}
+                              value={customer.name}
+                              onSelect={() => {
+                                form.setValue("customerId", customer.id);
+                                form.setValue("customerName", "");
+                                setOpen(false);
+                                setSearchValue("");
+                              }}
+                              data-testid={`option-customer-${customer.id}`}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === customer.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {customer.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                      {showCreateOption && (
+                        <CommandGroup heading="Create New">
+                          <CommandItem
+                            value={`create-${searchValue}`}
+                            onSelect={() => {
+                              form.setValue("customerId", "");
+                              form.setValue("customerName", searchValue.trim());
+                              setOpen(false);
+                              setSearchValue("");
+                            }}
+                            data-testid="option-create-customer"
+                          >
+                            <Check className="mr-2 h-4 w-4 opacity-0" />
+                            Create &quot;{searchValue.trim()}&quot;
+                          </CommandItem>
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}

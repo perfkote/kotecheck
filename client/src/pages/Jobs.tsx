@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Job, Customer, InsertJob } from "@shared/schema";
+import type { Job, Customer, CreateJobWithCustomer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,10 +44,11 @@ export default function Jobs() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: InsertJob) =>
+    mutationFn: (data: CreateJobWithCustomer) =>
       apiRequest("POST", "/api/jobs", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       setIsDialogOpen(false);
       toast({
         title: "Success",

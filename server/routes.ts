@@ -96,11 +96,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/jobs", async (req, res) => {
     try {
-      const validated = insertJobSchema.parse(req.body);
-      const job = await storage.createJob(validated);
+      const { createJobWithCustomerSchema } = await import("@shared/schema");
+      const validated = createJobWithCustomerSchema.parse(req.body);
+      
+      let customerId = validated.customerId;
+      
+      // If creating a new customer
+      if (validated.customerName) {
+        // Check if a customer with this name already exists (case-insensitive)
+        const existing = await storage.findCustomerByName(validated.customerName);
+        
+        if (existing) {
+          // Use the existing customer
+          customerId = existing.id;
+        } else {
+          // Create a new customer
+          const newCustomer = await storage.createCustomer({
+            name: validated.customerName,
+            email: validated.customerEmail || undefined,
+            phone: validated.customerPhone || undefined,
+          });
+          customerId = newCustomer.id;
+        }
+      }
+      
+      if (!customerId) {
+        return res.status(400).json({ error: "Customer ID is required" });
+      }
+      
+      // Create the job with the resolved customer ID
+      const job = await storage.createJob({
+        customerId,
+        title: validated.title,
+        description: validated.description,
+        status: validated.status,
+        priority: validated.priority,
+      });
+      
       res.status(201).json(job);
     } catch (error) {
-      res.status(400).json({ error: "Invalid job data" });
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid job data" });
+      }
+      res.status(500).json({ error: "Failed to create job" });
     }
   });
 
