@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { JobForm } from "@/components/JobForm";
 import { StatusBadge } from "@/components/StatusBadge";
-import { PriorityIndicator } from "@/components/PriorityIndicator";
-import { Plus, Search, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, MoreVertical, Briefcase } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,76 +138,98 @@ export default function Jobs() {
         </Select>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
+            <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Tracking ID
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Customer
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Phone
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Coating Type
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Price
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Status
                 </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Received Date
                 </th>
-                <th className="text-right py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {filteredJobs.map((job) => (
-                <tr key={job.id} className="border-b hover-elevate" data-testid={`row-job-${job.id}`}>
-                  <td className="py-4 px-4 font-medium">{job.trackingId}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{job.customerName}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{job.phoneNumber}</td>
-                  <td className="py-4 px-4">
-                    <span className="capitalize">{job.coatingType}</span>
-                  </td>
-                  <td className="py-4 px-4">${Number(job.price).toFixed(2)}</td>
-                  <td className="py-4 px-4">
-                    <StatusBadge status={job.status} type="job" />
-                  </td>
-                  <td className="py-4 px-4 text-muted-foreground">
-                    {new Date(job.receivedDate).toLocaleDateString()}
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" data-testid={`button-menu-${job.id}`}>
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem data-testid="menu-view">View Details</DropdownMenuItem>
-                        <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
-                        <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive" 
-                          data-testid="menu-delete"
-                          onClick={() => deleteMutation.mutate(job.id)}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            <tbody className="bg-card">
+              {filteredJobs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center">
+                    <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No jobs found</p>
+                    <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredJobs.map((job) => (
+                  <tr key={job.id} className="border-b last:border-b-0 hover-elevate transition-colors" data-testid={`row-job-${job.id}`}>
+                    <td className="py-4 px-6">
+                      <span className="font-mono font-medium text-sm">{job.trackingId}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="font-medium">{job.customerName}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-muted-foreground">{job.phoneNumber}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <Badge variant="outline" className="capitalize">
+                        {job.coatingType}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="font-semibold">${Number(job.price).toFixed(2)}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <StatusBadge status={job.status} type="job" />
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-muted-foreground text-sm">
+                        {new Date(job.receivedDate).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" data-testid={`button-menu-${job.id}`}>
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem data-testid="menu-view">View Details</DropdownMenuItem>
+                          <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
+                          <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive" 
+                            data-testid="menu-delete"
+                            onClick={() => deleteMutation.mutate(job.id)}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
