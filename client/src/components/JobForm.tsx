@@ -59,7 +59,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
       receivedDate: new Date(),
       coatingType: "powder",
       detailedNotes: "",
-      price: "",
+      price: 0,
       status: "pending",
     },
   });
@@ -85,7 +85,12 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(
+        onSubmit,
+        (errors) => {
+          console.error("Form validation errors:", errors);
+        }
+      )} className="space-y-6">
         <FormField
           control={form.control}
           name="customerId"

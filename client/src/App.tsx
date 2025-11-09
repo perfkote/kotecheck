@@ -37,7 +37,7 @@ function App() {
             <AppSidebar />
             <div className="flex flex-col flex-1">
               <header className="flex items-center justify-between p-4 border-b">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <SidebarTrigger data-testid="button-sidebar-toggle" className="scale-[2]" />
               </header>
               <main className="flex-1 overflow-auto p-8">
                 <Router />
