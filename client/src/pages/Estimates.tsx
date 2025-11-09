@@ -1,18 +1,64 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import type { Estimate } from "@shared/schema";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { Estimate, Service, InsertEstimate } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Plus, Search, Settings } from "lucide-react";
 import { Link } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { EstimateForm } from "@/components/EstimateForm";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Estimates() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: estimates = [], isLoading } = useQuery<Estimate[]>({
     queryKey: ["/api/estimates"],
   });
+
+  const { data: services = [] } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async ({ estimate, services }: { estimate: InsertEstimate; services: any[] }) => {
+      // Create the estimate first
+      const estimateResponse = await apiRequest("POST", "/api/estimates", estimate);
+      const newEstimate: Estimate = await estimateResponse.json();
+      
+      // Then add all services to it
+      for (const service of services) {
+        await apiRequest("POST", `/api/estimates/${newEstimate.id}/services`, {
+          serviceId: service.serviceId,
+          serviceName: service.serviceName,
+          servicePrice: service.servicePrice.toString(),
+        });
+      }
+      
+      return newEstimate;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      toast({ title: "Success", description: "Estimate created successfully" });
+      setIsDialogOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create estimate", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (data: InsertEstimate, selectedServices: any[]) => {
+    createMutation.mutate({ estimate: data, services: selectedServices });
+  };
 
   const filteredEstimates = estimates.filter(estimate =>
     estimate.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,7 +83,7 @@ export default function Estimates() {
               Manage Services
             </Button>
           </Link>
-          <Button data-testid="button-new-estimate">
+          <Button onClick={() => setIsDialogOpen(true)} data-testid="button-new-estimate">
             <Plus className="w-4 h-4 mr-2" />
             New Estimate
           </Button>
@@ -77,7 +123,7 @@ export default function Estimates() {
                     Manage Services
                   </Button>
                 </Link>
-                <Button>
+                <Button onClick={() => setIsDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Estimate
                 </Button>
@@ -111,6 +157,19 @@ export default function Estimates() {
           ))
         )}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Estimate</DialogTitle>
+          </DialogHeader>
+          <EstimateForm
+            onSubmit={handleSubmit}
+            onCancel={() => setIsDialogOpen(false)}
+            services={services}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
