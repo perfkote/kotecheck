@@ -114,7 +114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const newCustomer = await storage.createCustomer({
             name: validated.customerName,
             email: validated.customerEmail || undefined,
-            phone: validated.customerPhone || undefined,
           });
           customerId = newCustomer.id;
         }

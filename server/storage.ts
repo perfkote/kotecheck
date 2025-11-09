@@ -97,9 +97,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    // Generate tracking ID based on job count
+    // Generate tracking ID based on MAX existing tracking ID to ensure uniqueness
     const allJobs = await db.select().from(jobs);
-    const jobNumber = allJobs.length + 1;
+    let maxNumber = 0;
+    
+    // Find the highest tracking number
+    for (const job of allJobs) {
+      const match = job.trackingId.match(/JOB-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+    
+    const jobNumber = maxNumber + 1;
     const trackingId = `JOB-${jobNumber.toString().padStart(4, '0')}`;
     
     const [job] = await db

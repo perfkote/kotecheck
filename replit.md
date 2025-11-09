@@ -1,8 +1,8 @@
-# ShopFlow - Shop Management System
+# Coat Check - Coating Job Management System
 
 ## Overview
 
-ShopFlow is a comprehensive shop management application designed for businesses to track customers, jobs, estimates, and notes. The system provides a clean, productivity-focused interface for managing day-to-day shop operations with features for customer relationship management, job tracking, estimate creation, and internal note-taking.
+Coat Check is a comprehensive coating job management application designed for coating businesses to track customers, jobs, estimates, and notes. The system provides a clean, productivity-focused interface for managing coating operations with features for customer relationship management, job tracking with coating types, estimate creation, and internal note-taking.
 
 The application follows a modern full-stack architecture with a React frontend and Express backend, utilizing PostgreSQL for data persistence.
 

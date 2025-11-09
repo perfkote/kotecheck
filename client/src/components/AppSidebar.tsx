@@ -47,7 +47,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-lg font-semibold px-4 py-4">
-            ShopFlow
+            Coat Check
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

@@ -89,7 +89,7 @@ export default function Jobs() {
   }));
 
   const filteredJobs = jobsWithCustomerNames.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || job.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -143,19 +143,25 @@ export default function Jobs() {
             <thead>
               <tr className="border-b">
                 <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Job Title
+                  Tracking ID
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Customer
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Phone
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Coating Type
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Price
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Status
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Priority
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Date
+                  Received Date
                 </th>
                 <th className="text-right py-3 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Actions
@@ -165,16 +171,18 @@ export default function Jobs() {
             <tbody>
               {filteredJobs.map((job) => (
                 <tr key={job.id} className="border-b hover-elevate" data-testid={`row-job-${job.id}`}>
-                  <td className="py-4 px-4 font-medium">{job.title}</td>
+                  <td className="py-4 px-4 font-medium">{job.trackingId}</td>
                   <td className="py-4 px-4 text-muted-foreground">{job.customerName}</td>
+                  <td className="py-4 px-4 text-muted-foreground">{job.phoneNumber}</td>
+                  <td className="py-4 px-4">
+                    <span className="capitalize">{job.coatingType}</span>
+                  </td>
+                  <td className="py-4 px-4">${Number(job.price).toFixed(2)}</td>
                   <td className="py-4 px-4">
                     <StatusBadge status={job.status} type="job" />
                   </td>
-                  <td className="py-4 px-4">
-                    <PriorityIndicator priority={job.priority} />
-                  </td>
                   <td className="py-4 px-4 text-muted-foreground">
-                    {new Date(job.createdAt).toLocaleDateString()}
+                    {new Date(job.receivedDate).toLocaleDateString()}
                   </td>
                   <td className="py-4 px-4 text-right">
                     <DropdownMenu>

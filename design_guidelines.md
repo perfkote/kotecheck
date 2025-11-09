@@ -1,4 +1,4 @@
-# ShopFlow Design Guidelines
+# Coat Check Design Guidelines
 
 ## Design Approach
 **System-Based Approach** - Drawing from Linear's clean productivity aesthetic combined with Material Design principles for data-heavy interfaces. This application prioritizes efficiency, scannability, and task completion over visual flourish.
