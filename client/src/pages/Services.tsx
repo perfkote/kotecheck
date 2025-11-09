@@ -53,7 +53,10 @@ export default function Services() {
 
   const createMutation = useMutation({
     mutationFn: (data: InsertService) =>
-      apiRequest("POST", "/api/services", data),
+      apiRequest("POST", "/api/services", {
+        ...data,
+        price: data.price.toString(),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({ title: "Success", description: "Service created successfully" });
@@ -67,7 +70,10 @@ export default function Services() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<InsertService> }) =>
-      apiRequest("PATCH", `/api/services/${id}`, data),
+      apiRequest("PATCH", `/api/services/${id}`, {
+        ...data,
+        price: data.price ? data.price.toString() : undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({ title: "Success", description: "Service updated successfully" });

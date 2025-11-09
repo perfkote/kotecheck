@@ -206,7 +206,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const service = await storage.createService(validated);
       res.status(201).json(service);
     } catch (error) {
-      res.status(400).json({ error: "Invalid service data" });
+      console.error("Failed to create service:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid service data", details: error.message });
+      }
+      res.status(500).json({ error: "Failed to create service" });
     }
   });
 
