@@ -1,13 +1,18 @@
-import { randomUUID } from "crypto";
-import type { 
-  Customer, 
-  InsertCustomer, 
-  Job, 
-  InsertJob, 
-  Estimate, 
-  InsertEstimate, 
-  Note, 
-  InsertNote 
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import { 
+  customers,
+  jobs,
+  estimates,
+  notes,
+  type Customer, 
+  type InsertCustomer, 
+  type Job, 
+  type InsertJob, 
+  type Estimate, 
+  type InsertEstimate, 
+  type Note, 
+  type InsertNote 
 } from "@shared/schema";
 
 export interface IStorage {
@@ -38,166 +43,133 @@ export interface IStorage {
   deleteNote(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private customers: Map<string, Customer>;
-  private jobs: Map<string, Job>;
-  private estimates: Map<string, Estimate>;
-  private notes: Map<string, Note>;
-
-  constructor() {
-    this.customers = new Map();
-    this.jobs = new Map();
-    this.estimates = new Map();
-    this.notes = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getCustomer(id: string): Promise<Customer | undefined> {
-    return this.customers.get(id);
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer || undefined;
   }
 
   async getAllCustomers(): Promise<Customer[]> {
-    return Array.from(this.customers.values());
+    return await db.select().from(customers);
   }
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
-    const id = randomUUID();
-    const customer: Customer = { 
-      id, 
-      name: insertCustomer.name,
-      email: insertCustomer.email ?? null,
-      phone: insertCustomer.phone ?? null,
-      address: insertCustomer.address ?? null,
-      createdAt: new Date() 
-    };
-    this.customers.set(id, customer);
+    const [customer] = await db
+      .insert(customers)
+      .values(insertCustomer)
+      .returning();
     return customer;
   }
 
   async updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    const customer = this.customers.get(id);
-    if (!customer) return undefined;
-    const updated = { ...customer, ...updates };
-    this.customers.set(id, updated);
-    return updated;
+    const [customer] = await db
+      .update(customers)
+      .set(updates)
+      .where(eq(customers.id, id))
+      .returning();
+    return customer || undefined;
   }
 
   async deleteCustomer(id: string): Promise<boolean> {
-    return this.customers.delete(id);
+    const result = await db.delete(customers).where(eq(customers.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getJob(id: string): Promise<Job | undefined> {
-    return this.jobs.get(id);
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+    return job || undefined;
   }
 
   async getAllJobs(): Promise<Job[]> {
-    return Array.from(this.jobs.values());
+    return await db.select().from(jobs);
   }
 
   async getJobsByCustomerId(customerId: string): Promise<Job[]> {
-    return Array.from(this.jobs.values()).filter(job => job.customerId === customerId);
+    return await db.select().from(jobs).where(eq(jobs.customerId, customerId));
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const id = randomUUID();
-    const now = new Date();
-    const job: Job = { 
-      id, 
-      customerId: insertJob.customerId,
-      title: insertJob.title,
-      description: insertJob.description ?? null,
-      status: insertJob.status ?? "pending",
-      priority: insertJob.priority ?? "medium",
-      createdAt: now,
-      updatedAt: now
-    };
-    this.jobs.set(id, job);
+    const [job] = await db
+      .insert(jobs)
+      .values(insertJob)
+      .returning();
     return job;
   }
 
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
-    const job = this.jobs.get(id);
-    if (!job) return undefined;
-    const updated = { ...job, ...updates, updatedAt: new Date() };
-    this.jobs.set(id, updated);
-    return updated;
+    const [job] = await db
+      .update(jobs)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(jobs.id, id))
+      .returning();
+    return job || undefined;
   }
 
   async deleteJob(id: string): Promise<boolean> {
-    return this.jobs.delete(id);
+    const result = await db.delete(jobs).where(eq(jobs.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getEstimate(id: string): Promise<Estimate | undefined> {
-    return this.estimates.get(id);
+    const [estimate] = await db.select().from(estimates).where(eq(estimates.id, id));
+    return estimate || undefined;
   }
 
   async getAllEstimates(): Promise<Estimate[]> {
-    return Array.from(this.estimates.values());
+    return await db.select().from(estimates);
   }
 
   async createEstimate(insertEstimate: InsertEstimate): Promise<Estimate> {
-    const id = randomUUID();
-    const estimate: Estimate = { 
-      id,
-      customerId: insertEstimate.customerId,
-      jobId: insertEstimate.jobId ?? null,
-      title: insertEstimate.title,
-      description: insertEstimate.description ?? null,
-      items: insertEstimate.items,
-      subtotal: insertEstimate.subtotal,
-      tax: insertEstimate.tax ?? "0",
-      total: insertEstimate.total,
-      status: insertEstimate.status ?? "draft",
-      createdAt: new Date() 
-    };
-    this.estimates.set(id, estimate);
+    const [estimate] = await db
+      .insert(estimates)
+      .values(insertEstimate)
+      .returning();
     return estimate;
   }
 
   async updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined> {
-    const estimate = this.estimates.get(id);
-    if (!estimate) return undefined;
-    const updated = { ...estimate, ...updates };
-    this.estimates.set(id, updated);
-    return updated;
+    const [estimate] = await db
+      .update(estimates)
+      .set(updates)
+      .where(eq(estimates.id, id))
+      .returning();
+    return estimate || undefined;
   }
 
   async deleteEstimate(id: string): Promise<boolean> {
-    return this.estimates.delete(id);
+    const result = await db.delete(estimates).where(eq(estimates.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getNote(id: string): Promise<Note | undefined> {
-    return this.notes.get(id);
+    const [note] = await db.select().from(notes).where(eq(notes.id, id));
+    return note || undefined;
   }
 
   async getAllNotes(): Promise<Note[]> {
-    return Array.from(this.notes.values());
+    return await db.select().from(notes);
   }
 
   async getNotesByJobId(jobId: string): Promise<Note[]> {
-    return Array.from(this.notes.values()).filter(note => note.jobId === jobId);
+    return await db.select().from(notes).where(eq(notes.jobId, jobId));
   }
 
   async getNotesByCustomerId(customerId: string): Promise<Note[]> {
-    return Array.from(this.notes.values()).filter(note => note.customerId === customerId);
+    return await db.select().from(notes).where(eq(notes.customerId, customerId));
   }
 
   async createNote(insertNote: InsertNote): Promise<Note> {
-    const id = randomUUID();
-    const note: Note = { 
-      id,
-      customerId: insertNote.customerId ?? null,
-      jobId: insertNote.jobId ?? null,
-      content: insertNote.content,
-      author: insertNote.author,
-      createdAt: new Date() 
-    };
-    this.notes.set(id, note);
+    const [note] = await db
+      .insert(notes)
+      .values(insertNote)
+      .returning();
     return note;
   }
 
   async deleteNote(id: string): Promise<boolean> {
-    return this.notes.delete(id);
+    const result = await db.delete(notes).where(eq(notes.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
