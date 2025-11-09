@@ -65,12 +65,15 @@ Preferred communication style: Simple, everyday language.
 **Database Schema**
 - **customers**: Core customer information (name, email, phone, address)
 - **jobs**: Work orders linked to customers with status and priority tracking
-- **estimates**: Financial quotes linked to customers and optionally to jobs
+- **services**: Reusable service definitions with pricing (categories: powder, ceramic, prep)
+- **estimates**: Service-based financial quotes with customer info and dates
+- **estimate_services**: Junction table linking estimates to services (stores service snapshot)
 - **notes**: Text notes linked to either jobs or customers
 
 **Relationships**
 - Jobs reference customers (many-to-one)
-- Estimates reference customers (many-to-one) and optionally jobs (many-to-one)
+- Estimates contain customer name and phone directly (denormalized for flexibility)
+- Estimate services reference estimates and services (many-to-many via junction table)
 - Notes reference either jobs or customers (many-to-one)
 
 **Data Validation**
