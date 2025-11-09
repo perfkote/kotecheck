@@ -167,6 +167,9 @@ export default function Estimates() {
             onSubmit={handleSubmit}
             onCancel={() => setIsDialogOpen(false)}
             services={services}
+            onServiceCreated={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+            }}
           />
         </DialogContent>
       </Dialog>

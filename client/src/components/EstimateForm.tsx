@@ -26,11 +26,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Service } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 
 type FormData = z.infer<typeof insertEstimateSchema>;
 
@@ -44,9 +53,10 @@ interface EstimateFormProps {
   onSubmit: (data: FormData, services: SelectedService[]) => void;
   onCancel: () => void;
   services: Service[];
+  onServiceCreated: () => void;
 }
 
-export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps) {
+export function EstimateForm({ onSubmit, onCancel, services, onServiceCreated }: EstimateFormProps) {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [openPowder, setOpenPowder] = useState(false);
   const [openCeramic, setOpenCeramic] = useState(false);
@@ -54,6 +64,10 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
   const [searchPowder, setSearchPowder] = useState("");
   const [searchCeramic, setSearchCeramic] = useState("");
   const [searchPrep, setSearchPrep] = useState("");
+  const [showNewServiceDialog, setShowNewServiceDialog] = useState(false);
+  const [newServiceCategory, setNewServiceCategory] = useState<"powder" | "ceramic" | "prep">("powder");
+
+  const { toast } = useToast();
 
   const form = useForm<FormData>({
     resolver: zodResolver(insertEstimateSchema),
@@ -65,6 +79,51 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
       status: "draft",
     },
   });
+
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("");
+
+  const createServiceMutation = useMutation({
+    mutationFn: (data: { name: string; category: string; price: string }) =>
+      apiRequest("POST", "/api/services", {
+        name: data.name,
+        category: data.category,
+        price: data.price,
+      }),
+    onSuccess: async (response) => {
+      const newService: Service = await response.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      onServiceCreated();
+      
+      // Auto-add the newly created service to selected services
+      addService(newService);
+      
+      toast({ title: "Success", description: "Service created and added" });
+      setShowNewServiceDialog(false);
+      setNewServiceName("");
+      setNewServicePrice("");
+      
+      // Close the dropdown that was open
+      setOpenPowder(false);
+      setOpenCeramic(false);
+      setOpenPrep(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create service", variant: "destructive" });
+    },
+  });
+
+  const handleCreateNewService = () => {
+    if (!newServiceName || !newServicePrice) {
+      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+    createServiceMutation.mutate({
+      name: newServiceName,
+      category: newServiceCategory,
+      price: newServicePrice,
+    });
+  };
 
   const powderServices = services.filter(s => s.category === "powder");
   const ceramicServices = services.filter(s => s.category === "ceramic");
@@ -102,8 +161,9 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="grid grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -214,6 +274,18 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
                     <CommandList>
                       <CommandEmpty>No powder services found.</CommandEmpty>
                       <CommandGroup>
+                        <CommandItem
+                          onSelect={() => {
+                            setNewServiceCategory("powder");
+                            setShowNewServiceDialog(true);
+                            setOpenPowder(false);
+                          }}
+                          className="text-primary"
+                          data-testid="button-create-powder-service"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create new powder service...
+                        </CommandItem>
                         {filteredPowder.map((service) => (
                           <CommandItem
                             key={service.id}
@@ -267,6 +339,18 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
                     <CommandList>
                       <CommandEmpty>No ceramic services found.</CommandEmpty>
                       <CommandGroup>
+                        <CommandItem
+                          onSelect={() => {
+                            setNewServiceCategory("ceramic");
+                            setShowNewServiceDialog(true);
+                            setOpenCeramic(false);
+                          }}
+                          className="text-primary"
+                          data-testid="button-create-ceramic-service"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create new ceramic service...
+                        </CommandItem>
                         {filteredCeramic.map((service) => (
                           <CommandItem
                             key={service.id}
@@ -320,6 +404,18 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
                     <CommandList>
                       <CommandEmpty>No prep services found.</CommandEmpty>
                       <CommandGroup>
+                        <CommandItem
+                          onSelect={() => {
+                            setNewServiceCategory("prep");
+                            setShowNewServiceDialog(true);
+                            setOpenPrep(false);
+                          }}
+                          className="text-primary"
+                          data-testid="button-create-prep-service"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create new prep service...
+                        </CommandItem>
                         {filteredPrep.map((service) => (
                           <CommandItem
                             key={service.id}
@@ -397,7 +493,63 @@ export function EstimateForm({ onSubmit, onCancel, services }: EstimateFormProps
             Create Estimate
           </Button>
         </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+
+      {/* Inline Service Creation Dialog */}
+      <Dialog open={showNewServiceDialog} onOpenChange={setShowNewServiceDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            Create New {newServiceCategory.charAt(0).toUpperCase() + newServiceCategory.slice(1)} Service
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Service Name</label>
+            <Input
+              placeholder="e.g. Premium Powder Coat"
+              value={newServiceName}
+              onChange={(e) => setNewServiceName(e.target.value)}
+              data-testid="input-new-service-name"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Price ($)</label>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={newServicePrice}
+              onChange={(e) => setNewServicePrice(e.target.value)}
+              data-testid="input-new-service-price"
+            />
+          </div>
+          <div className="flex justify-end gap-4 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowNewServiceDialog(false);
+                setNewServiceName("");
+                setNewServicePrice("");
+              }}
+              data-testid="button-cancel-new-service"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateNewService}
+              disabled={createServiceMutation.isPending}
+              data-testid="button-save-new-service"
+            >
+              {createServiceMutation.isPending ? "Creating..." : "Create & Add"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+      </Dialog>
+    </>
   );
 }
