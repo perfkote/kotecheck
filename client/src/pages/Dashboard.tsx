@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { Customer, Job } from "@shared/schema";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityIndicator } from "@/components/PriorityIndicator";
@@ -7,15 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Users, Briefcase, FileText, DollarSign, Plus } from "lucide-react";
 import { Link } from "wouter";
 
-//todo: remove mock functionality
-const mockRecentJobs = [
-  { id: "1", title: "Engine Repair", customer: "Acme Corp", status: "in-progress", priority: "high" },
-  { id: "2", title: "Oil Change", customer: "Tech Solutions", status: "pending", priority: "medium" },
-  { id: "3", title: "Brake Service", customer: "Global Industries", status: "completed", priority: "low" },
-  { id: "4", title: "Transmission Fix", customer: "Smith Auto", status: "in-progress", priority: "urgent" },
-];
-
 export default function Dashboard() {
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+  });
+
+  const activeJobs = jobs.filter(j => j.status === "in-progress" || j.status === "pending");
+  const recentJobs = jobs.slice(0, 4).map(job => ({
+    ...job,
+    customerName: customers.find(c => c.id === job.customerId)?.name || "Unknown",
+  }));
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -28,27 +35,23 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="Total Customers" 
-          value={42} 
+          value={customers.length} 
           icon={Users}
-          trend="+12% from last month"
         />
         <StatsCard 
           title="Active Jobs" 
-          value={15} 
+          value={activeJobs.length} 
           icon={Briefcase}
-          trend="3 completed today"
         />
         <StatsCard 
-          title="Pending Estimates" 
-          value={8} 
+          title="Total Jobs" 
+          value={jobs.length} 
           icon={FileText}
-          trend="2 sent this week"
         />
         <StatsCard 
-          title="Revenue (MTD)" 
-          value="$12,450" 
+          title="Completed Jobs" 
+          value={jobs.filter(j => j.status === "completed").length} 
           icon={DollarSign}
-          trend="+8% vs last month"
         />
       </div>
 
@@ -63,22 +66,26 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="space-y-4">
-            {mockRecentJobs.map((job) => (
-              <div 
-                key={job.id} 
-                className="flex items-center justify-between p-4 border rounded-lg hover-elevate"
-                data-testid={`card-job-${job.id}`}
-              >
-                <div className="flex-1">
-                  <h3 className="font-medium">{job.title}</h3>
-                  <p className="text-sm text-muted-foreground">{job.customer}</p>
+            {recentJobs.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No jobs yet</p>
+            ) : (
+              recentJobs.map((job) => (
+                <div 
+                  key={job.id} 
+                  className="flex items-center justify-between p-4 border rounded-lg hover-elevate"
+                  data-testid={`card-job-${job.id}`}
+                >
+                  <div className="flex-1">
+                    <h3 className="font-medium">{job.title}</h3>
+                    <p className="text-sm text-muted-foreground">{job.customerName}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <PriorityIndicator priority={job.priority} />
+                    <StatusBadge status={job.status} type="job" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <PriorityIndicator priority={job.priority} />
-                  <StatusBadge status={job.status} type="job" />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 

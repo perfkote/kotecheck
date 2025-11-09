@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { Customer, InsertCustomer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -16,23 +19,64 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-//todo: remove mock functionality
-const mockCustomers = [
-  { id: "1", name: "Acme Corp", email: "contact@acme.com", phone: "(555) 123-4567", address: "123 Main St", jobs: 5 },
-  { id: "2", name: "Tech Solutions Inc", email: "info@techsol.com", phone: "(555) 234-5678", address: "456 Oak Ave", jobs: 3 },
-  { id: "3", name: "Global Industries", email: "hello@global.com", phone: "(555) 345-6789", address: "789 Pine Rd", jobs: 8 },
-  { id: "4", name: "Smith Auto", email: "service@smith.com", phone: "(555) 456-7890", address: "321 Elm St", jobs: 2 },
-];
+import { useToast } from "@/hooks/use-toast";
 
 export default function Customers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
-  const filteredCustomers = mockCustomers.filter(customer =>
+  const { data: customers = [], isLoading } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: InsertCustomer) =>
+      apiRequest("POST", "/api/customers", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Customer created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("DELETE", `/api/customers/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({
+        title: "Success",
+        description: "Customer deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return <div className="p-8">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -74,7 +118,11 @@ export default function Customers() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
                   <DropdownMenuItem data-testid="menu-view-jobs">View Jobs</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" data-testid="menu-delete">
+                  <DropdownMenuItem 
+                    className="text-destructive" 
+                    data-testid="menu-delete"
+                    onClick={() => deleteMutation.mutate(customer.id)}
+                  >
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -82,25 +130,24 @@ export default function Customers() {
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{customer.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{customer.phone}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{customer.address}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Total Jobs: </span>
-                <span className="font-medium">{customer.jobs}</span>
-              </div>
+              {customer.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{customer.email}</span>
+                </div>
+              )}
+              {customer.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{customer.phone}</span>
+                </div>
+              )}
+              {customer.address && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{customer.address}</span>
+                </div>
+              )}
             </div>
           </Card>
         ))}
@@ -112,10 +159,7 @@ export default function Customers() {
             <DialogTitle>Add New Customer</DialogTitle>
           </DialogHeader>
           <CustomerForm
-            onSubmit={(data) => {
-              console.log("Customer created:", data);
-              setIsDialogOpen(false);
-            }}
+            onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setIsDialogOpen(false)}
           />
         </DialogContent>

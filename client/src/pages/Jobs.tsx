@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { Job, Customer, InsertJob } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,34 +27,76 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-//todo: remove mock functionality
-const mockJobs = [
-  { id: "1", title: "Engine Repair", customer: "Acme Corp", customerId: "1", status: "in-progress", priority: "high", date: "2024-03-15" },
-  { id: "2", title: "Oil Change", customer: "Tech Solutions", customerId: "2", status: "pending", priority: "medium", date: "2024-03-16" },
-  { id: "3", title: "Brake Service", customer: "Global Industries", customerId: "3", status: "completed", priority: "low", date: "2024-03-14" },
-  { id: "4", title: "Transmission Fix", customer: "Smith Auto", customerId: "4", status: "in-progress", priority: "urgent", date: "2024-03-15" },
-  { id: "5", title: "Tire Replacement", customer: "Acme Corp", customerId: "1", status: "pending", priority: "medium", date: "2024-03-17" },
-];
-
-const mockCustomers = [
-  { id: "1", name: "Acme Corp" },
-  { id: "2", name: "Tech Solutions Inc" },
-  { id: "3", name: "Global Industries" },
-  { id: "4", name: "Smith Auto" },
-];
+import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const { toast } = useToast();
 
-  const filteredJobs = mockJobs.filter(job => {
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+  });
+
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: InsertJob) =>
+      apiRequest("POST", "/api/jobs", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Job created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("DELETE", `/api/jobs/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Success",
+        description: "Job deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const jobsWithCustomerNames = jobs.map(job => ({
+    ...job,
+    customerName: customers.find(c => c.id === job.customerId)?.name || "Unknown",
+  }));
+
+  const filteredJobs = jobsWithCustomerNames.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.customer.toLowerCase().includes(searchQuery.toLowerCase());
+      job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || job.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (jobsLoading) {
+    return <div className="p-8">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -120,14 +165,16 @@ export default function Jobs() {
               {filteredJobs.map((job) => (
                 <tr key={job.id} className="border-b hover-elevate" data-testid={`row-job-${job.id}`}>
                   <td className="py-4 px-4 font-medium">{job.title}</td>
-                  <td className="py-4 px-4 text-muted-foreground">{job.customer}</td>
+                  <td className="py-4 px-4 text-muted-foreground">{job.customerName}</td>
                   <td className="py-4 px-4">
                     <StatusBadge status={job.status} type="job" />
                   </td>
                   <td className="py-4 px-4">
                     <PriorityIndicator priority={job.priority} />
                   </td>
-                  <td className="py-4 px-4 text-muted-foreground">{job.date}</td>
+                  <td className="py-4 px-4 text-muted-foreground">
+                    {new Date(job.createdAt).toLocaleDateString()}
+                  </td>
                   <td className="py-4 px-4 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -139,7 +186,11 @@ export default function Jobs() {
                         <DropdownMenuItem data-testid="menu-view">View Details</DropdownMenuItem>
                         <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
                         <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" data-testid="menu-delete">
+                        <DropdownMenuItem 
+                          className="text-destructive" 
+                          data-testid="menu-delete"
+                          onClick={() => deleteMutation.mutate(job.id)}
+                        >
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -158,11 +209,8 @@ export default function Jobs() {
             <DialogTitle>Create New Job</DialogTitle>
           </DialogHeader>
           <JobForm
-            customers={mockCustomers}
-            onSubmit={(data) => {
-              console.log("Job created:", data);
-              setIsDialogOpen(false);
-            }}
+            customers={customers.map(c => ({ id: c.id, name: c.name }))}
+            onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setIsDialogOpen(false)}
           />
         </DialogContent>
