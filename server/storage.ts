@@ -97,9 +97,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
+    // Generate tracking ID based on job count
+    const allJobs = await db.select().from(jobs);
+    const jobNumber = allJobs.length + 1;
+    const trackingId = `JOB-${jobNumber.toString().padStart(4, '0')}`;
+    
     const [job] = await db
       .insert(jobs)
-      .values(insertJob)
+      .values({
+        ...insertJob,
+        trackingId,
+      })
       .returning();
     return job;
   }
@@ -107,7 +115,7 @@ export class DatabaseStorage implements IStorage {
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
     const [job] = await db
       .update(jobs)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(updates)
       .where(eq(jobs.id, id))
       .returning();
     return job || undefined;

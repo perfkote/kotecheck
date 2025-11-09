@@ -14,13 +14,15 @@ export const customers = pgTable("customers", {
 
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trackingId: text("tracking_id").notNull(),
   customerId: varchar("customer_id").notNull().references(() => customers.id),
-  title: text("title").notNull(),
-  description: text("description"),
+  phoneNumber: text("phone_number").notNull(),
+  receivedDate: timestamp("received_date").notNull().defaultNow(),
+  coatingType: text("coating_type").notNull(),
+  detailedNotes: text("detailed_notes"),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("pending"),
-  priority: text("priority").notNull().default("medium"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const estimates = pgTable("estimates", {
@@ -53,8 +55,11 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 
 export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
+  trackingId: true,
   createdAt: true,
-  updatedAt: true,
+}).extend({
+  receivedDate: z.coerce.date().optional(),
+  coatingType: z.enum(["powder", "ceramic", "both"]),
 });
 
 export const insertEstimateSchema = createInsertSchema(estimates).omit({
@@ -76,7 +81,6 @@ export const createJobWithCustomerSchema = insertJobSchema
     // Allow creating a new customer inline
     customerName: z.string().optional(),
     customerEmail: z.string().email().optional().or(z.literal("")),
-    customerPhone: z.string().optional(),
   })
   .superRefine((data, ctx) => {
   // Trim string fields
@@ -85,9 +89,6 @@ export const createJobWithCustomerSchema = insertJobSchema
   }
   if (data.customerEmail) {
     data.customerEmail = data.customerEmail.trim();
-  }
-  if (data.customerPhone) {
-    data.customerPhone = data.customerPhone.trim();
   }
   
   // Enforce XOR: either customerId OR customerName, not both

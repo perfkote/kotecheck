@@ -55,10 +55,12 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
     defaultValues: defaultValues || {
       customerId: "",
       customerName: "",
-      title: "",
-      description: "",
+      phoneNumber: "",
+      receivedDate: new Date(),
+      coatingType: "powder",
+      detailedNotes: "",
+      price: "",
       status: "pending",
-      priority: "medium",
     },
   });
 

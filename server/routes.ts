@@ -127,10 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the job with the resolved customer ID
       const job = await storage.createJob({
         customerId,
-        title: validated.title,
-        description: validated.description,
+        phoneNumber: validated.phoneNumber,
+        receivedDate: validated.receivedDate || new Date(),
+        coatingType: validated.coatingType,
+        detailedNotes: validated.detailedNotes,
+        price: validated.price,
         status: validated.status,
-        priority: validated.priority,
       });
       
       res.status(201).json(job);
