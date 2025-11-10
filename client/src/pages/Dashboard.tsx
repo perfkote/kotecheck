@@ -37,6 +37,7 @@ const DEFAULT_TILES: TileId[] = [
   "active-jobs",
   "completed-jobs",
   "total-revenue",
+  "most-common-product",
 ];
 
 export default function Dashboard() {
