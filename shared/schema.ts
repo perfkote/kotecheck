@@ -19,6 +19,7 @@ export const jobs = pgTable("jobs", {
   phoneNumber: text("phone_number").notNull(),
   receivedDate: timestamp("received_date").notNull().defaultNow(),
   coatingType: text("coating_type").notNull(),
+  items: text("items"),
   detailedNotes: text("detailed_notes"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("pending"),
