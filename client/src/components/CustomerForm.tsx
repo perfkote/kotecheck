@@ -35,6 +35,7 @@ export function CustomerForm({ onSubmit, onCancel, defaultValues }: CustomerForm
       email: "",
       phone: "",
       address: "",
+      projectList: "",
     },
   });
 
@@ -100,6 +101,26 @@ export function CustomerForm({ onSubmit, onCancel, defaultValues }: CustomerForm
               <FormLabel>Address</FormLabel>
               <FormControl>
                 <Textarea placeholder="123 Main St, City, State ZIP" {...field} value={field.value || ""} data-testid="input-customer-address" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="projectList"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project List</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Enter project notes and details..." 
+                  {...field} 
+                  value={field.value || ""} 
+                  data-testid="input-customer-project-list"
+                  rows={4}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CustomerForm } from "@/components/CustomerForm";
-import { Plus, Search, Mail, Phone, MapPin, MoreVertical } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, MoreVertical, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -187,6 +187,12 @@ export default function Customers() {
                 <div className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">{customer.address}</span>
+                </div>
+              )}
+              {customer.projectList && (
+                <div className="flex items-start gap-2 text-sm">
+                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <span className="text-muted-foreground whitespace-pre-wrap">{customer.projectList}</span>
                 </div>
               )}
             </div>
