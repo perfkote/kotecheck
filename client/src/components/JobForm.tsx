@@ -58,6 +58,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
       phoneNumber: "",
       receivedDate: new Date(),
       coatingType: "powder",
+      items: "",
       detailedNotes: "",
       price: 0,
       status: "pending",
@@ -235,6 +236,25 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="items"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Items</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="List parts dropped off for service (e.g., bumper, wheels, frame)..." 
+                  {...field}
+                  value={field.value || ""}
+                  data-testid="input-items"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
