@@ -156,6 +156,9 @@ export default function Jobs() {
                   Coating Type
                 </th>
                 <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Items
+                </th>
+                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Price
                 </th>
                 <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -172,7 +175,7 @@ export default function Jobs() {
             <tbody className="bg-card">
               {filteredJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center">
+                  <td colSpan={9} className="py-12 text-center">
                     <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                     <p className="text-muted-foreground">No jobs found</p>
                     <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
@@ -194,6 +197,11 @@ export default function Jobs() {
                       <Badge variant="outline" className="capitalize">
                         {job.coatingType}
                       </Badge>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-muted-foreground text-sm">
+                        {job.items || <span className="text-muted-foreground/50">—</span>}
+                      </span>
                     </td>
                     <td className="py-4 px-6">
                       <span className="font-semibold">${Number(job.price).toFixed(2)}</span>
