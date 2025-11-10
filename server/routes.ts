@@ -136,6 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phoneNumber: validated.phoneNumber,
         receivedDate: validated.receivedDate || new Date(),
         coatingType: validated.coatingType,
+        items: validated.items,
         detailedNotes: validated.detailedNotes,
         price: validated.price,
         status: validated.status,

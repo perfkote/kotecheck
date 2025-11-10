@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatPhoneNumber } from "@/lib/formatters";
 
 type FormData = z.infer<typeof createJobWithCustomerSchema>;
 
@@ -185,7 +186,15 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
             <FormItem>
               <FormLabel>Phone Number</FormLabel>
               <FormControl>
-                <Input placeholder="(555) 123-4567" {...field} data-testid="input-phone-number" />
+                <Input 
+                  placeholder="555-123-4567" 
+                  {...field}
+                  onChange={(e) => {
+                    const formatted = formatPhoneNumber(e.target.value);
+                    field.onChange(formatted);
+                  }}
+                  data-testid="input-phone-number" 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
