@@ -14,8 +14,14 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Users, Briefcase, CheckCircle2, DollarSign, Plus, Sparkles, Settings, Clock, TrendingUp, Package } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, DollarSign, Plus, Sparkles, Settings, Clock, TrendingUp, Package, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 type TileId = 
   | "total-customers"
@@ -88,16 +94,32 @@ export default function Dashboard() {
     ? jobs.reduce((sum, job) => sum + Number(job.price || 0), 0) / jobs.length
     : 0;
 
-  // Find most common coating type
-  const mostCommonProduct = (() => {
-    if (jobs.length === 0) return "N/A";
-    const counts = jobs.reduce((acc, job) => {
+  // Find top 2 most common coating types
+  const topCoatingTypes = (() => {
+    const validJobs = jobs.filter(job => job.coatingType);
+    if (validJobs.length === 0) return [];
+    const counts = validJobs.reduce((acc, job) => {
       acc[job.coatingType] = (acc[job.coatingType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a);
-    const [type, count] = sorted[0];
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} (${count})`;
+    return sorted.slice(0, 2).map(([type, count]) => ({
+      type: type.charAt(0).toUpperCase() + type.slice(1),
+      count,
+    }));
+  })();
+
+  // Chart data for coating types distribution
+  const coatingChartData = (() => {
+    const validJobs = jobs.filter(job => job.coatingType);
+    const counts = validJobs.reduce((acc, job) => {
+      acc[job.coatingType] = (acc[job.coatingType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    return Object.entries(counts).map(([type, count]) => ({
+      type: type.charAt(0).toUpperCase() + type.slice(1),
+      jobs: count,
+    }));
   })();
 
   const recentJobs = jobs
@@ -147,8 +169,10 @@ export default function Dashboard() {
     },
     {
       id: "most-common-product" as TileId,
-      title: "Most Common Type",
-      value: mostCommonProduct,
+      title: "Most Common",
+      value: topCoatingTypes.length > 0 
+        ? topCoatingTypes.map(t => `${t.type} (${t.count})`).join("  •  ")
+        : "N/A",
       icon: Package,
     },
   ];
@@ -191,6 +215,39 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {coatingChartData.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-medium">Coating Type Distribution</h2>
+          </div>
+          <ChartContainer
+            config={{
+              jobs: {
+                label: "Jobs",
+                color: "hsl(var(--primary))",
+              },
+            }}
+            className="h-[300px] w-full"
+          >
+            <BarChart data={coatingChartData}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis 
+                dataKey="type" 
+                className="text-xs"
+              />
+              <YAxis className="text-xs" />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar 
+                dataKey="jobs" 
+                fill="var(--color-jobs)" 
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -221,9 +278,11 @@ export default function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-medium font-mono text-sm">{job.trackingId}</h3>
-                      <Badge variant="outline" className="capitalize text-xs">
-                        {job.coatingType}
-                      </Badge>
+                      {job.coatingType && (
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {job.coatingType}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{job.customerName}</p>
                     <p className="text-xs text-muted-foreground">{job.phoneNumber}</p>
@@ -271,15 +330,15 @@ export default function Dashboard() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Powder</span>
-                <Badge variant="secondary">{jobs.filter(j => j.coatingType === "powder").length}</Badge>
+                <Badge variant="secondary">{jobs.filter(j => j.coatingType && j.coatingType === "powder").length}</Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Ceramic</span>
-                <Badge variant="secondary">{jobs.filter(j => j.coatingType === "ceramic").length}</Badge>
+                <Badge variant="secondary">{jobs.filter(j => j.coatingType && j.coatingType === "ceramic").length}</Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Both</span>
-                <Badge variant="secondary">{jobs.filter(j => j.coatingType === "both").length}</Badge>
+                <Badge variant="secondary">{jobs.filter(j => j.coatingType && j.coatingType === "both").length}</Badge>
               </div>
             </div>
           </div>
