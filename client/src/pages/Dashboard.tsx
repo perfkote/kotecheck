@@ -236,13 +236,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-10 gap-6">
         {visibleTileData.map((tile) => (
           <StatsCard 
             key={tile.id}
             title={tile.title} 
             value={tile.value} 
             icon={tile.icon}
+            className={tile.id === "most-common-product" ? "md:col-span-2 lg:col-span-5" : "lg:col-span-2"}
+            valueClassName={tile.id === "most-common-product" ? "text-2xl whitespace-nowrap" : undefined}
           />
         ))}
       </div>
