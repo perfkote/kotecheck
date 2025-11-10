@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { formatMoney } from "@/lib/formatters";
 
 export default function Services() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -249,15 +250,34 @@ export default function Services() {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
+                    <FormLabel>Price</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        data-testid="input-service-price"
-                      />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          type="text"
+                          placeholder="0.00"
+                          className="pl-6"
+                          value={typeof field.value === 'number' ? field.value.toString() : field.value}
+                          onChange={(e) => {
+                            const formatted = formatMoney(e.target.value);
+                            field.onChange(parseFloat(formatted) || 0);
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            let formattedValue = value;
+                            if (value && !value.includes('.')) {
+                              formattedValue = value + '.00';
+                            } else if (value && value.endsWith('.')) {
+                              formattedValue = value + '00';
+                            } else if (value && value.split('.')[1]?.length === 1) {
+                              formattedValue = value + '0';
+                            }
+                            field.onChange(parseFloat(formattedValue) || 0);
+                          }}
+                          data-testid="input-service-price"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

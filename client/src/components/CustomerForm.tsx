@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { formatPhoneNumber } from "@/lib/formatters";
 
 const formSchema = insertCustomerSchema.extend({
   email: z.string().email().optional().or(z.literal("")),
@@ -75,7 +76,16 @@ export function CustomerForm({ onSubmit, onCancel, defaultValues }: CustomerForm
             <FormItem>
               <FormLabel>Phone</FormLabel>
               <FormControl>
-                <Input placeholder="(555) 123-4567" {...field} value={field.value || ""} data-testid="input-customer-phone" />
+                <Input 
+                  placeholder="555-555-5555" 
+                  {...field} 
+                  value={field.value || ""} 
+                  onChange={(e) => {
+                    const formatted = formatPhoneNumber(e.target.value);
+                    field.onChange(formatted);
+                  }}
+                  data-testid="input-customer-phone" 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

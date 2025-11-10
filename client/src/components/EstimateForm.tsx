@@ -40,6 +40,7 @@ import type { Service } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { formatPhoneNumber, formatMoney, displayMoney } from "@/lib/formatters";
 
 type FormData = z.infer<typeof insertEstimateSchema>;
 
@@ -186,7 +187,15 @@ export function EstimateForm({ onSubmit, onCancel, services, onServiceCreated }:
               <FormItem>
                 <FormLabel>Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="(555) 123-4567" {...field} data-testid="input-phone" />
+                  <Input 
+                    placeholder="555-555-5555" 
+                    {...field} 
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      field.onChange(formatted);
+                    }}
+                    data-testid="input-phone" 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -515,15 +524,31 @@ export function EstimateForm({ onSubmit, onCancel, services, onServiceCreated }:
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Price ($)</label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={newServicePrice}
-              onChange={(e) => setNewServicePrice(e.target.value)}
-              data-testid="input-new-service-price"
-            />
+            <label className="text-sm font-medium mb-2 block">Price</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                type="text"
+                placeholder="0.00"
+                className="pl-6"
+                value={newServicePrice}
+                onChange={(e) => {
+                  const formatted = formatMoney(e.target.value);
+                  setNewServicePrice(formatted);
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value;
+                  if (value && !value.includes('.')) {
+                    setNewServicePrice(value + '.00');
+                  } else if (value && value.endsWith('.')) {
+                    setNewServicePrice(value + '00');
+                  } else if (value && value.split('.')[1]?.length === 1) {
+                    setNewServicePrice(value + '0');
+                  }
+                }}
+                data-testid="input-new-service-price"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-4 pt-4">
             <Button
