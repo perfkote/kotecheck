@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
@@ -222,7 +223,12 @@ export default function Jobs() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem data-testid="menu-view">View Details</DropdownMenuItem>
+                          <DropdownMenuItem 
+                            data-testid="menu-view"
+                            onClick={() => setViewingJob(job)}
+                          >
+                            View Details
+                          </DropdownMenuItem>
                           <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
                           <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
                           <DropdownMenuItem 
@@ -253,6 +259,89 @@ export default function Jobs() {
             onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setIsDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewingJob} onOpenChange={(open) => !open && setViewingJob(null)}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-job-details">
+          <DialogHeader>
+            <DialogTitle>Job Details</DialogTitle>
+          </DialogHeader>
+          {viewingJob && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Tracking ID</p>
+                  <p className="font-mono font-semibold" data-testid="detail-tracking-id">{viewingJob.trackingId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <StatusBadge status={viewingJob.status} type="job" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Customer</p>
+                  <p className="font-medium" data-testid="detail-customer">
+                    {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
+                  <p data-testid="detail-phone">{viewingJob.phoneNumber}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Coating Type</p>
+                  <Badge variant="outline" className="capitalize">
+                    {viewingJob.coatingType}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Price</p>
+                  <p className="font-semibold text-lg" data-testid="detail-price">
+                    ${Number(viewingJob.price).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Received Date</p>
+                  <p data-testid="detail-received-date">
+                    {new Date(viewingJob.receivedDate).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              {viewingJob.items && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Items</p>
+                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-items">
+                    {viewingJob.items}
+                  </p>
+                </div>
+              )}
+
+              {viewingJob.detailedNotes && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Detailed Notes</p>
+                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-notes">
+                    {viewingJob.detailedNotes}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={() => setViewingJob(null)} data-testid="button-close-details">
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
