@@ -10,6 +10,16 @@ The application follows a modern full-stack architecture with a React frontend a
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**Dashboard Metrics Chart (November 10, 2025)**
+- Added dynamic chart visualization displaying all active dashboard tile metrics
+- Chart uses single-axis BarChart from Recharts with custom tooltips
+- Automatically updates when tiles are enabled/disabled in settings
+- Excludes "Most Common" tile (non-numeric complex data)
+- Shows formatted values in tooltips (currency, days, counts)
+- Metric count displayed in chart header
+
 ## System Architecture
 
 ### Frontend Architecture
