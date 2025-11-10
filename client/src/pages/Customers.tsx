@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Customer, InsertCustomer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function Customers() {
+  const [, setLocation] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
@@ -117,7 +119,12 @@ export default function Customers() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
-                  <DropdownMenuItem data-testid="menu-view-jobs">View Jobs</DropdownMenuItem>
+                  <DropdownMenuItem 
+                    data-testid="menu-view-jobs"
+                    onClick={() => setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`)}
+                  >
+                    View Jobs
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="text-destructive" 
                     data-testid="menu-delete"

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Job, Customer, CreateJobWithCustomer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -30,11 +31,21 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
+  const [location] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
+
+  // Read customer query parameter and set initial search
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const customerParam = params.get('customer');
+    if (customerParam && customerParam !== searchQuery) {
+      setSearchQuery(customerParam);
+    }
+  }, [location, searchQuery]);
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
