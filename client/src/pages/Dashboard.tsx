@@ -21,7 +21,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
 type TileId = 
   | "total-customers"
@@ -110,19 +110,6 @@ export default function Dashboard() {
     }));
   })();
 
-  // Chart data for coating types distribution
-  const coatingChartData = (() => {
-    const validJobs = jobs.filter(job => job.coatingType);
-    const counts = validJobs.reduce((acc, job) => {
-      acc[job.coatingType] = (acc[job.coatingType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    return Object.entries(counts).map(([type, count]) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      jobs: count,
-    }));
-  })();
-
   const recentJobs = jobs
     .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime())
     .slice(0, 5)
@@ -180,6 +167,50 @@ export default function Dashboard() {
 
   const visibleTileData = tiles.filter(tile => visibleTiles.includes(tile.id));
 
+  // Create chart data from visible tiles
+  const dashboardChartData = visibleTileData
+    .map((tile) => {
+      let numericValue: number;
+      let isCurrency = false;
+      const rawValue = tile.value;
+      
+      // Extract numeric value from formatted strings
+      if (typeof rawValue === 'number') {
+        numericValue = rawValue;
+      } else if (typeof rawValue === 'string') {
+        // Skip "Most Common" tile as it has complex non-numeric data
+        if (tile.id === 'most-common-product') {
+          return null;
+        }
+        
+        // Check if it's currency
+        isCurrency = rawValue.includes('$');
+        
+        // Remove $ signs, commas, and "days" suffix
+        const cleaned = rawValue.replace(/[$,]/g, '').replace(/\s*days?$/i, '').trim();
+        
+        numericValue = parseFloat(cleaned);
+        if (isNaN(numericValue)) {
+          return null;
+        }
+      } else {
+        return null;
+      }
+      
+      return {
+        metric: tile.title,
+        value: numericValue,
+        isCurrency,
+        formattedValue: typeof rawValue === 'string' ? rawValue : rawValue.toString(),
+      };
+    })
+    .filter((item): item is { 
+      metric: string; 
+      value: number; 
+      isCurrency: boolean;
+      formattedValue: string;
+    } => item !== null);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -216,36 +247,47 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {coatingChartData.length > 0 && (
+      {dashboardChartData.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-6">
             <BarChart3 className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-medium">Coating Type Distribution</h2>
+            <h2 className="text-xl font-medium">Dashboard Metrics</h2>
+            <span className="text-xs text-muted-foreground ml-auto">Showing {dashboardChartData.length} metrics</span>
           </div>
-          <ChartContainer
-            config={{
-              jobs: {
-                label: "Jobs",
-                color: "hsl(var(--primary))",
-              },
-            }}
-            className="h-[300px] w-full"
-          >
-            <BarChart data={coatingChartData}>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={dashboardChartData} margin={{ top: 5, right: 30, left: 20, bottom: 100 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
-                dataKey="type" 
-                className="text-xs"
+                dataKey="metric" 
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                tick={{ fontSize: 12 }}
               />
-              <YAxis className="text-xs" />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <ChartTooltip 
+                content={({ active, payload }) => {
+                  if (!active || !payload || payload.length === 0) return null;
+                  const data = payload[0].payload;
+                  return (
+                    <div className="rounded-lg border bg-background p-2 shadow-sm">
+                      <div className="grid gap-1">
+                        <div className="font-medium text-sm">{data.metric}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {data.formattedValue}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
               <Bar 
-                dataKey="jobs" 
-                fill="var(--color-jobs)" 
+                dataKey="value" 
+                fill="hsl(var(--primary))"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
-          </ChartContainer>
+          </ResponsiveContainer>
         </Card>
       )}
 
