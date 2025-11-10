@@ -145,10 +145,28 @@ export class DatabaseStorage implements IStorage {
 
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
     const { price, ...rest } = updates;
-    const dbUpdates = {
+    const dbUpdates: any = {
       ...rest,
       ...(price !== undefined && { price: price.toString() }),
     };
+    
+    // Only update completedAt when status actually changes
+    if (updates.status) {
+      // Fetch current job to check for status transition
+      const [currentJob] = await db.select().from(jobs).where(eq(jobs.id, id));
+      
+      if (currentJob) {
+        // Transitioning TO completed: set completedAt if not already set
+        if (updates.status === "completed" && currentJob.status !== "completed") {
+          dbUpdates.completedAt = new Date();
+        }
+        // Transitioning AWAY FROM completed: clear completedAt
+        else if (updates.status !== "completed" && currentJob.status === "completed") {
+          dbUpdates.completedAt = null;
+        }
+      }
+    }
+    
     const [job] = await db
       .update(jobs)
       .set(dbUpdates)
