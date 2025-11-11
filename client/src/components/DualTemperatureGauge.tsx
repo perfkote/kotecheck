@@ -52,68 +52,120 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
 
   const hashMarks = generateHashMarks();
 
-  return (
-    <Card className="p-8">
-      <div className="flex gap-24 justify-center items-center flex-wrap">
-        {/* Ceramic Gauge */}
-        <div className="relative flex flex-col items-center" data-testid="gauge-ceramic">
-          <div className="relative">
-            <PieChart width={220} height={220}>
-              <Pie
-                data={ceramicData}
-                startAngle={210}
-                endAngle={-30}
-                innerRadius={70}
-                outerRadius={100}
-                stroke="none"
-                dataKey="value"
-                cornerRadius={8}
-                isAnimationActive={true}
-              >
-                {ceramicData.map((entry, i) => (
-                  <Cell
-                    key={`ceramic-${i}`}
-                    fill={i === 0 ? CERAMIC_COLOR : MUTED_COLOR}
-                    opacity={i === 0 ? 1 : 0.3}
-                  />
-                ))}
-              </Pie>
-            </PieChart>
+  // Responsive gauge sizes: mobile (180x180), desktop (220x220)
+  const gaugeConfig = {
+    mobile: { width: 180, height: 180, innerRadius: 55, outerRadius: 80, cornerRadius: 6, needleLength: 70, hashDistance: 80 },
+    desktop: { width: 220, height: 220, innerRadius: 70, outerRadius: 100, cornerRadius: 8, needleLength: 85, hashDistance: 100 },
+  };
 
-            {/* Hash marks */}
-            {hashMarks.map((angle, idx) => (
-              <div
-                key={`ceramic-hash-${idx}`}
-                className="absolute top-1/2 left-1/2 w-0.5 h-3 origin-bottom"
-                style={{
-                  backgroundColor: NEEDLE_COLOR,
-                  opacity: 0.3,
-                  transform: `translate(-50%, -100px) rotate(${angle}deg)`,
-                }}
+  const renderGauge = (data: any[], color: string, rotation: number, testId: string, isCeramic: boolean) => (
+    <>
+      {/* Mobile gauge */}
+      <div className="sm:hidden relative">
+        <PieChart width={gaugeConfig.mobile.width} height={gaugeConfig.mobile.height}>
+          <Pie
+            data={data}
+            startAngle={210}
+            endAngle={-30}
+            innerRadius={gaugeConfig.mobile.innerRadius}
+            outerRadius={gaugeConfig.mobile.outerRadius}
+            stroke="none"
+            dataKey="value"
+            cornerRadius={gaugeConfig.mobile.cornerRadius}
+            isAnimationActive={true}
+          >
+            {data.map((entry, i) => (
+              <Cell
+                key={`${testId}-mobile-${i}`}
+                fill={i === 0 ? color : MUTED_COLOR}
+                opacity={i === 0 ? 1 : 0.3}
               />
             ))}
+          </Pie>
+        </PieChart>
 
-            {/* Needle overlay */}
-            <div
-              className="absolute top-1/2 left-1/2 w-1.5 h-[85px] origin-bottom rounded-full transition-transform duration-1000"
-              style={{
-                backgroundColor: NEEDLE_COLOR,
-                transform: `translate(-50%, -100%) rotate(${ceramicRotation}deg)`,
-              }}
-              data-rotation={ceramicRotation}
-              data-testid="needle-ceramic"
-            />
+        {/* Mobile needle */}
+        <div
+          className="absolute top-1/2 left-1/2 w-1 h-[70px] origin-bottom rounded-full transition-transform duration-1000"
+          style={{
+            backgroundColor: NEEDLE_COLOR,
+            transform: `translate(-50%, -100%) rotate(${rotation}deg)`,
+          }}
+          data-rotation={rotation}
+          data-testid={`${testId}-mobile`}
+        />
 
-            {/* Center hub */}
-            <div className="absolute top-1/2 left-1/2 w-6 h-6 bg-muted border-2 border-border rounded-full -translate-x-1/2 -translate-y-1/2 shadow-inner" />
-          </div>
+        {/* Mobile center hub */}
+        <div className="absolute top-1/2 left-1/2 w-5 h-5 bg-muted border-2 border-border rounded-full -translate-x-1/2 -translate-y-1/2 shadow-inner" />
+      </div>
 
-          <p className="mt-4 font-semibold text-lg uppercase tracking-wide" style={{ color: CERAMIC_COLOR }}>
+      {/* Desktop gauge */}
+      <div className="hidden sm:block relative">
+        <PieChart width={gaugeConfig.desktop.width} height={gaugeConfig.desktop.height}>
+          <Pie
+            data={data}
+            startAngle={210}
+            endAngle={-30}
+            innerRadius={gaugeConfig.desktop.innerRadius}
+            outerRadius={gaugeConfig.desktop.outerRadius}
+            stroke="none"
+            dataKey="value"
+            cornerRadius={gaugeConfig.desktop.cornerRadius}
+            isAnimationActive={true}
+          >
+            {data.map((entry, i) => (
+              <Cell
+                key={`${testId}-desktop-${i}`}
+                fill={i === 0 ? color : MUTED_COLOR}
+                opacity={i === 0 ? 1 : 0.3}
+              />
+            ))}
+          </Pie>
+        </PieChart>
+
+        {/* Desktop hash marks */}
+        {hashMarks.map((angle, idx) => (
+          <div
+            key={`${testId}-hash-${idx}`}
+            className="absolute top-1/2 left-1/2 w-0.5 h-3 origin-bottom"
+            style={{
+              backgroundColor: NEEDLE_COLOR,
+              opacity: 0.3,
+              transform: `translate(-50%, -${gaugeConfig.desktop.hashDistance}px) rotate(${angle}deg)`,
+            }}
+          />
+        ))}
+
+        {/* Desktop needle */}
+        <div
+          className="absolute top-1/2 left-1/2 w-1.5 h-[85px] origin-bottom rounded-full transition-transform duration-1000"
+          style={{
+            backgroundColor: NEEDLE_COLOR,
+            transform: `translate(-50%, -100%) rotate(${rotation}deg)`,
+          }}
+          data-rotation={rotation}
+          data-testid={testId}
+        />
+
+        {/* Desktop center hub */}
+        <div className="absolute top-1/2 left-1/2 w-6 h-6 bg-muted border-2 border-border rounded-full -translate-x-1/2 -translate-y-1/2 shadow-inner" />
+      </div>
+    </>
+  );
+
+  return (
+    <Card className="p-4 sm:p-6 md:p-8">
+      <div className="flex gap-6 sm:gap-12 md:gap-16 lg:gap-24 justify-center items-center flex-wrap">
+        {/* Ceramic Gauge */}
+        <div className="relative flex flex-col items-center" data-testid="gauge-ceramic">
+          {renderGauge(ceramicData, CERAMIC_COLOR, ceramicRotation, "needle-ceramic", true)}
+
+          <p className="mt-3 sm:mt-4 font-semibold text-base sm:text-lg uppercase tracking-wide" style={{ color: CERAMIC_COLOR }}>
             Ceramic
           </p>
           <span data-testid="text-ceramic-count">
             <CountUp
-              className="text-3xl font-bold"
+              className="text-2xl sm:text-3xl font-bold"
               end={ceramicJobs}
               duration={2}
             />
@@ -122,63 +174,14 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
 
         {/* Powder Gauge */}
         <div className="relative flex flex-col items-center" data-testid="gauge-powder">
-          <div className="relative">
-            <PieChart width={220} height={220}>
-              <Pie
-                data={powderData}
-                startAngle={210}
-                endAngle={-30}
-                innerRadius={70}
-                outerRadius={100}
-                stroke="none"
-                dataKey="value"
-                cornerRadius={8}
-                isAnimationActive={true}
-              >
-                {powderData.map((entry, i) => (
-                  <Cell
-                    key={`powder-${i}`}
-                    fill={i === 0 ? POWDER_COLOR : MUTED_COLOR}
-                    opacity={i === 0 ? 1 : 0.3}
-                  />
-                ))}
-              </Pie>
-            </PieChart>
+          {renderGauge(powderData, POWDER_COLOR, powderRotation, "needle-powder", false)}
 
-            {/* Hash marks */}
-            {hashMarks.map((angle, idx) => (
-              <div
-                key={`powder-hash-${idx}`}
-                className="absolute top-1/2 left-1/2 w-0.5 h-3 origin-bottom"
-                style={{
-                  backgroundColor: NEEDLE_COLOR,
-                  opacity: 0.3,
-                  transform: `translate(-50%, -100px) rotate(${angle}deg)`,
-                }}
-              />
-            ))}
-
-            {/* Needle overlay */}
-            <div
-              className="absolute top-1/2 left-1/2 w-1.5 h-[85px] origin-bottom rounded-full transition-transform duration-1000"
-              style={{
-                backgroundColor: NEEDLE_COLOR,
-                transform: `translate(-50%, -100%) rotate(${powderRotation}deg)`,
-              }}
-              data-rotation={powderRotation}
-              data-testid="needle-powder"
-            />
-
-            {/* Center hub */}
-            <div className="absolute top-1/2 left-1/2 w-6 h-6 bg-muted border-2 border-border rounded-full -translate-x-1/2 -translate-y-1/2 shadow-inner" />
-          </div>
-
-          <p className="mt-4 font-semibold text-lg uppercase tracking-wide" style={{ color: POWDER_COLOR }}>
+          <p className="mt-3 sm:mt-4 font-semibold text-base sm:text-lg uppercase tracking-wide" style={{ color: POWDER_COLOR }}>
             Powder
           </p>
           <span data-testid="text-powder-count">
             <CountUp
-              className="text-3xl font-bold"
+              className="text-2xl sm:text-3xl font-bold"
               end={powderJobs}
               duration={2}
             />
@@ -186,7 +189,7 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
         </div>
       </div>
 
-      <div className="mt-8 text-center text-sm text-muted-foreground tracking-wider uppercase">
+      <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted-foreground tracking-wider uppercase">
         Shop Output Monitor
       </div>
     </Card>

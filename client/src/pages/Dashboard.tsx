@@ -199,14 +199,16 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-6 flex-wrap">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-semibold">Analytic Center</h1>
-          <p className="text-muted-foreground mt-1">Welcome to your coating management hub</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Analytic Center</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Welcome to your coating management hub</p>
         </div>
-        <div className="flex items-center gap-6">
-          <WeatherWidget />
+        <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+          <div className="hidden sm:block">
+            <WeatherWidget />
+          </div>
           <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
@@ -217,7 +219,7 @@ export default function Dashboard() {
               <Settings className="w-4 h-4" />
             </Button>
             <Link href="/jobs">
-              <Button data-testid="button-new-job" size="lg">
+              <Button data-testid="button-new-job" size="default" className="sm:text-base">
                 <Plus className="w-4 h-4 mr-2" />
                 New Job
               </Button>
@@ -226,28 +228,79 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-10 gap-6">
+      {/* Mobile weather widget */}
+      <div className="sm:hidden">
+        <WeatherWidget />
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
         {visibleTileData.map((tile) => (
           <StatsCard 
             key={tile.id}
             title={tile.title} 
             value={tile.value} 
             icon={tile.icon}
-            className={tile.id === "most-common-product" ? "md:col-span-2 lg:col-span-5" : "lg:col-span-2"}
-            valueClassName={tile.id === "most-common-product" ? "text-xl whitespace-nowrap" : undefined}
+            className={tile.id === "most-common-product" ? "col-span-2 md:col-span-3 lg:col-span-5" : "lg:col-span-2"}
+            valueClassName={tile.id === "most-common-product" ? "text-lg sm:text-xl whitespace-nowrap" : undefined}
           />
         ))}
       </div>
 
       <DualTemperatureGauge jobs={jobs} />
 
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <LineChartIcon className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-medium">Monthly Revenue - {currentYear}</h2>
-          <span className="text-xs text-muted-foreground ml-auto">Revenue per month</span>
+      <Card className="p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-4 sm:mb-6 flex-wrap">
+          <LineChartIcon className="w-4 sm:w-5 h-4 sm:h-5 text-primary" />
+          <h2 className="text-lg sm:text-xl font-medium">Monthly Revenue - {currentYear}</h2>
+          <span className="text-xs text-muted-foreground ml-auto hidden sm:inline">Revenue per month</span>
         </div>
-        <ResponsiveContainer width="100%" height={350}>
+        <ResponsiveContainer width="100%" height={250} className="sm:hidden">
+          <AreaChart data={monthlyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <defs>
+              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <XAxis 
+              dataKey="month" 
+              tick={{ fontSize: 10 }}
+              stroke="hsl(var(--muted-foreground))"
+            />
+            <YAxis 
+              tick={{ fontSize: 10 }}
+              stroke="hsl(var(--muted-foreground))"
+              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            />
+            <ChartTooltip 
+              content={({ active, payload }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                const data = payload[0].payload;
+                return (
+                  <div className="rounded-lg border bg-background p-2 shadow-lg">
+                    <div className="grid gap-1">
+                      <div className="font-medium text-xs">{data.month} {currentYear}</div>
+                      <div className="text-sm font-bold text-primary">
+                        ${data.revenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="revenue"
+              stroke="hsl(var(--chart-2))"
+              strokeWidth={2}
+              fill="url(#revenueGradient)"
+              dot={{ fill: "hsl(var(--chart-2))", strokeWidth: 1, r: 3 }}
+              activeDot={{ r: 5, fill: "hsl(var(--primary))" }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height={350} className="hidden sm:block">
           <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
