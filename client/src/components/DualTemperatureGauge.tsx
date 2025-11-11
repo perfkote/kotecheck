@@ -77,6 +77,8 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
                 backgroundColor: CERAMIC_COLOR,
                 transform: `translate(-50%, -100%) rotate(${ceramicRotation}deg)`,
               }}
+              data-rotation={ceramicRotation}
+              data-testid="needle-ceramic"
             />
 
             {/* Center hub */}
@@ -86,12 +88,13 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
           <p className="mt-4 font-semibold text-lg uppercase tracking-wide" style={{ color: CERAMIC_COLOR }}>
             Ceramic
           </p>
-          <CountUp
-            className="text-3xl font-bold"
-            end={ceramicJobs}
-            duration={2}
-            data-testid="text-ceramic-count"
-          />
+          <span data-testid="text-ceramic-count">
+            <CountUp
+              className="text-3xl font-bold"
+              end={ceramicJobs}
+              duration={2}
+            />
+          </span>
         </div>
 
         {/* Powder Gauge */}
@@ -126,6 +129,8 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
                 backgroundColor: POWDER_COLOR,
                 transform: `translate(-50%, -100%) rotate(${powderRotation}deg)`,
               }}
+              data-rotation={powderRotation}
+              data-testid="needle-powder"
             />
 
             {/* Center hub */}
@@ -135,12 +140,13 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
           <p className="mt-4 font-semibold text-lg uppercase tracking-wide" style={{ color: POWDER_COLOR }}>
             Powder
           </p>
-          <CountUp
-            className="text-3xl font-bold"
-            end={powderJobs}
-            duration={2}
-            data-testid="text-powder-count"
-          />
+          <span data-testid="text-powder-count">
+            <CountUp
+              className="text-3xl font-bold"
+              end={powderJobs}
+              duration={2}
+            />
+          </span>
         </div>
       </div>
 
