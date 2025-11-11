@@ -2,6 +2,7 @@ import { Users, Briefcase, FileText, StickyNote, LayoutDashboard, Settings } fro
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
@@ -9,7 +10,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-import logoImage from "@assets/Transparent Logo_1762705947779.jpeg";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
 
 const items = [
   {
@@ -75,6 +77,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <div className="flex items-center justify-center p-2">
+          <ThemeToggle />
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

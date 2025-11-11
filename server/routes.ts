@@ -204,6 +204,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/services", async (req, res) => {
     try {
       const validated = insertServiceSchema.parse(req.body);
+      
+      // Check for duplicate service name
+      const allServices = await storage.getAllServices();
+      const duplicate = allServices.find(
+        s => s.name.toLowerCase().trim() === validated.name.toLowerCase().trim()
+      );
+      if (duplicate) {
+        return res.status(400).json({ error: "A service with this name already exists" });
+      }
+      
       const service = await storage.createService(validated);
       res.status(201).json(service);
     } catch (error) {
@@ -218,6 +228,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/services/:id", async (req, res) => {
     try {
       const validated = insertServiceSchema.partial().parse(req.body);
+      
+      // Check for duplicate service name (excluding current service)
+      if (validated.name) {
+        const allServices = await storage.getAllServices();
+        const duplicate = allServices.find(
+          s => s.id !== req.params.id && 
+          s.name.toLowerCase().trim() === validated.name.toLowerCase().trim()
+        );
+        if (duplicate) {
+          return res.status(400).json({ error: "A service with this name already exists" });
+        }
+      }
+      
       const service = await storage.updateService(req.params.id, validated);
       if (!service) {
         return res.status(404).json({ error: "Service not found" });

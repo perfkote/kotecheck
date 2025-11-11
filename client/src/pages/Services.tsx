@@ -64,8 +64,9 @@ export default function Services() {
       setIsDialogOpen(false);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create service", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Failed to create service";
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
@@ -82,8 +83,9 @@ export default function Services() {
       setEditingService(null);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update service", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Failed to update service";
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
