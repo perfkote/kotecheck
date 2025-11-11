@@ -31,13 +31,30 @@ async function importData() {
     const fileContent = fs.readFileSync(exportPath, "utf-8");
     const data = JSON.parse(fileContent);
 
+    // Convert date strings back to Date objects
+    const convertDates = (records: any[]) => {
+      return records.map(record => ({
+        ...record,
+        createdAt: record.createdAt ? new Date(record.createdAt) : undefined,
+        dueDate: record.dueDate ? new Date(record.dueDate) : undefined,
+        estimateDate: record.estimateDate ? new Date(record.estimateDate) : undefined,
+      }));
+    };
+
+    const customersData = convertDates(data.customers);
+    const jobsData = convertDates(data.jobs);
+    const servicesData = data.services; // services don't have date fields
+    const estimatesData = convertDates(data.estimates);
+    const estimateServicesData = data.estimateServices; // junction table doesn't have date fields
+    const notesData = convertDates(data.notes);
+
     console.log("📊 Importing data:");
-    console.log(`   - ${data.customers.length} customers`);
-    console.log(`   - ${data.jobs.length} jobs`);
-    console.log(`   - ${data.services.length} services`);
-    console.log(`   - ${data.estimates.length} estimates`);
-    console.log(`   - ${data.estimateServices.length} estimate services`);
-    console.log(`   - ${data.notes.length} notes\n`);
+    console.log(`   - ${customersData.length} customers`);
+    console.log(`   - ${jobsData.length} jobs`);
+    console.log(`   - ${servicesData.length} services`);
+    console.log(`   - ${estimatesData.length} estimates`);
+    console.log(`   - ${estimateServicesData.length} estimate services`);
+    console.log(`   - ${notesData.length} notes\n`);
 
     console.log("⚠️  Warning: This will add data to your production database.");
     console.log("Starting import in 3 seconds... (Ctrl+C to cancel)\n");
@@ -46,34 +63,34 @@ async function importData() {
     // Wrap all inserts in a transaction for atomic import
     await db.transaction(async (tx) => {
       // Import in order to respect foreign key constraints
-      if (data.customers.length > 0) {
+      if (customersData.length > 0) {
         console.log("Importing customers...");
-        await tx.insert(customers).values(data.customers);
+        await tx.insert(customers).values(customersData);
       }
 
-      if (data.jobs.length > 0) {
+      if (jobsData.length > 0) {
         console.log("Importing jobs...");
-        await tx.insert(jobs).values(data.jobs);
+        await tx.insert(jobs).values(jobsData);
       }
 
-      if (data.services.length > 0) {
+      if (servicesData.length > 0) {
         console.log("Importing services...");
-        await tx.insert(services).values(data.services);
+        await tx.insert(services).values(servicesData);
       }
 
-      if (data.estimates.length > 0) {
+      if (estimatesData.length > 0) {
         console.log("Importing estimates...");
-        await tx.insert(estimates).values(data.estimates);
+        await tx.insert(estimates).values(estimatesData);
       }
 
-      if (data.estimateServices.length > 0) {
+      if (estimateServicesData.length > 0) {
         console.log("Importing estimate services...");
-        await tx.insert(estimateServices).values(data.estimateServices);
+        await tx.insert(estimateServices).values(estimateServicesData);
       }
 
-      if (data.notes.length > 0) {
+      if (notesData.length > 0) {
         console.log("Importing notes...");
-        await tx.insert(notes).values(data.notes);
+        await tx.insert(notes).values(notesData);
       }
     });
 

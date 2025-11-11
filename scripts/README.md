@@ -48,6 +48,10 @@ The scripts migrate all data from these tables:
 - Make sure you ran the export step first
 - Check that `database-export.json` exists in your project root
 
+**"toISOString is not a function" error**
+- This has been fixed - the script now automatically converts date strings to Date objects
+- Make sure you're using the latest version of the import script
+
 ## Safety Notes
 
 - The export script only reads data (safe to run anytime)
