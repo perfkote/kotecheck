@@ -15,7 +15,7 @@ import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
 
 const items = [
   {
-    title: "Dashboard",
+    title: "Analytic Center",
     url: "/",
     icon: LayoutDashboard,
   },

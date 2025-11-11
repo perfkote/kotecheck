@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Customer, Job } from "@shared/schema";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { WeatherWidget } from "@/components/WeatherWidget";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +46,17 @@ export default function Dashboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("dashboard-tiles");
+    // Migrate old dashboard-tiles to new analytic-center-tiles key
+    const oldSaved = localStorage.getItem("dashboard-tiles");
+    const newSaved = localStorage.getItem("analytic-center-tiles");
+    
+    if (oldSaved && !newSaved) {
+      // Migrate old preferences to new key
+      localStorage.setItem("analytic-center-tiles", oldSaved);
+      localStorage.removeItem("dashboard-tiles");
+    }
+    
+    const saved = localStorage.getItem("analytic-center-tiles");
     if (saved) {
       try {
         setVisibleTiles(JSON.parse(saved));
@@ -60,7 +71,7 @@ export default function Dashboard() {
       ? visibleTiles.filter(id => id !== tileId)
       : [...visibleTiles, tileId];
     setVisibleTiles(newTiles);
-    localStorage.setItem("dashboard-tiles", JSON.stringify(newTiles));
+    localStorage.setItem("analytic-center-tiles", JSON.stringify(newTiles));
   };
 
   const { data: customers = [] } = useQuery<Customer[]>({
@@ -213,26 +224,29 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-6 flex-wrap">
         <div>
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
+          <h1 className="text-3xl font-semibold">Analytic Center</h1>
           <p className="text-muted-foreground mt-1">Welcome to your coating management hub</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={() => setIsSettingsOpen(true)}
-            data-testid="button-dashboard-settings"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-          <Link href="/jobs">
-            <Button data-testid="button-new-job" size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              New Job
+        <div className="flex items-center gap-6">
+          <WeatherWidget />
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setIsSettingsOpen(true)}
+              data-testid="button-dashboard-settings"
+            >
+              <Settings className="w-4 h-4" />
             </Button>
-          </Link>
+            <Link href="/jobs">
+              <Button data-testid="button-new-job" size="lg">
+                <Plus className="w-4 h-4 mr-2" />
+                New Job
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -253,7 +267,7 @@ export default function Dashboard() {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-6">
             <BarChart3 className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-medium">Dashboard Metrics</h2>
+            <h2 className="text-xl font-medium">Analytic Center Metrics</h2>
             <span className="text-xs text-muted-foreground ml-auto">Showing {dashboardChartData.length} metrics</span>
           </div>
           <ResponsiveContainer width="100%" height={350}>
@@ -393,11 +407,11 @@ export default function Dashboard() {
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Customize Dashboard Tiles</DialogTitle>
+            <DialogTitle>Customize Analytic Center Tiles</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Select which metrics to display on your dashboard
+              Select which metrics to display in your Analytic Center
             </p>
             {tiles.map((tile) => (
               <div key={tile.id} className="flex items-center space-x-2">
