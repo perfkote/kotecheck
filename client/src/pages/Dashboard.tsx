@@ -239,6 +239,8 @@ export default function Dashboard() {
         ))}
       </div>
 
+      <DualTemperatureGauge jobs={jobs} />
+
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-6">
           <LineChartIcon className="w-5 h-5 text-primary" />
@@ -292,8 +294,6 @@ export default function Dashboard() {
           </AreaChart>
         </ResponsiveContainer>
       </Card>
-
-      <DualTemperatureGauge jobs={jobs} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6">
