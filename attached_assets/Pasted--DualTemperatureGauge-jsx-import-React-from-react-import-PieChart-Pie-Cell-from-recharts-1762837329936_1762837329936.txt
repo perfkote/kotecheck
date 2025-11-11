@@ -1,0 +1,71 @@
+// DualTemperatureGauge.jsx
+import React from "react";
+import { PieChart, Pie, Cell } from "recharts";
+
+export default function DualTemperatureGauge() {
+  // Example data – replace with dynamic counts from your DB
+  const ceramicJobs = 42;
+  const powderJobs = 68;
+  const maxJobs = Math.max(ceramicJobs, powderJobs);
+
+  const ceramicData = [
+    { name: "Ceramic", value: ceramicJobs },
+    { name: "Remaining", value: maxJobs - ceramicJobs },
+  ];
+  const powderData = [
+    { name: "Powder", value: powderJobs },
+    { name: "Remaining", value: maxJobs - powderJobs },
+  ];
+
+  const ceramicColors = ["#FF4B00", "#2B2B2B"]; // hot red/orange
+  const powderColors = ["#00B2FF", "#2B2B2B"]; // cool blue
+
+  return (
+    <div className="flex flex-col items-center gap-6 bg-zinc-900 text-white p-6 rounded-2xl shadow-lg">
+      <h2 className="text-xl font-bold mb-2">Ceramic vs Powder Jobs</h2>
+      <div className="flex gap-12 justify-center items-center">
+        {/* Ceramic Gauge */}
+        <div className="text-center">
+          <PieChart width={200} height={120}>
+            <Pie
+              data={ceramicData}
+              startAngle={180}
+              endAngle={0}
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              {ceramicData.map((entry, index) => (
+                <Cell key={index} fill={ceramicColors[index % ceramicColors.length]} />
+              ))}
+            </Pie>
+          </PieChart>
+          <p className="font-semibold text-orange-400">Ceramic Jobs</p>
+          <p className="text-2xl">{ceramicJobs}</p>
+        </div>
+
+        {/* Powder Gauge */}
+        <div className="text-center">
+          <PieChart width={200} height={120}>
+            <Pie
+              data={powderData}
+              startAngle={180}
+              endAngle={0}
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              {powderData.map((entry, index) => (
+                <Cell key={index} fill={powderColors[index % powderColors.length]} />
+              ))}
+            </Pie>
+          </PieChart>
+          <p className="font-semibold text-sky-400">Powder Jobs</p>
+          <p className="text-2xl">{powderJobs}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
