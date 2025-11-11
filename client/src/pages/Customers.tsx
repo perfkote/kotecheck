@@ -91,10 +91,25 @@ export default function Customers() {
         description: "Customer deleted successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = "Failed to delete customer";
+      
+      // Parse error message from API response
+      if (error?.message) {
+        try {
+          // Error format is "STATUS_CODE: {json}"
+          const jsonPart = error.message.split(': ').slice(1).join(': ');
+          const parsed = JSON.parse(jsonPart);
+          errorMessage = parsed.error || errorMessage;
+        } catch {
+          // If parsing fails, use the raw message
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to delete customer",
+        title: "Cannot Delete Customer",
+        description: errorMessage,
         variant: "destructive",
       });
     },
