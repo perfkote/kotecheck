@@ -125,10 +125,14 @@ export default function Dashboard() {
   const recentJobs = jobs
     .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime())
     .slice(0, 5)
-    .map(job => ({
-      ...job,
-      customerName: customers.find(c => c.id === job.customerId)?.name || "Unknown",
-    }));
+    .map(job => {
+      const customer = customers.find(c => c.id === job.customerId);
+      return {
+        ...job,
+        customerName: customer?.name || "Unknown Customer",
+        customerDeleted: !customer && job.customerId !== null,
+      };
+    });
 
   const tiles = [
     {
@@ -377,7 +381,9 @@ export default function Dashboard() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-sm">{job.customerName}</h3>
+                      <h3 className={`font-medium text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                        {job.customerName}
+                      </h3>
                       {job.coatingType && (
                         <Badge variant="outline" className="capitalize text-xs">
                           {job.coatingType}

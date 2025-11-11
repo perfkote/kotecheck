@@ -131,10 +131,14 @@ export default function Jobs() {
     },
   });
 
-  const jobsWithCustomerNames = jobs.map(job => ({
-    ...job,
-    customerName: customers.find(c => c.id === job.customerId)?.name || "Unknown",
-  }));
+  const jobsWithCustomerNames = jobs.map(job => {
+    const customer = customers.find(c => c.id === job.customerId);
+    return {
+      ...job,
+      customerName: customer?.name || "Unknown Customer",
+      customerDeleted: !customer && job.customerId !== null,
+    };
+  });
 
   const filteredJobs = jobsWithCustomerNames
     .filter(job => {
@@ -213,7 +217,9 @@ export default function Jobs() {
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1">
-                  <div className="font-medium text-base">{job.customerName}</div>
+                  <div className={`font-medium text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                    {job.customerName}
+                  </div>
                   <div className="text-sm text-muted-foreground">{job.phoneNumber}</div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -289,7 +295,9 @@ export default function Jobs() {
                     onClick={() => setEditingJob(job)}
                   >
                     <td className="py-2.5 px-4">
-                      <span className="font-medium">{job.customerName}</span>
+                      <span className={`font-medium ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                        {job.customerName}
+                      </span>
                     </td>
                     <td className="py-2.5 px-4">
                       <span className="text-muted-foreground text-sm">{job.phoneNumber}</span>
@@ -413,8 +421,11 @@ export default function Jobs() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Customer</p>
-                  <p className="font-medium" data-testid="detail-customer">
-                    {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown"}
+                  <p 
+                    className={`font-medium ${!customers.find(c => c.id === viewingJob.customerId) && viewingJob.customerId ? 'text-muted-foreground line-through' : ''}`}
+                    data-testid="detail-customer"
+                  >
+                    {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown Customer"}
                   </p>
                 </div>
                 <div>
