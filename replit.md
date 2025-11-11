@@ -15,20 +15,27 @@ Preferred communication style: Simple, everyday language.
 **Dual Temperature Gauge with Needles (November 11, 2025)**
 - Added ceramic vs powder jobs comparison gauge to Analytic Center with speedometer styling
 - Displays two side-by-side gauges with 240° arc sweep (210° to -30°) showing job counts
-- Ceramic gauge uses chart-3 (orange) representing "hot" coating
-- Powder gauge uses chart-2 (teal) representing "cool" coating
-- Enhanced with needle overlays that dynamically rotate based on job count
+- Ceramic gauge arc uses chart-3 (orange) representing "hot" coating
+- Powder gauge arc uses chart-2 (teal) representing "cool" coating
+- Enhanced with black needle overlays that dynamically rotate based on job count
   - Needle rotation formula: -120° + (value/maxJobs × 240°)
   - Smooth 1000ms transition animations
   - 85px length, 6px width with rounded ends
+  - Black/foreground color for universal visibility
+- Added 12 hash marks along the gauge sweep for precision reading
+  - 3px tall, 0.5px wide, 30% opacity
+  - Evenly distributed from -120° to +120°
+  - Black color matching needles
 - Integrated CountUp animations for numeric displays (2-second duration)
 - Added center hubs (24px diameter) with muted backgrounds
-- Gauges normalize against shared maximum (minimum 100) for visual comparison
-- Positioned between monthly revenue chart and recent jobs section
+- Dynamic max value: 50 above highest metric (replaces fixed 100 minimum)
+- Positioned between metric tiles and monthly revenue chart
+- No title on card (removed "Performance Metrics")
 - Increased size: inner radius 70px, outer radius 100px with 8px corner radius
 - Unfilled arc portions shown at 30% opacity
 - All elements include data-testid attributes for automated testing
 - Theme-aware colors adapt to light/dark mode via CSS variables
+- Dashboard order: Tiles → Gauges → Revenue Chart → Recent Jobs
 
 **Dashboard Tiles & Light Mode Colors (November 11, 2025)**
 - Reduced all Analytic Center tiles by 25% (smaller padding, fonts, icons)
