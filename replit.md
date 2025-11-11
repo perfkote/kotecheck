@@ -12,6 +12,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Dashboard Tiles & Light Mode Colors (November 11, 2025)**
+- Reduced all Analytic Center tiles by 25% (smaller padding, fonts, icons)
+- Updated light mode color scheme:
+  - Sidebar: Changed to dark grey (25% lightness) with light text for contrast
+  - Main background: Changed to very light grey (97% lightness, almost white)
+  - Cards: White background to stand out against light grey canvas
+  - Improved contrast ratios for better readability
+
 **Analytic Center Rename & Weather Widget (November 11, 2025)**
 - Renamed "Dashboard" to "Analytic Center" throughout application (page title, sidebar, settings, charts)
 - Added live Orlando, FL weather widget displaying temperature and humidity
