@@ -178,11 +178,16 @@ export default function Customers() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCustomers.map((customer) => (
-          <Card key={customer.id} className="p-6" data-testid={`card-customer-${customer.id}`}>
+          <Card 
+            key={customer.id} 
+            className="p-6 hover-elevate cursor-pointer transition-all" 
+            data-testid={`card-customer-${customer.id}`}
+            onClick={() => setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`)}
+          >
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-lg font-medium">{customer.name}</h3>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" data-testid={`button-menu-${customer.id}`}>
                     <MoreVertical className="w-4 h-4" />
                   </Button>
@@ -190,20 +195,29 @@ export default function Customers() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem 
                     data-testid="menu-edit"
-                    onClick={() => setEditingCustomer(customer)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCustomer(customer);
+                    }}
                   >
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     data-testid="menu-view-jobs"
-                    onClick={() => setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`);
+                    }}
                   >
                     View Jobs
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="text-destructive" 
                     data-testid="menu-delete"
-                    onClick={() => deleteMutation.mutate(customer.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteMutation.mutate(customer.id);
+                    }}
                   >
                     Delete
                   </DropdownMenuItem>
