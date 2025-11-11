@@ -31,22 +31,40 @@ async function importData() {
     const fileContent = fs.readFileSync(exportPath, "utf-8");
     const data = JSON.parse(fileContent);
 
-    // Convert date strings back to Date objects
-    const convertDates = (records: any[]) => {
-      return records.map(record => ({
-        ...record,
-        createdAt: record.createdAt ? new Date(record.createdAt) : undefined,
-        dueDate: record.dueDate ? new Date(record.dueDate) : undefined,
-        estimateDate: record.estimateDate ? new Date(record.estimateDate) : undefined,
-      }));
-    };
+    // Convert date strings back to Date objects for each table
+    const customersData = data.customers.map((r: any) => ({
+      ...r,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+    }));
 
-    const customersData = convertDates(data.customers);
-    const jobsData = convertDates(data.jobs);
-    const servicesData = data.services; // services don't have date fields
-    const estimatesData = convertDates(data.estimates);
-    const estimateServicesData = data.estimateServices; // junction table doesn't have date fields
-    const notesData = convertDates(data.notes);
+    const jobsData = data.jobs.map((r: any) => ({
+      ...r,
+      receivedDate: r.receivedDate ? new Date(r.receivedDate) : undefined,
+      completedAt: r.completedAt ? new Date(r.completedAt) : undefined,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+    }));
+
+    const servicesData = data.services.map((r: any) => ({
+      ...r,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+    }));
+
+    const estimatesData = data.estimates.map((r: any) => ({
+      ...r,
+      date: r.date ? new Date(r.date) : undefined,
+      desiredFinishDate: r.desiredFinishDate ? new Date(r.desiredFinishDate) : undefined,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+    }));
+
+    const estimateServicesData = data.estimateServices.map((r: any) => ({
+      ...r,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+    }));
+
+    const notesData = data.notes.map((r: any) => ({
+      ...r,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+    }));
 
     console.log("📊 Importing data:");
     console.log(`   - ${customersData.length} customers`);
