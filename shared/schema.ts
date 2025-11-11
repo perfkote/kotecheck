@@ -16,7 +16,7 @@ export const customers = pgTable("customers", {
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   trackingId: text("tracking_id").notNull(),
-  customerId: varchar("customer_id").notNull().references(() => customers.id),
+  customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }),
   phoneNumber: text("phone_number").notNull(),
   receivedDate: timestamp("received_date").notNull().defaultNow(),
   coatingType: text("coating_type").notNull(),
@@ -58,8 +58,8 @@ export const estimateServices = pgTable("estimate_services", {
 
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  jobId: varchar("job_id").references(() => jobs.id),
-  customerId: varchar("customer_id").references(() => customers.id),
+  jobId: varchar("job_id").references(() => jobs.id, { onDelete: "cascade" }),
+  customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }),
   content: text("content").notNull(),
   author: text("author").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),

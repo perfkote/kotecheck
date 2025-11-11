@@ -130,7 +130,7 @@ export default function Dashboard() {
       return {
         ...job,
         customerName: customer?.name || "Unknown Customer",
-        customerDeleted: !customer && job.customerId !== null,
+        customerDeleted: job.customerId === null,
       };
     });
 

@@ -136,7 +136,7 @@ export default function Jobs() {
     return {
       ...job,
       customerName: customer?.name || "Unknown Customer",
-      customerDeleted: !customer && job.customerId !== null,
+      customerDeleted: job.customerId === null,
     };
   });
 
@@ -384,7 +384,7 @@ export default function Jobs() {
             <JobForm
               customers={customers.map(c => ({ id: c.id, name: c.name }))}
               defaultValues={{
-                customerId: editingJob.customerId,
+                customerId: editingJob.customerId || undefined,
                 phoneNumber: editingJob.phoneNumber,
                 receivedDate: new Date(editingJob.receivedDate),
                 coatingType: editingJob.coatingType as "powder" | "ceramic" | "both",
@@ -422,7 +422,7 @@ export default function Jobs() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Customer</p>
                   <p 
-                    className={`font-medium ${!customers.find(c => c.id === viewingJob.customerId) && viewingJob.customerId ? 'text-muted-foreground line-through' : ''}`}
+                    className={`font-medium ${viewingJob.customerId === null ? 'text-muted-foreground line-through' : ''}`}
                     data-testid="detail-customer"
                   >
                     {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown Customer"}
