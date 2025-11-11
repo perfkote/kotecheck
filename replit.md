@@ -12,6 +12,24 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Mobile Optimization (November 11, 2025)**
+- Comprehensive mobile optimization across Dashboard and Jobs pages
+- Dashboard mobile improvements:
+  - Header stacks vertically on mobile with responsive typography (2xl/3xl)
+  - Weather widget repositioned below header on mobile devices
+  - Stat tiles use 2-column grid on mobile with smaller fonts (xl/2xl/3xl)
+  - Revenue chart reduces to 250px height on mobile (vs 350px desktop)
+  - Dual temperature gauge scales to 180x180px on mobile (vs 220x220px desktop)
+  - Hash marks hidden on mobile for cleaner gauge appearance
+- Jobs page mobile card view:
+  - Table hidden on mobile (<768px), replaced with card-based layout
+  - Cards show essential info: tracking ID, customer, phone, status, price
+  - Coating type and date displayed as inline badges
+  - Keyboard accessible (Enter/Space keys) with role="button" semantics
+  - Tap to open job edit dialog
+- StatsCard component responsive padding and icon sizing
+- Consistent Tailwind breakpoints (sm: 640px, md: 768px) throughout
+
 **Dual Temperature Gauge with Needles (November 11, 2025)**
 - Added ceramic vs powder jobs comparison gauge to Analytic Center with speedometer styling
 - Displays two side-by-side gauges with 240° arc sweep (210° to -30°) showing job counts

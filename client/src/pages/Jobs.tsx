@@ -24,6 +24,7 @@ import {
 import { JobForm } from "@/components/JobForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Plus, Search, MoreVertical, Briefcase } from "lucide-react";
 import {
   DropdownMenu,
@@ -201,6 +202,14 @@ export default function Jobs() {
               className="p-4 hover-elevate cursor-pointer"
               data-testid={`card-job-${job.id}`}
               onClick={() => setEditingJob(job)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setEditingJob(job);
+                }
+              }}
+              role="button"
+              tabIndex={0}
             >
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1">
