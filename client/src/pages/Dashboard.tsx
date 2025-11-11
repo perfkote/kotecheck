@@ -258,7 +258,7 @@ export default function Dashboard() {
             value={tile.value} 
             icon={tile.icon}
             className={tile.id === "most-common-product" ? "md:col-span-2 lg:col-span-5" : "lg:col-span-2"}
-            valueClassName={tile.id === "most-common-product" ? "text-2xl whitespace-nowrap" : undefined}
+            valueClassName={tile.id === "most-common-product" ? "text-xl whitespace-nowrap" : undefined}
           />
         ))}
       </div>

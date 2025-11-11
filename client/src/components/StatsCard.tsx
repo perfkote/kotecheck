@@ -13,21 +13,21 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon: Icon, trend, className, valueClassName }: StatsCardProps) {
   return (
-    <Card className={cn("p-6 hover-elevate transition-all", className)}>
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+    <Card className={cn("p-4 hover-elevate transition-all", className)}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           {title}
         </span>
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Icon className="w-5 h-5 text-primary" />
+        <div className="p-1.5 rounded-lg bg-primary/10">
+          <Icon className="w-4 h-4 text-primary" />
         </div>
       </div>
       <div className="space-y-1">
-        <div className={cn("text-4xl font-bold", valueClassName)} data-testid={`text-${title.toLowerCase().replace(/\s+/g, '-')}-value`}>
+        <div className={cn("text-3xl font-bold", valueClassName)} data-testid={`text-${title.toLowerCase().replace(/\s+/g, '-')}-value`}>
           {value}
         </div>
         {trend && (
-          <div className="text-sm text-muted-foreground">{trend}</div>
+          <div className="text-xs text-muted-foreground">{trend}</div>
         )}
       </div>
     </Card>
