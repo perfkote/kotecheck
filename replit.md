@@ -12,6 +12,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Analytic Center Rename & Weather Widget (November 11, 2025)**
+- Renamed "Dashboard" to "Analytic Center" throughout application (page title, sidebar, settings, charts)
+- Added live Orlando, FL weather widget displaying temperature and humidity
+- Weather widget shows trend arrows (up/down/stable) based on 3-hour comparison
+- Uses Open-Meteo API (free, no API key required) with 5-minute auto-refresh
+- Migrated localStorage key from "dashboard-tiles" to "analytic-center-tiles" with automatic preference migration
+- Weather widget includes error handling and loading states
+
+**Estimate to Job Conversion (November 11, 2025)**
+- Added "Convert to Job" button on estimate cards
+- Backend endpoint creates jobs from estimates with automatic customer lookup/creation
+- Coating type inference from service categories (powder/ceramic/both)
+- Status tracking prevents duplicate conversions
+- Navigates to Jobs page after successful conversion
+- Status badges on estimates (Draft, Sent, Approved, Rejected, Converted)
+
 **Dashboard Metrics Chart (November 10, 2025)**
 - Added dynamic chart visualization displaying all active dashboard tile metrics
 - Chart uses single-axis BarChart from Recharts with custom tooltips
