@@ -43,6 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Jobs() {
   const [location] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [deletingJob, setDeletingJob] = useState<Job | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,6 +89,26 @@ export default function Jobs() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateJobWithCustomer> }) =>
+      apiRequest("PATCH", `/api/jobs/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Success",
+        description: "Job updated successfully",
+      });
+      setTimeout(() => setEditingJob(null), 100);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update job",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
       apiRequest("DELETE", `/api/jobs/${id}`),
@@ -114,12 +135,14 @@ export default function Jobs() {
     customerName: customers.find(c => c.id === job.customerId)?.name || "Unknown",
   }));
 
-  const filteredJobs = jobsWithCustomerNames.filter(job => {
-    const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || job.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredJobs = jobsWithCustomerNames
+    .filter(job => {
+      const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime());
 
   if (jobsLoading) {
     return <div className="p-8">Loading...</div>;
@@ -208,7 +231,12 @@ export default function Jobs() {
                 </tr>
               ) : (
                 filteredJobs.map((job) => (
-                  <tr key={job.id} className="border-b last:border-b-0 hover-elevate transition-colors" data-testid={`row-job-${job.id}`}>
+                  <tr 
+                    key={job.id} 
+                    className="border-b last:border-b-0 hover-elevate transition-colors cursor-pointer" 
+                    data-testid={`row-job-${job.id}`}
+                    onClick={() => setEditingJob(job)}
+                  >
                     <td className="py-4 px-6">
                       <span className="font-mono font-medium text-sm">{job.trackingId}</span>
                     </td>
@@ -239,7 +267,7 @@ export default function Jobs() {
                         {new Date(job.receivedDate).toLocaleDateString()}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" data-testid={`button-menu-${job.id}`}>
@@ -253,7 +281,12 @@ export default function Jobs() {
                           >
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
+                          <DropdownMenuItem 
+                            data-testid="menu-edit"
+                            onClick={() => setEditingJob(job)}
+                          >
+                            Edit
+                          </DropdownMenuItem>
                           <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive" 
@@ -283,6 +316,31 @@ export default function Jobs() {
             onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setIsDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-edit-job">
+          <DialogHeader>
+            <DialogTitle>Edit Job</DialogTitle>
+          </DialogHeader>
+          {editingJob && (
+            <JobForm
+              customers={customers.map(c => ({ id: c.id, name: c.name }))}
+              defaultValues={{
+                customerId: editingJob.customerId,
+                phoneNumber: editingJob.phoneNumber,
+                receivedDate: new Date(editingJob.receivedDate),
+                coatingType: editingJob.coatingType as "powder" | "ceramic" | "both",
+                items: editingJob.items || "",
+                detailedNotes: editingJob.detailedNotes || "",
+                price: Number(editingJob.price),
+                status: editingJob.status,
+              }}
+              onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
+              onCancel={() => setEditingJob(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
