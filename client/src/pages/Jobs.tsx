@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { JobForm } from "@/components/JobForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +44,7 @@ export default function Jobs() {
   const [location] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
+  const [deletingJob, setDeletingJob] = useState<Job | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
@@ -86,6 +97,7 @@ export default function Jobs() {
         title: "Success",
         description: "Job deleted successfully",
       });
+      setDeletingJob(null);
     },
     onError: () => {
       toast({
@@ -93,6 +105,7 @@ export default function Jobs() {
         description: "Failed to delete job",
         variant: "destructive",
       });
+      setDeletingJob(null);
     },
   });
 
@@ -245,7 +258,7 @@ export default function Jobs() {
                           <DropdownMenuItem 
                             className="text-destructive" 
                             data-testid="menu-delete"
-                            onClick={() => deleteMutation.mutate(job.id)}
+                            onClick={() => setDeletingJob(job)}
                           >
                             Delete
                           </DropdownMenuItem>
@@ -355,6 +368,28 @@ export default function Jobs() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingJob} onOpenChange={(open) => !open && setDeletingJob(null)}>
+        <AlertDialogContent data-testid="dialog-delete-confirmation">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete job <span className="font-mono font-semibold">{deletingJob?.trackingId}</span>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="button-confirm-delete"
+              onClick={() => deletingJob && deleteMutation.mutate(deletingJob.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
