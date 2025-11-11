@@ -1,11 +1,20 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import { customers, jobs, services, estimates, estimateServices, notes } from "../shared/schema";
+import ws from "ws";
 import * as fs from "fs";
 import * as path from "path";
 
-const sql = neon(process.env.DATABASE_URL!);
-const db = drizzle(sql);
+neonConfig.webSocketConstructor = ws;
+
+if (!process.env.DATABASE_URL) {
+  console.error("❌ Error: DATABASE_URL environment variable is not set!");
+  console.log("Please ensure DATABASE_URL is configured.");
+  process.exit(1);
+}
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle({ client: pool });
 
 async function exportData() {
   console.log("🔄 Exporting data from development database...\n");
@@ -40,12 +49,14 @@ async function exportData() {
     console.log(`   - ${allNotes.length} notes`);
     console.log(`\n📁 Saved to: ${exportPath}`);
     console.log("\n📝 Next steps:");
-    console.log("   1. Download the database-export.json file");
-    console.log("   2. Switch DATABASE_URL to your production database");
-    console.log("   3. Run: npm run import-data");
+    console.log("   1. Get your production DATABASE_URL from Replit's database pane");
+    console.log("   2. Run: DATABASE_URL='your-prod-url' npx tsx scripts/import-data.ts");
+    console.log("\n⚠️  Important: Make sure you use your PRODUCTION database URL, not development!");
   } catch (error) {
     console.error("❌ Export failed:", error);
     process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
