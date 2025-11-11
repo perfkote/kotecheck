@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Customers() {
   const [, setLocation] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
   const { toast } = useToast();
@@ -55,6 +56,26 @@ export default function Customers() {
       toast({
         title: "Error",
         description: "Failed to create customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: InsertCustomer }) =>
+      apiRequest("PATCH", `/api/customers/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setEditingCustomer(null);
+      toast({
+        title: "Success",
+        description: "Customer updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update customer",
         variant: "destructive",
       });
     },
@@ -152,7 +173,12 @@ export default function Customers() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem data-testid="menu-edit">Edit</DropdownMenuItem>
+                  <DropdownMenuItem 
+                    data-testid="menu-edit"
+                    onClick={() => setEditingCustomer(customer)}
+                  >
+                    Edit
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     data-testid="menu-view-jobs"
                     onClick={() => setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`)}
@@ -209,6 +235,27 @@ export default function Customers() {
             onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setIsDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingCustomer} onOpenChange={(open) => !open && setEditingCustomer(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+          </DialogHeader>
+          {editingCustomer && (
+            <CustomerForm
+              defaultValues={{
+                name: editingCustomer.name,
+                email: editingCustomer.email || "",
+                phone: editingCustomer.phone || "",
+                address: editingCustomer.address || "",
+                projectList: editingCustomer.projectList || "",
+              }}
+              onSubmit={(data) => updateMutation.mutate({ id: editingCustomer.id, data })}
+              onCancel={() => setEditingCustomer(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
