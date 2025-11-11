@@ -15,14 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Users, Briefcase, CheckCircle2, DollarSign, Plus, Sparkles, Settings, Clock, TrendingUp, Package, BarChart3 } from "lucide-react";
+import { Users, Briefcase, CheckCircle2, DollarSign, Plus, Sparkles, Settings, Clock, TrendingUp, Package, LineChart as LineChartIcon } from "lucide-react";
 import { Link } from "wouter";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from "recharts";
 
 type TileId = 
   | "total-customers"
@@ -178,49 +178,24 @@ export default function Dashboard() {
 
   const visibleTileData = tiles.filter(tile => visibleTiles.includes(tile.id));
 
-  // Create chart data from visible tiles
-  const dashboardChartData = visibleTileData
-    .map((tile) => {
-      let numericValue: number;
-      let isCurrency = false;
-      const rawValue = tile.value;
-      
-      // Extract numeric value from formatted strings
-      if (typeof rawValue === 'number') {
-        numericValue = rawValue;
-      } else if (typeof rawValue === 'string') {
-        // Skip "Most Common" tile as it has complex non-numeric data
-        if (tile.id === 'most-common-product') {
-          return null;
-        }
-        
-        // Check if it's currency
-        isCurrency = rawValue.includes('$');
-        
-        // Remove $ signs, commas, and "days" suffix
-        const cleaned = rawValue.replace(/[$,]/g, '').replace(/\s*days?$/i, '').trim();
-        
-        numericValue = parseFloat(cleaned);
-        if (isNaN(numericValue)) {
-          return null;
-        }
-      } else {
-        return null;
-      }
-      
-      return {
-        metric: tile.title,
-        value: numericValue,
-        isCurrency,
-        formattedValue: typeof rawValue === 'string' ? rawValue : rawValue.toString(),
-      };
-    })
-    .filter((item): item is { 
-      metric: string; 
-      value: number; 
-      isCurrency: boolean;
-      formattedValue: string;
-    } => item !== null);
+  // Calculate monthly revenue for the current year
+  const currentYear = new Date().getFullYear();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  
+  const monthlyRevenueData = monthNames.map((month, index) => {
+    // Filter jobs that were received in this month of the current year
+    const monthRevenue = jobs
+      .filter(job => {
+        const jobDate = new Date(job.receivedDate);
+        return jobDate.getFullYear() === currentYear && jobDate.getMonth() === index;
+      })
+      .reduce((sum, job) => sum + Number(job.price || 0), 0);
+    
+    return {
+      month,
+      revenue: monthRevenue,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -263,49 +238,59 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {dashboardChartData.length > 0 && (
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-medium">Analytic Center Metrics</h2>
-            <span className="text-xs text-muted-foreground ml-auto">Showing {dashboardChartData.length} metrics</span>
-          </div>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={dashboardChartData} margin={{ top: 5, right: 30, left: 20, bottom: 100 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="metric" 
-                angle={-45}
-                textAnchor="end"
-                height={100}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis tick={{ fontSize: 12 }} />
-              <ChartTooltip 
-                content={({ active, payload }) => {
-                  if (!active || !payload || payload.length === 0) return null;
-                  const data = payload[0].payload;
-                  return (
-                    <div className="rounded-lg border bg-background p-2 shadow-sm">
-                      <div className="grid gap-1">
-                        <div className="font-medium text-sm">{data.metric}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {data.formattedValue}
-                        </div>
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <LineChartIcon className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-medium">Monthly Revenue - {currentYear}</h2>
+          <span className="text-xs text-muted-foreground ml-auto">Revenue per month</span>
+        </div>
+        <ResponsiveContainer width="100%" height={350}>
+          <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+            <defs>
+              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <XAxis 
+              dataKey="month" 
+              tick={{ fontSize: 12 }}
+              stroke="hsl(var(--muted-foreground))"
+            />
+            <YAxis 
+              tick={{ fontSize: 12 }}
+              stroke="hsl(var(--muted-foreground))"
+              tickFormatter={(value) => `$${value.toLocaleString()}`}
+            />
+            <ChartTooltip 
+              content={({ active, payload }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                const data = payload[0].payload;
+                return (
+                  <div className="rounded-lg border bg-background p-3 shadow-lg">
+                    <div className="grid gap-1">
+                      <div className="font-medium text-sm">{data.month} {currentYear}</div>
+                      <div className="text-lg font-bold text-primary">
+                        ${data.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                     </div>
-                  );
-                }}
-              />
-              <Bar 
-                dataKey="value" 
-                fill="hsl(var(--primary))"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
+                  </div>
+                );
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="revenue"
+              stroke="hsl(var(--chart-2))"
+              strokeWidth={3}
+              fill="url(#revenueGradient)"
+              dot={{ fill: "hsl(var(--chart-2))", strokeWidth: 2, r: 5 }}
+              activeDot={{ r: 7, fill: "hsl(var(--primary))" }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6">
