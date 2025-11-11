@@ -231,10 +231,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check for duplicate service name (excluding current service)
       if (validated.name) {
+        const serviceName = validated.name;
         const allServices = await storage.getAllServices();
         const duplicate = allServices.find(
           s => s.id !== req.params.id && 
-          s.name.toLowerCase().trim() === validated.name.toLowerCase().trim()
+          s.name.toLowerCase().trim() === serviceName.toLowerCase().trim()
         );
         if (duplicate) {
           return res.status(400).json({ error: "A service with this name already exists" });
@@ -376,6 +377,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete estimate service" });
+    }
+  });
+
+  // Convert estimate to job
+  app.post("/api/estimates/:id/convert-to-job", async (req, res) => {
+    try {
+      const estimateId = req.params.id;
+      
+      // Get the estimate
+      const estimate = await storage.getEstimate(estimateId);
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      
+      // Check if already converted
+      if (estimate.status === "converted") {
+        return res.status(400).json({ error: "Estimate has already been converted to a job" });
+      }
+      
+      // Get estimate services to include in job details
+      const estimateServices = await storage.getEstimateServices(estimateId);
+      const servicesText = estimateServices
+        .map(s => `${s.serviceName} - $${parseFloat(s.servicePrice).toFixed(2)}`)
+        .join('\n');
+      
+      // Find or create customer
+      let customerId: string;
+      const existingCustomer = await storage.findCustomerByName(estimate.customerName);
+      
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const newCustomer = await storage.createCustomer({
+          name: estimate.customerName,
+          phone: estimate.phone,
+        });
+        customerId = newCustomer.id;
+      }
+      
+      // Determine coating type based on services
+      let coatingType: "powder" | "ceramic" | "both" = "powder";
+      const serviceCategories = new Set(estimateServices.map(s => {
+        // Try to infer category from service name if not available
+        const serviceName = s.serviceName.toLowerCase();
+        if (serviceName.includes("ceramic")) return "ceramic";
+        if (serviceName.includes("powder")) return "powder";
+        return "powder"; // default
+      }));
+      
+      if (serviceCategories.has("powder") && serviceCategories.has("ceramic")) {
+        coatingType = "both";
+      } else if (serviceCategories.has("ceramic")) {
+        coatingType = "ceramic";
+      }
+      
+      // Create the job
+      const job = await storage.createJob({
+        customerId,
+        phoneNumber: estimate.phone,
+        receivedDate: new Date(estimate.date),
+        coatingType,
+        items: servicesText,
+        detailedNotes: `Converted from estimate on ${new Date().toLocaleDateString()}`,
+        price: parseFloat(estimate.total),
+        status: "pending",
+      });
+      
+      // Update estimate status to "converted"
+      await storage.updateEstimate(estimateId, { status: "converted" });
+      
+      res.status(201).json(job);
+    } catch (error) {
+      console.error("Failed to convert estimate to job:", error);
+      res.status(500).json({ error: "Failed to convert estimate to job" });
     }
   });
 

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Estimate, Service, InsertEstimate } from "@shared/schema";
+import type { Estimate, Service, InsertEstimate, Job } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, Settings } from "lucide-react";
-import { Link } from "wouter";
+import { Plus, Search, Settings, ArrowRight } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ export default function Estimates() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const { data: estimates = [], isLoading } = useQuery<Estimate[]>({
     queryKey: ["/api/estimates"],
@@ -53,6 +54,31 @@ export default function Estimates() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create estimate", variant: "destructive" });
+    },
+  });
+
+  const convertToJobMutation = useMutation({
+    mutationFn: async (estimateId: string) => {
+      const response = await apiRequest("POST", `/api/estimates/${estimateId}/convert-to-job`);
+      return await response.json() as Job;
+    },
+    onSuccess: (job) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ 
+        title: "Success", 
+        description: "Estimate converted to job successfully" 
+      });
+      // Navigate to jobs page to see the new job
+      setLocation("/jobs");
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to convert estimate to job";
+      toast({ 
+        title: "Error", 
+        description: message, 
+        variant: "destructive" 
+      });
     },
   });
 
@@ -133,8 +159,8 @@ export default function Estimates() {
         ) : (
           filteredEstimates.map((estimate) => (
             <Card key={estimate.id} className="p-6 hover-elevate" data-testid={`card-estimate-${estimate.id}`}>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2 flex-1">
                   <div>
                     <h3 className="font-semibold text-lg">{estimate.customerName}</h3>
                     <p className="text-muted-foreground">{estimate.phone}</p>
@@ -147,10 +173,33 @@ export default function Estimates() {
                       </span>
                     )}
                   </div>
+                  <div className="text-sm">
+                    <span className={`inline-block px-2 py-1 rounded-md ${
+                      estimate.status === "converted" ? "bg-green-100 text-green-800" :
+                      estimate.status === "approved" ? "bg-blue-100 text-blue-800" :
+                      estimate.status === "sent" ? "bg-purple-100 text-purple-800" :
+                      estimate.status === "rejected" ? "bg-red-100 text-red-800" :
+                      "bg-gray-100 text-gray-800"
+                    }`}>
+                      {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">${parseFloat(estimate.total).toFixed(2)}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Total</div>
+                <div className="text-right flex flex-col items-end gap-3">
+                  <div>
+                    <div className="text-2xl font-bold">${parseFloat(estimate.total).toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground mt-1">Total</div>
+                  </div>
+                  {estimate.status !== "converted" && (
+                    <Button 
+                      onClick={() => convertToJobMutation.mutate(estimate.id)}
+                      disabled={convertToJobMutation.isPending}
+                      data-testid={`button-convert-${estimate.id}`}
+                    >
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Convert to Job
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
