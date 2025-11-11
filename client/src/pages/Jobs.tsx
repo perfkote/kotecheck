@@ -211,9 +211,8 @@ export default function Jobs() {
               role="button"
               tabIndex={0}
             >
-              <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1">
-                  <div className="font-mono font-medium text-sm mb-1">{job.trackingId}</div>
                   <div className="font-medium text-base">{job.customerName}</div>
                   <div className="text-sm text-muted-foreground">{job.phoneNumber}</div>
                 </div>
@@ -246,31 +245,28 @@ export default function Jobs() {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Tracking ID
-                </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Customer
                 </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Phone
                 </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Coating Type
                 </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Items
                 </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Price
                 </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Status
                 </th>
-                <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Received Date
                 </th>
-                <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="text-right py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Actions
                 </th>
               </tr>
@@ -278,7 +274,7 @@ export default function Jobs() {
             <tbody className="bg-card">
               {filteredJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center">
+                  <td colSpan={8} className="py-12 text-center">
                     <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                     <p className="text-muted-foreground">No jobs found</p>
                     <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
@@ -292,37 +288,34 @@ export default function Jobs() {
                     data-testid={`row-job-${job.id}`}
                     onClick={() => setEditingJob(job)}
                   >
-                    <td className="py-4 px-6">
-                      <span className="font-mono font-medium text-sm">{job.trackingId}</span>
-                    </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2.5 px-4">
                       <span className="font-medium">{job.customerName}</span>
                     </td>
-                    <td className="py-4 px-6">
-                      <span className="text-muted-foreground">{job.phoneNumber}</span>
+                    <td className="py-2.5 px-4">
+                      <span className="text-muted-foreground text-sm">{job.phoneNumber}</span>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2.5 px-4">
                       <Badge variant="outline" className="capitalize">
                         {job.coatingType}
                       </Badge>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2.5 px-4">
                       <span className="text-muted-foreground text-sm">
                         {job.items || <span className="text-muted-foreground/50">—</span>}
                       </span>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2.5 px-4">
                       <span className="font-semibold">${Number(job.price).toFixed(2)}</span>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2.5 px-4">
                       <StatusBadge status={job.status} type="job" />
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2.5 px-4">
                       <span className="text-muted-foreground text-sm">
                         {new Date(job.receivedDate).toLocaleDateString()}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-2.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" data-testid={`button-menu-${job.id}`}>
