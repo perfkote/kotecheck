@@ -12,6 +12,19 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Customer Deletion with Orphaned Jobs (November 11, 2025)**
+- Implemented clickable customer cards that navigate to filtered jobs view
+- Changed customer deletion behavior to allow deletion even when jobs exist
+- Database schema updated: jobs.customer_id now nullable with ON DELETE SET NULL constraint
+- When customer is deleted, associated jobs remain with customer_id set to NULL
+- Jobs with deleted customers display "Unknown Customer" with greyed-out (text-muted-foreground) and line-through styling
+- Greyed-out customer names appear consistently across:
+  - Jobs page table and mobile card views
+  - Job details dialog
+  - Dashboard Recent Jobs section
+- Applied schema migration via `npm run db:push --force`
+- Notes table also updated with ON DELETE SET NULL for customer_id (cascades on job deletion)
+
 **Job Listings Optimization (November 11, 2025)**
 - Removed tracking ID from job listings for cleaner, more focused display
 - Jobs page table now shows: Customer, Phone, Coating Type, Items, Price, Status, Date
