@@ -12,6 +12,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Dual Temperature Gauge (November 11, 2025)**
+- Added ceramic vs powder jobs comparison gauge to Analytic Center
+- Displays two side-by-side semi-circular gauges showing job counts
+- Ceramic gauge uses chart-3 (orange/yellow) representing "hot" coating
+- Powder gauge uses chart-2 (teal/cyan) representing "cool" coating
+- Gauges normalize against shared maximum for visual comparison
+- Positioned between monthly revenue chart and recent jobs section
+- Uses Recharts PieChart with 180° to 0° arc configuration
+- Theme-aware colors adapt to light/dark mode via CSS variables
+
 **Dashboard Tiles & Light Mode Colors (November 11, 2025)**
 - Reduced all Analytic Center tiles by 25% (smaller padding, fonts, icons)
 - Updated light mode color scheme:
