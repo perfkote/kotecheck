@@ -58,14 +58,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/customers/:id", async (req, res) => {
     try {
-      // Check if customer has any jobs
-      const jobs = await storage.getJobsByCustomerId(req.params.id);
-      if (jobs.length > 0) {
-        return res.status(400).json({ 
-          error: "Cannot delete customer with existing jobs. Please delete or reassign all jobs first." 
-        });
-      }
-
       const success = await storage.deleteCustomer(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "Customer not found" });
