@@ -22,9 +22,10 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
     { name: "Remaining", value: maxJobs - powderJobs },
   ];
 
-  // Using theme colors - chart-1 (orange) for ceramic, chart-2 (teal/cyan) for powder
-  const ceramicColors = ["hsl(var(--chart-1))", "hsl(var(--muted))"];
-  const powderColors = ["hsl(var(--chart-2))", "hsl(var(--muted))"];
+  // Using theme colors - chart-3 (orange) for ceramic (hot), chart-2 (teal/cyan) for powder (cool)
+  const CERAMIC_COLOR = "hsl(var(--chart-3))";
+  const POWDER_COLOR = "hsl(var(--chart-2))";
+  const MUTED_COLOR = "hsl(var(--muted))";
 
   return (
     <Card className="p-6">
@@ -42,12 +43,11 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
               paddingAngle={2}
               dataKey="value"
             >
-              {ceramicData.map((entry, index) => (
-                <Cell key={`ceramic-${index}`} fill={ceramicColors[index % ceramicColors.length]} />
-              ))}
+              <Cell fill={CERAMIC_COLOR} />
+              <Cell fill={MUTED_COLOR} />
             </Pie>
           </PieChart>
-          <p className="font-semibold mt-2" style={{ color: "hsl(var(--chart-1))" }}>Ceramic Jobs</p>
+          <p className="font-semibold mt-2" style={{ color: CERAMIC_COLOR }}>Ceramic Jobs</p>
           <p className="text-3xl font-bold" data-testid="text-ceramic-count">{ceramicJobs}</p>
         </div>
 
@@ -63,12 +63,11 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
               paddingAngle={2}
               dataKey="value"
             >
-              {powderData.map((entry, index) => (
-                <Cell key={`powder-${index}`} fill={powderColors[index % powderColors.length]} />
-              ))}
+              <Cell fill={POWDER_COLOR} />
+              <Cell fill={MUTED_COLOR} />
             </Pie>
           </PieChart>
-          <p className="font-semibold mt-2" style={{ color: "hsl(var(--chart-2))" }}>Powder Jobs</p>
+          <p className="font-semibold mt-2" style={{ color: POWDER_COLOR }}>Powder Jobs</p>
           <p className="text-3xl font-bold" data-testid="text-powder-count">{powderJobs}</p>
         </div>
       </div>
