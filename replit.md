@@ -12,6 +12,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Job Listings Optimization (November 11, 2025)**
+- Removed tracking ID from job listings for cleaner, more focused display
+- Jobs page table now shows: Customer, Phone, Coating Type, Items, Price, Status, Date
+- Dashboard recent jobs section updated to show customer name as primary identifier
+- Reduced row height (py-2.5 instead of py-4) for more compact listings
+- Tracking ID still available in job details view when viewing/editing individual jobs
+- Mobile card view also updated to remove tracking ID
+
 **Mobile Optimization (November 11, 2025)**
 - Comprehensive mobile optimization across Dashboard and Jobs pages
 - Dashboard mobile improvements:

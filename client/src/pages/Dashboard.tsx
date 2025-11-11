@@ -377,15 +377,14 @@ export default function Dashboard() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium font-mono text-sm">{job.trackingId}</h3>
+                      <h3 className="font-medium text-sm">{job.customerName}</h3>
                       {job.coatingType && (
                         <Badge variant="outline" className="capitalize text-xs">
                           {job.coatingType}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{job.customerName}</p>
-                    <p className="text-xs text-muted-foreground">{job.phoneNumber}</p>
+                    <p className="text-sm text-muted-foreground">{job.phoneNumber}</p>
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right">
