@@ -12,14 +12,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Dual Temperature Gauge (November 11, 2025)**
-- Added ceramic vs powder jobs comparison gauge to Analytic Center
-- Displays two side-by-side semi-circular gauges showing job counts
-- Ceramic gauge uses chart-3 (orange/yellow) representing "hot" coating
-- Powder gauge uses chart-2 (teal/cyan) representing "cool" coating
-- Gauges normalize against shared maximum for visual comparison
+**Dual Temperature Gauge with Needles (November 11, 2025)**
+- Added ceramic vs powder jobs comparison gauge to Analytic Center with speedometer styling
+- Displays two side-by-side gauges with 240° arc sweep (210° to -30°) showing job counts
+- Ceramic gauge uses chart-3 (orange) representing "hot" coating
+- Powder gauge uses chart-2 (teal) representing "cool" coating
+- Enhanced with needle overlays that dynamically rotate based on job count
+  - Needle rotation formula: -120° + (value/maxJobs × 240°)
+  - Smooth 1000ms transition animations
+  - 85px length, 6px width with rounded ends
+- Integrated CountUp animations for numeric displays (2-second duration)
+- Added center hubs (24px diameter) with muted backgrounds
+- Gauges normalize against shared maximum (minimum 100) for visual comparison
 - Positioned between monthly revenue chart and recent jobs section
-- Uses Recharts PieChart with 180° to 0° arc configuration
+- Increased size: inner radius 70px, outer radius 100px with 8px corner radius
+- Unfilled arc portions shown at 30% opacity
+- All elements include data-testid attributes for automated testing
 - Theme-aware colors adapt to light/dark mode via CSS variables
 
 **Dashboard Tiles & Light Mode Colors (November 11, 2025)**
