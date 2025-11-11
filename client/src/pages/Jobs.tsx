@@ -186,7 +186,53 @@ export default function Jobs() {
         </Select>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {filteredJobs.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No jobs found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+          </Card>
+        ) : (
+          filteredJobs.map((job) => (
+            <Card 
+              key={job.id}
+              className="p-4 hover-elevate cursor-pointer"
+              data-testid={`card-job-${job.id}`}
+              onClick={() => setEditingJob(job)}
+            >
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex-1">
+                  <div className="font-mono font-medium text-sm mb-1">{job.trackingId}</div>
+                  <div className="font-medium text-base">{job.customerName}</div>
+                  <div className="text-sm text-muted-foreground">{job.phoneNumber}</div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <StatusBadge status={job.status} type="job" />
+                  <div className="font-semibold text-lg">${Number(job.price).toFixed(2)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                <Badge variant="outline" className="capitalize text-xs">
+                  {job.coatingType}
+                </Badge>
+                <span>•</span>
+                <span>{new Date(job.receivedDate).toLocaleDateString()}</span>
+                {job.items && (
+                  <>
+                    <span>•</span>
+                    <span className="truncate">{job.items}</span>
+                  </>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
