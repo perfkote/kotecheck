@@ -12,8 +12,8 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
   const ceramicJobs = jobs.filter(job => job.coatingType === "ceramic").length;
   const powderJobs = jobs.filter(job => job.coatingType === "powder").length;
   
-  // Use 100 or the higher count as max for better gauge scaling
-  const maxJobs = Math.max(100, ceramicJobs, powderJobs);
+  // Max value is 50 above the highest metric
+  const maxJobs = Math.max(ceramicJobs, powderJobs) + 50;
 
   const createGaugeData = (value: number) => [
     { name: "value", value },
@@ -27,6 +27,7 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
   const CERAMIC_COLOR = "hsl(var(--chart-3))";
   const POWDER_COLOR = "hsl(var(--chart-2))";
   const MUTED_COLOR = "hsl(var(--muted))";
+  const NEEDLE_COLOR = "hsl(var(--foreground))"; // Black needles
 
   // Calculate needle rotation (240 degree sweep from 210° to -30°)
   // At 0 jobs: -120° (pointing left), at maxJobs: 120° (pointing right)
@@ -38,12 +39,21 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
   const ceramicRotation = calculateNeedleRotation(ceramicJobs);
   const powderRotation = calculateNeedleRotation(powderJobs);
 
+  // Generate hash marks for the gauge (ticks along the arc)
+  const generateHashMarks = () => {
+    const marks = [];
+    const totalMarks = 12; // 12 hash marks along the 240° sweep
+    for (let i = 0; i <= totalMarks; i++) {
+      const angle = -120 + (i / totalMarks) * 240; // From -120° to 120°
+      marks.push(angle);
+    }
+    return marks;
+  };
+
+  const hashMarks = generateHashMarks();
+
   return (
     <Card className="p-8">
-      <h2 className="text-2xl font-semibold mb-8 text-center tracking-wide">
-        Performance Metrics
-      </h2>
-
       <div className="flex gap-24 justify-center items-center flex-wrap">
         {/* Ceramic Gauge */}
         <div className="relative flex flex-col items-center" data-testid="gauge-ceramic">
@@ -70,11 +80,24 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
               </Pie>
             </PieChart>
 
+            {/* Hash marks */}
+            {hashMarks.map((angle, idx) => (
+              <div
+                key={`ceramic-hash-${idx}`}
+                className="absolute top-1/2 left-1/2 w-0.5 h-3 origin-bottom"
+                style={{
+                  backgroundColor: NEEDLE_COLOR,
+                  opacity: 0.3,
+                  transform: `translate(-50%, -100px) rotate(${angle}deg)`,
+                }}
+              />
+            ))}
+
             {/* Needle overlay */}
             <div
               className="absolute top-1/2 left-1/2 w-1.5 h-[85px] origin-bottom rounded-full transition-transform duration-1000"
               style={{
-                backgroundColor: CERAMIC_COLOR,
+                backgroundColor: NEEDLE_COLOR,
                 transform: `translate(-50%, -100%) rotate(${ceramicRotation}deg)`,
               }}
               data-rotation={ceramicRotation}
@@ -122,11 +145,24 @@ export default function DualTemperatureGauge({ jobs }: DualTemperatureGaugeProps
               </Pie>
             </PieChart>
 
+            {/* Hash marks */}
+            {hashMarks.map((angle, idx) => (
+              <div
+                key={`powder-hash-${idx}`}
+                className="absolute top-1/2 left-1/2 w-0.5 h-3 origin-bottom"
+                style={{
+                  backgroundColor: NEEDLE_COLOR,
+                  opacity: 0.3,
+                  transform: `translate(-50%, -100px) rotate(${angle}deg)`,
+                }}
+              />
+            ))}
+
             {/* Needle overlay */}
             <div
               className="absolute top-1/2 left-1/2 w-1.5 h-[85px] origin-bottom rounded-full transition-transform duration-1000"
               style={{
-                backgroundColor: POWDER_COLOR,
+                backgroundColor: NEEDLE_COLOR,
                 transform: `translate(-50%, -100%) rotate(${powderRotation}deg)`,
               }}
               data-rotation={powderRotation}
