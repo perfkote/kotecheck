@@ -23,6 +23,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from "recharts";
+import DualTemperatureGauge from "@/components/DualTemperatureGauge";
 
 type TileId = 
   | "total-customers"
@@ -291,6 +292,8 @@ export default function Dashboard() {
           </AreaChart>
         </ResponsiveContainer>
       </Card>
+
+      <DualTemperatureGauge jobs={jobs} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6">
