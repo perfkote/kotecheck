@@ -36,13 +36,18 @@ Preferred communication style: Simple, everyday language.
 - Navigates to Jobs page after successful conversion
 - Status badges on estimates (Draft, Sent, Approved, Rejected, Converted)
 
-**Dashboard Metrics Chart (November 10, 2025)**
-- Added dynamic chart visualization displaying all active dashboard tile metrics
-- Chart uses single-axis BarChart from Recharts with custom tooltips
-- Automatically updates when tiles are enabled/disabled in settings
-- Excludes "Most Common" tile (non-numeric complex data)
-- Shows formatted values in tooltips (currency, days, counts)
-- Metric count displayed in chart header
+**Monthly Revenue Line Graph (November 11, 2025)**
+- Replaced bar chart with eye-catching monthly revenue line graph
+- Shows revenue trends across all 12 months (Jan-Dec) for current year
+- Uses AreaChart from Recharts with gradient fill (teal/cyan chart-2 color)
+- Gradient fades from 80% opacity at top to 10% at bottom
+- Line features 3px stroke with circular data point markers (5px radius)
+- Active hover markers enlarge to 7px with primary color highlight
+- Y-axis formatted with currency ($), X-axis shows month abbreviations
+- Custom tooltips display month, year, and formatted revenue amount
+- Calculates revenue from jobs filtered by receivedDate (current year)
+- Guards against NaN with `Number(job.price || 0)` for missing prices
+- Chart always visible with 350px height in responsive container
 
 ## System Architecture
 
