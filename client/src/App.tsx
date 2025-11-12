@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,6 +18,7 @@ import Services from "@/pages/Services";
 import Estimates from "@/pages/Estimates";
 import Notes from "@/pages/Notes";
 import Users from "@/pages/Users";
+import Profile from "@/pages/Profile";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/estimates" component={Estimates} />
       <Route path="/notes" component={Notes} />
       <Route path="/users" component={Users} />
+      <Route path="/profile" component={Profile} />
     </Switch>
   );
 }
@@ -52,18 +54,22 @@ function AuthenticatedApp() {
           <header className="flex items-center justify-between p-4 border-b gap-4">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="scale-[2]" />
             <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium" data-testid="text-user-name">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-muted-foreground" data-testid="text-user-role">
-                  {user?.role ? getRoleName(user.role) : ""}
-                </p>
-              </div>
-              <Avatar data-testid="avatar-user">
-                <AvatarImage src={user?.profileImageUrl || undefined} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
+              <Link href="/profile">
+                <div className="flex items-center gap-3 cursor-pointer hover-elevate rounded-md p-2" data-testid="link-profile">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-medium" data-testid="text-user-name">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-user-role">
+                      {user?.role ? getRoleName(user.role) : ""}
+                    </p>
+                  </div>
+                  <Avatar data-testid="avatar-user">
+                    <AvatarImage src={user?.profileImageUrl || undefined} />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                </div>
+              </Link>
               <Button
                 variant="ghost"
                 size="icon"

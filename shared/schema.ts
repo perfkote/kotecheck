@@ -25,6 +25,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: text("role").notNull().default("employee"),
   isLocalAdmin: integer("is_local_admin").notNull().default(0),
+  passwordHash: varchar("password_hash"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

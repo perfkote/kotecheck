@@ -9,6 +9,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
 const getOidcConfig = memoize(
@@ -87,28 +88,36 @@ export async function setupAuth(app: Express) {
     { usernameField: 'username', passwordField: 'password' },
     async (username, password, done) => {
       try {
-        // Check if credentials match local admin (case-insensitive username)
-        if (username.toLowerCase() === 'admin' && password === process.env.LOCAL_ADMIN_PASSWORD) {
-          const localAdmin = await storage.getLocalAdmin();
-          if (!localAdmin) {
-            return done(null, false, { message: 'Local admin not configured' });
-          }
-          // Create session for local admin
-          const user = {
-            claims: {
-              sub: localAdmin.id,
-              email: localAdmin.email,
-              first_name: localAdmin.firstName,
-              last_name: localAdmin.lastName,
-              profile_image_url: localAdmin.profileImageUrl,
-              exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 1 week
-            },
-            isLocalAdmin: true,
-            expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
-          };
-          return done(null, user);
+        // Check if username is 'admin' (case-insensitive)
+        if (username.toLowerCase() !== 'admin') {
+          return done(null, false, { message: 'Invalid credentials' });
         }
-        return done(null, false, { message: 'Invalid credentials' });
+
+        const localAdmin = await storage.getLocalAdmin();
+        if (!localAdmin || !localAdmin.passwordHash) {
+          return done(null, false, { message: 'Local admin not configured' });
+        }
+
+        // Verify password against stored hash
+        const isValid = await bcrypt.compare(password, localAdmin.passwordHash);
+        if (!isValid) {
+          return done(null, false, { message: 'Invalid credentials' });
+        }
+
+        // Create session for local admin
+        const user = {
+          claims: {
+            sub: localAdmin.id,
+            email: localAdmin.email,
+            first_name: localAdmin.firstName,
+            last_name: localAdmin.lastName,
+            profile_image_url: localAdmin.profileImageUrl,
+            exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 1 week
+          },
+          isLocalAdmin: true,
+          expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
+        };
+        return done(null, user);
       } catch (error) {
         return done(error);
       }

@@ -83,7 +83,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getLocalAdmin(): Promise<User | undefined>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
-  createLocalAdmin(admin: InsertUser): Promise<User>;
+  createLocalAdmin(admin: InsertUser, passwordHash: string): Promise<User>;
+  updateLocalAdminPassword(passwordHash: string): Promise<User | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -422,16 +423,26 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createLocalAdmin(admin: InsertUser): Promise<User> {
+  async createLocalAdmin(admin: InsertUser, passwordHash: string): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
         ...admin,
         isLocalAdmin: 1,
         role: "admin",
+        passwordHash,
       })
       .returning();
     return user;
+  }
+
+  async updateLocalAdminPassword(passwordHash: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.isLocalAdmin, 1))
+      .returning();
+    return user || undefined;
   }
 }
 
