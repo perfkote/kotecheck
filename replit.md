@@ -12,6 +12,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Customer Metrics & Dashboard Analytics (November 12, 2025)**
+- Redesigned Customers page from card grid to clean table/list layout
+- Added "Customer Since" and "Total Spent" columns to Customers table
+- Made customer rows clickable to open edit dialog directly (not navigate to jobs)
+- Created `/api/customers/metrics` endpoint with SQL aggregation for totalSpent and activeJobsCount
+- Added "Top Customers" section to Dashboard showing top 5 customers by total spent in list format
+- Added "Most Popular Service" metric tile tracking total service quantities
+- Enhanced estimate_services schema with quantity column (integer, default 1) for accurate analytics
+- Fixed Express route ordering: `/api/customers/metrics` now appears before `/api/customers/:id` to prevent 404 errors
+- Most Popular Service query sums quantities from estimate_services (not row counts)
+- Applied schema migration via `npm run db:push --force`
+
 **Customer Deletion with Orphaned Jobs (November 11, 2025)**
 - Implemented clickable customer cards that navigate to filtered jobs view
 - Changed customer deletion behavior to allow deletion even when jobs exist
