@@ -89,14 +89,14 @@ export async function setupAuth(app: Express) {
       try {
         console.log('[AUTH DEBUG] Login attempt:', {
           username,
-          usernameMatch: username === 'admin',
+          usernameMatch: username.toLowerCase() === 'admin',
           passwordLength: password?.length,
           envPasswordLength: process.env.LOCAL_ADMIN_PASSWORD?.length,
           passwordsMatch: password === process.env.LOCAL_ADMIN_PASSWORD,
         });
         
-        // Check if credentials match local admin
-        if (username === 'admin' && password === process.env.LOCAL_ADMIN_PASSWORD) {
+        // Check if credentials match local admin (case-insensitive username)
+        if (username.toLowerCase() === 'admin' && password === process.env.LOCAL_ADMIN_PASSWORD) {
           const localAdmin = await storage.getLocalAdmin();
           if (!localAdmin) {
             console.log('[AUTH DEBUG] Local admin not found in database');
