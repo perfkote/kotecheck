@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
-import coatCheckLogo from "@assets/49617362-2EA2-4D26-B4BB-432F691F436A_1762955195555.PNG";
+import coatCheckLogo from "@assets/49617362-2EA2-4D26-B4BB-432F691F436A_1762955195555.png";
 
 export default function Landing() {
   const { toast } = useToast();
