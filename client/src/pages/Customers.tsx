@@ -5,7 +5,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Customer, InsertCustomer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CustomerForm } from "@/components/CustomerForm";
-import { Plus, Search, Mail, Phone, MapPin, MoreVertical, FileText } from "lucide-react";
+import { Plus, Search, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +27,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+
+interface CustomerWithMetrics extends Customer {
+  totalSpent: number;
+  activeJobsCount: number;
+}
 
 export default function Customers() {
   const [, setLocation] = useLocation();
@@ -37,15 +41,15 @@ export default function Customers() {
   const [sortBy, setSortBy] = useState("name-asc");
   const { toast } = useToast();
 
-  const { data: customers = [], isLoading } = useQuery<Customer[]>({
-    queryKey: ["/api/customers"],
+  const { data: customers = [], isLoading } = useQuery<CustomerWithMetrics[]>({
+    queryKey: ["/api/customers/metrics"],
   });
 
   const createMutation = useMutation({
     mutationFn: (data: InsertCustomer) =>
       apiRequest("POST", "/api/customers", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/metrics"] });
       setIsDialogOpen(false);
       toast({
         title: "Success",
@@ -65,7 +69,7 @@ export default function Customers() {
     mutationFn: ({ id, data }: { id: string; data: InsertCustomer }) =>
       apiRequest("PATCH", `/api/customers/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/metrics"] });
       setEditingCustomer(null);
       toast({
         title: "Success",
@@ -85,7 +89,7 @@ export default function Customers() {
     mutationFn: (id: string) =>
       apiRequest("DELETE", `/api/customers/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/metrics"] });
       toast({
         title: "Success",
         description: "Customer deleted successfully",
@@ -176,16 +180,40 @@ export default function Customers() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="border rounded-md">
+        {/* Header Row */}
+        <div className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_auto] gap-4 p-4 bg-muted/50 border-b font-medium text-sm">
+          <div>Name</div>
+          <div>Contact</div>
+          <div>Customer Since</div>
+          <div>Total Spent</div>
+          <div>Active Jobs</div>
+          <div className="w-12"></div>
+        </div>
+
+        {/* Customer Rows */}
         {filteredCustomers.map((customer) => (
-          <Card 
-            key={customer.id} 
-            className="p-6 hover-elevate cursor-pointer transition-all" 
-            data-testid={`card-customer-${customer.id}`}
-            onClick={() => setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`)}
+          <div
+            key={customer.id}
+            className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_auto] gap-4 p-4 border-b last:border-b-0 hover-elevate cursor-pointer transition-all"
+            data-testid={`row-customer-${customer.id}`}
+            onClick={() => setEditingCustomer(customer)}
           >
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-lg font-medium">{customer.name}</h3>
+            <div className="font-medium">{customer.name}</div>
+            <div className="text-sm text-muted-foreground">
+              <div>{customer.phone || '—'}</div>
+              {customer.email && <div className="text-xs">{customer.email}</div>}
+            </div>
+            <div className="text-sm">
+              {new Date(customer.createdAt).toLocaleDateString()}
+            </div>
+            <div className="text-sm font-medium">
+              ${customer.totalSpent.toFixed(2)}
+            </div>
+            <div className="text-sm">
+              {customer.activeJobsCount}
+            </div>
+            <div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" data-testid={`button-menu-${customer.id}`}>
@@ -224,34 +252,7 @@ export default function Customers() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            
-            <div className="space-y-3">
-              {customer.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{customer.email}</span>
-                </div>
-              )}
-              {customer.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{customer.phone}</span>
-                </div>
-              )}
-              {customer.address && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{customer.address}</span>
-                </div>
-              )}
-              {customer.projectList && (
-                <div className="flex items-start gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <span className="text-muted-foreground whitespace-pre-wrap">{customer.projectList}</span>
-                </div>
-              )}
-            </div>
-          </Card>
+          </div>
         ))}
       </div>
 

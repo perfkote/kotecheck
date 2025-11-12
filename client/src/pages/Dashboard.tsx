@@ -32,7 +32,8 @@ type TileId =
   | "total-revenue"
   | "avg-job-length"
   | "avg-job-price"
-  | "most-common-product";
+  | "most-common-product"
+  | "most-popular-service";
 
 const DEFAULT_TILES: TileId[] = [
   "total-customers",
@@ -40,6 +41,7 @@ const DEFAULT_TILES: TileId[] = [
   "completed-jobs",
   "total-revenue",
   "most-common-product",
+  "most-popular-service",
 ];
 
 export default function Dashboard() {
@@ -75,12 +77,25 @@ export default function Dashboard() {
     localStorage.setItem("analytic-center-tiles", JSON.stringify(newTiles));
   };
 
+  interface CustomerWithMetrics extends Customer {
+    totalSpent: number;
+    activeJobsCount: number;
+  }
+
+  const { data: customersWithMetrics = [] } = useQuery<CustomerWithMetrics[]>({
+    queryKey: ["/api/customers/metrics"],
+  });
+
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
   });
 
   const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
+  });
+
+  const { data: popularService } = useQuery<{serviceId: string | null; serviceName: string; usageCount: number} | null>({
+    queryKey: ["/api/analytics/most-popular-service"],
   });
 
   const activeJobs = jobs.filter(j => j.status === "in-progress" || j.status === "pending");
@@ -178,6 +193,14 @@ export default function Dashboard() {
         ? topCoatingTypes.map(t => `${t.type} (${t.count})`).join("  •  ")
         : "N/A",
       icon: Package,
+    },
+    {
+      id: "most-popular-service" as TileId,
+      title: "Most Popular Service",
+      value: popularService
+        ? `${popularService.serviceName} (${popularService.usageCount})`
+        : "N/A",
+      icon: Sparkles,
     },
   ];
 
@@ -350,6 +373,58 @@ export default function Dashboard() {
             />
           </AreaChart>
         </ResponsiveContainer>
+      </Card>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-medium flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Top Customers
+          </h2>
+          <Link href="/customers">
+            <Button variant="outline" size="sm" data-testid="button-view-all-customers">
+              View All
+            </Button>
+          </Link>
+        </div>
+        <div className="border rounded-md">
+          {/* Header Row */}
+          <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-4 p-3 bg-muted/50 border-b font-medium text-xs">
+            <div>Name</div>
+            <div>Customer Since</div>
+            <div>Total Spent</div>
+            <div>Active Jobs</div>
+          </div>
+          {/* Customer Rows */}
+          {customersWithMetrics
+            .sort((a, b) => b.totalSpent - a.totalSpent)
+            .slice(0, 5)
+            .map((customer) => (
+              <Link key={customer.id} href="/customers">
+                <div
+                  className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-4 p-3 border-b last:border-b-0 hover-elevate cursor-pointer transition-all text-sm"
+                  data-testid={`row-dashboard-customer-${customer.id}`}
+                >
+                  <div className="font-medium truncate">{customer.name}</div>
+                  <div className="text-muted-foreground">
+                    {new Date(customer.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="font-medium">
+                    ${customer.totalSpent.toFixed(2)}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {customer.activeJobsCount}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          {customersWithMetrics.length === 0 && (
+            <div className="text-center py-8">
+              <Users className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground text-sm">No customers yet</p>
+            </div>
+          )}
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

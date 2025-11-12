@@ -21,6 +21,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/customers/metrics", async (req, res) => {
+    try {
+      const customers = await storage.getCustomersWithMetrics();
+      res.json(customers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch customer metrics" });
+    }
+  });
+
   app.get("/api/customers/:id", async (req, res) => {
     try {
       const customer = await storage.getCustomer(req.params.id);
@@ -253,6 +262,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete service" });
+    }
+  });
+
+  app.get("/api/analytics/most-popular-service", async (req, res) => {
+    try {
+      const service = await storage.getMostPopularService();
+      if (!service) {
+        return res.status(204).send();
+      }
+      res.json(service);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service analytics" });
     }
   });
 

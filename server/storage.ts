@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "./db";
 import { 
   customers,
@@ -21,9 +21,21 @@ import {
   type InsertNote 
 } from "@shared/schema";
 
+export interface CustomerWithMetrics extends Customer {
+  totalSpent: number;
+  activeJobsCount: number;
+}
+
+export interface PopularService {
+  serviceId: string | null;
+  serviceName: string;
+  usageCount: number;
+}
+
 export interface IStorage {
   getCustomer(id: string): Promise<Customer | undefined>;
   getAllCustomers(): Promise<Customer[]>;
+  getCustomersWithMetrics(): Promise<CustomerWithMetrics[]>;
   findCustomerByName(name: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
@@ -42,6 +54,7 @@ export interface IStorage {
   createService(service: InsertService): Promise<Service>;
   updateService(id: string, service: Partial<InsertService>): Promise<Service | undefined>;
   deleteService(id: string): Promise<boolean>;
+  getMostPopularService(): Promise<PopularService | null>;
 
   getEstimate(id: string): Promise<Estimate | undefined>;
   getAllEstimates(): Promise<Estimate[]>;
@@ -69,6 +82,36 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCustomers(): Promise<Customer[]> {
     return await db.select().from(customers);
+  }
+
+  async getCustomersWithMetrics(): Promise<CustomerWithMetrics[]> {
+    const rows = await db
+      .select({
+        id: customers.id,
+        name: customers.name,
+        email: customers.email,
+        phone: customers.phone,
+        address: customers.address,
+        projectList: customers.projectList,
+        createdAt: customers.createdAt,
+        totalSpent: sql<string>`coalesce(sum(${jobs.price}), '0')`,
+        activeJobsCount: sql<number>`coalesce(sum(case when ${jobs.status} != 'completed' then 1 else 0 end), 0)`,
+      })
+      .from(customers)
+      .leftJoin(jobs, eq(jobs.customerId, customers.id))
+      .groupBy(customers.id, customers.name, customers.email, customers.phone, customers.address, customers.projectList, customers.createdAt);
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      address: row.address,
+      projectList: row.projectList,
+      createdAt: row.createdAt,
+      totalSpent: parseFloat(row.totalSpent) || 0,
+      activeJobsCount: Number(row.activeJobsCount) || 0,
+    }));
   }
 
   async findCustomerByName(name: string): Promise<Customer | undefined> {
@@ -221,6 +264,30 @@ export class DatabaseStorage implements IStorage {
   async deleteService(id: string): Promise<boolean> {
     const result = await db.delete(services).where(eq(services.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getMostPopularService(): Promise<PopularService | null> {
+    const [row] = await db
+      .select({
+        serviceId: services.id,
+        serviceName: sql<string>`coalesce(${services.name}, ${estimateServices.serviceName})`,
+        usageCount: sql<number>`coalesce(sum(${estimateServices.quantity}), 0)`,
+      })
+      .from(estimateServices)
+      .leftJoin(services, eq(estimateServices.serviceId, services.id))
+      .groupBy(services.id, services.name, estimateServices.serviceName)
+      .orderBy(desc(sql`coalesce(sum(${estimateServices.quantity}), 0)`))
+      .limit(1);
+
+    if (!row || row.usageCount === 0 || !row.serviceName) {
+      return null;
+    }
+
+    return {
+      serviceId: row.serviceId,
+      serviceName: row.serviceName,
+      usageCount: Number(row.usageCount),
+    };
   }
 
   async getEstimate(id: string): Promise<Estimate | undefined> {

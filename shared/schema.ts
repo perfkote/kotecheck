@@ -53,6 +53,7 @@ export const estimateServices = pgTable("estimate_services", {
   serviceId: varchar("service_id").notNull().references(() => services.id),
   serviceName: text("service_name").notNull(),
   servicePrice: numeric("service_price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
