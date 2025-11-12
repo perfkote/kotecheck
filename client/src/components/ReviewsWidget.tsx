@@ -13,17 +13,18 @@ const reviews: Review[] = [
   {stars:"⭐⭐⭐⭐⭐", text:"expert pipe polishers.", name:"— Todd P., Orlando"},
   {stars:"⭐⭐⭐☆☆", text:"my husband left me because my engine wasn't hot enough.", name:"— Lisa from Accounts Payable"},
   {stars:"⭐⭐⭐⭐⭐", text:"I get alot of attention from other guys , so that's something .", name:"— Kyle L."},
-  {stars:"⭐⭐⭐⭐⭐", text:"Dropped off my headers. Got it back shiny , it was being mined in Africa ", name:"— Steve '2-Bar' Johnson"},
+  {stars:"⭐⭐☆☆☆", text:"The owner referred to me as Harry Potter , and told me to go suck on a goblet of fire…still don't know what that means", name:"— Harry P."},
+  {stars:"⭐⭐⭐⭐⭐", text:"Dropped off my headers. Got it back so shiny , it was being mined in Africa", name:"— Steve '2-Bar' Johnson"},
   {stars:"⭐⭐☆☆☆", text:"owner made derogatory remarks about my EV", name:"— Dan R."},
   {stars:"⭐⭐⭐⭐⭐", text:"Hard and veiny. The perfect powder coat.", name:"— Chad V."},
-  {stars:"⭐⭐⭐⭐⭐", text:"Got my pipes coated. Now I can see my future in the reflection. It's mostly debt, but still shiny.", name:"— Brent T."},
-  {stars:"⭐⭐⭐⭐⭐", text:"The ad said  hot singles in my area . 10/10 would do again ", name:"— Rick 'The Bolt Guy' M."},
+  {stars:"⭐⭐⭐⭐⭐", text:"Got my pipes coated. Now I can see my future in the reflection. And for some reason I'm wearing women's clothes", name:"— Brent T."},
+  {stars:"⭐⭐⭐⭐⭐", text:"The ad said  hot singles in my area . 10/10 would do again", name:"— Rick 'The Bolt Guy' M."},
   {stars:"⭐⭐⭐⭐⭐", text:"forget the coating, they have a hole in the bathroom wall", name:"— Bill D."},
-  {stars:"⭐⭐⭐⭐⭐", text:"Before Performance Kote: depression. After Performance Kote: still depression, but shinier.", name:"— Matt L."},
-  {stars:"⭐⭐⭐⭐⭐", text:"Headers came back so polished my check engine light turned itself off.", name:"— Zach W."},
-  {stars:"⭐⭐⭐⭐⭐", text:"They told me to 'let it cure.' I thought they meant emotionally. Turns out, both worked.", name:"— Kyle B."},
-  {stars:"⭐⭐⭐⭐⭐", text:"The shop smells like power and broken dreams. Five stars.", name:"— Jason L."},
-  {stars:"⭐⭐⭐⭐⭐", text:"They said it was heat resistant. It survived my mother-in-law's visit.", name:"— Terry K."}
+  {stars:"⭐⭐⭐⭐⭐", text:"Before Performance Kote: depression. After Performance Kote: still depression, but I can watch myself cry in the headers.", name:"— Matt L."},
+  {stars:"⭐⭐⭐⭐⭐", text:"was initially disappointed when I found out the Rim Job, wasn't for my wheels", name:"— Zach W."},
+  {stars:"⭐⭐⭐⭐⭐", text:"great place ever since they got rid of the midget and the idiot", name:"— Kyle B."},
+  {stars:"⭐⭐⭐⭐⭐", text:"does everyone else get the private shower or am I just special ?.", name:"— Jason L."},
+  {stars:"⭐⭐⭐⭐⭐", text:"forget the headers, put a bun in this oven! What a stud !.", name:"— Kimmi K."}
 ];
 
 export function ReviewsWidget() {
