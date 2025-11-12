@@ -391,6 +391,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Don't allow OAuth users to take over local admin account
+    if (userData.email === "admin@coatcheck.local") {
+      const localAdmin = await this.getLocalAdmin();
+      if (localAdmin && localAdmin.id !== userData.id) {
+        throw new Error("Cannot create OAuth user with local admin email");
+      }
+    }
+
     const [user] = await db
       .insert(users)
       .values(userData)
