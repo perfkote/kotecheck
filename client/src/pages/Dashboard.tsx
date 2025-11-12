@@ -273,7 +273,7 @@ export default function Dashboard() {
             </Button>
           </Link>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {recentJobs.length === 0 ? (
             <div className="text-center py-12">
               <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
@@ -284,11 +284,11 @@ export default function Dashboard() {
             recentJobs.map((job) => (
               <div 
                 key={job.id} 
-                className="flex items-center justify-between gap-4 p-4 border rounded-lg hover-elevate transition-all"
+                className="flex items-center justify-between gap-4 p-2.5 border rounded-lg hover-elevate transition-all"
                 data-testid={`card-job-${job.id}`}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2">
                     <h3 className={`font-medium text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
                       {job.customerName}
                     </h3>
@@ -298,7 +298,6 @@ export default function Dashboard() {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">{job.phoneNumber}</p>
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="text-right">
