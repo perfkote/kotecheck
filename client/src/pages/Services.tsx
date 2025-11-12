@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Service, InsertService } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { canCreateServices } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -35,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { MoneyInput } from "@/components/MoneyInput";
 
 export default function Services() {
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const { toast } = useToast();
@@ -141,10 +144,12 @@ export default function Services() {
           <h1 className="text-3xl font-semibold">Service Management</h1>
           <p className="text-muted-foreground mt-1">Manage pricing for powder coating, ceramic coating, and prep services</p>
         </div>
-        <Button onClick={handleNew} data-testid="button-new-service">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Service
-        </Button>
+        {canCreateServices(user) && (
+          <Button onClick={handleNew} data-testid="button-new-service">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Service
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -185,14 +190,16 @@ export default function Services() {
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(service.id)}
-                          data-testid={`button-delete-${service.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {canCreateServices(user) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => deleteMutation.mutate(service.id)}
+                            data-testid={`button-delete-${service.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

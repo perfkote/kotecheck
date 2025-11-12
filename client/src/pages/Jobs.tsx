@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Job, Customer, CreateJobWithCustomer } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { canCreateJobs, canDeleteJobs } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
   const [location] = useLocation();
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
@@ -160,10 +163,12 @@ export default function Jobs() {
           <h1 className="text-3xl font-semibold">Jobs</h1>
           <p className="text-muted-foreground mt-1">Track and manage all your jobs</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-job">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Job
-        </Button>
+        {canCreateJobs(user) && (
+          <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-job">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Job
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 flex-wrap">
@@ -344,13 +349,15 @@ export default function Jobs() {
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive" 
-                            data-testid="menu-delete"
-                            onClick={() => setDeletingJob(job)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
+                          {canDeleteJobs(user) && (
+                            <DropdownMenuItem 
+                              className="text-destructive" 
+                              data-testid="menu-delete"
+                              onClick={() => setDeletingJob(job)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

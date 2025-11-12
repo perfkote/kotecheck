@@ -34,11 +34,15 @@ export default function Users() {
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      return await apiRequest(`/api/users/${userId}/role`, {
+      const response = await fetch(`/api/users/${userId}/role`, {
         method: "PATCH",
         body: JSON.stringify({ role }),
         headers: { "Content-Type": "application/json" },
       });
+      if (!response.ok) {
+        throw new Error("Failed to update role");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });

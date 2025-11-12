@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Customer, InsertCustomer } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { canCreateCustomers } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,6 +37,7 @@ interface CustomerWithMetrics extends Customer {
 
 export default function Customers() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,10 +153,12 @@ export default function Customers() {
           <h1 className="text-3xl font-semibold">Customers</h1>
           <p className="text-muted-foreground mt-1">Manage your customer database</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} data-testid="button-add-customer">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Customer
-        </Button>
+        {canCreateCustomers(user) && (
+          <Button onClick={() => setIsDialogOpen(true)} data-testid="button-add-customer">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Customer
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 flex-wrap">
@@ -239,16 +244,18 @@ export default function Customers() {
                   >
                     View Jobs
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-destructive" 
-                    data-testid="menu-delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteMutation.mutate(customer.id);
-                    }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
+                  {canCreateCustomers(user) && (
+                    <DropdownMenuItem 
+                      className="text-destructive" 
+                      data-testid="menu-delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMutation.mutate(customer.id);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

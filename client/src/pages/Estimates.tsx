@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Estimate, Service, InsertEstimate, Job } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { canCreateEstimates } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -17,6 +19,7 @@ import { EstimateForm } from "@/components/EstimateForm";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Estimates() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -109,10 +112,12 @@ export default function Estimates() {
               Manage Services
             </Button>
           </Link>
-          <Button onClick={() => setIsDialogOpen(true)} data-testid="button-new-estimate">
-            <Plus className="w-4 h-4 mr-2" />
-            New Estimate
-          </Button>
+          {canCreateEstimates(user) && (
+            <Button onClick={() => setIsDialogOpen(true)} data-testid="button-new-estimate">
+              <Plus className="w-4 h-4 mr-2" />
+              New Estimate
+            </Button>
+          )}
         </div>
       </div>
 
@@ -149,10 +154,12 @@ export default function Estimates() {
                     Manage Services
                   </Button>
                 </Link>
-                <Button onClick={() => setIsDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Estimate
-                </Button>
+                {canCreateEstimates(user) && (
+                  <Button onClick={() => setIsDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Estimate
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
