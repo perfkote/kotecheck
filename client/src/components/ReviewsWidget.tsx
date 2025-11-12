@@ -54,21 +54,22 @@ export function ReviewsWidget() {
 
   return (
     <Card 
-      className="p-6 text-center transition-opacity duration-1000"
+      className="p-3 sm:p-6 text-center transition-opacity duration-1000"
       style={{ opacity: fadeOut ? 0 : 1 }}
       data-testid="card-reviews-widget"
     >
-      <div className="text-2xl mb-3" data-testid="text-review-stars">
+      <div className="text-xl sm:text-2xl mb-2 sm:mb-3" data-testid="text-review-stars">
         {currentReview.stars}
       </div>
-      <div className="text-base leading-relaxed mb-3" data-testid="text-review-content">
+      <div className="text-sm sm:text-base leading-snug sm:leading-relaxed mb-2 sm:mb-3" data-testid="text-review-content">
         "{currentReview.text}"
       </div>
-      <div className="text-sm text-muted-foreground mb-4" data-testid="text-review-author">
+      <div className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4" data-testid="text-review-author">
         {currentReview.name}
       </div>
       <Button 
-        variant="secondary" 
+        variant="secondary"
+        size="sm"
         onClick={handleFakeReview}
         data-testid="button-write-review"
       >
