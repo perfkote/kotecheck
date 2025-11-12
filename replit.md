@@ -1,247 +1,35 @@
-# Coat Check - Coating Job Management System
-
 ## Overview
 
-Coat Check is a comprehensive coating job management application designed for coating businesses to track customers, jobs, estimates, and notes. The system provides a clean, productivity-focused interface for managing coating operations with features for customer relationship management, job tracking with coating types, estimate creation, and internal note-taking.
-
-The application follows a modern full-stack architecture with a React frontend and Express backend, utilizing PostgreSQL for data persistence.
+Coat Check is a comprehensive coating job management application designed for coating businesses. It provides a clean, productivity-focused interface for tracking customers, jobs, estimates, and notes. The system supports customer relationship management, detailed job tracking with various coating types, efficient estimate creation, and internal note-taking. The application aims to streamline operations and enhance productivity for coating businesses.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes
-
-**Powder Services Import (November 12, 2025)**
-- Imported 18 powder coating services from CSV (Performance Kote pricing)
-- Services include automotive and motorcycle parts (carbs, intakes, Harley components)
-- Price range: $50 (headlight buckets) to $600 (brake calipers with brackets)
-- All services categorized as "powder" and available in Estimates section
-- Import script created at `scripts/import-powder-services.ts` for future bulk imports
-
-**Dashboard Compact Job Listings (November 12, 2025)**
-- Removed phone numbers from dashboard job listings (shown only on Jobs page)
-- Reduced job card padding from p-4 to p-2.5 for more compact display
-- Reduced spacing between jobs from space-y-3 to space-y-2
-- Job listings now show: customer name, coating type, price, date, and status
-
-**Reviews Widget Randomization (November 12, 2025)**
-- Reviews now display in random order on each page load
-- Changed rotation interval from 30 seconds to 10 seconds for faster cycling
-- Updated to 15 hilarious customer reviews with varying star ratings
-- Reviews shuffle using `Math.random()` for unpredictable sequence
-
-**Customer Metrics & Dashboard Analytics (November 12, 2025)**
-- Redesigned Customers page from card grid to clean table/list layout
-- Added "Customer Since" and "Total Spent" columns to Customers table
-- Made customer rows clickable to open edit dialog directly (not navigate to jobs)
-- Created `/api/customers/metrics` endpoint with SQL aggregation for totalSpent and activeJobsCount
-- Added "Top Customers" section to Dashboard showing top 5 customers by total spent in list format
-- Added "Most Popular Service" metric tile tracking total service quantities
-- Enhanced estimate_services schema with quantity column (integer, default 1) for accurate analytics
-- Fixed Express route ordering: `/api/customers/metrics` now appears before `/api/customers/:id` to prevent 404 errors
-- Most Popular Service query sums quantities from estimate_services (not row counts)
-- Applied schema migration via `npm run db:push --force`
-
-**Customer Deletion with Orphaned Jobs (November 11, 2025)**
-- Implemented clickable customer cards that navigate to filtered jobs view
-- Changed customer deletion behavior to allow deletion even when jobs exist
-- Database schema updated: jobs.customer_id now nullable with ON DELETE SET NULL constraint
-- When customer is deleted, associated jobs remain with customer_id set to NULL
-- Jobs with deleted customers display "Unknown Customer" with greyed-out (text-muted-foreground) and line-through styling
-- Greyed-out customer names appear consistently across:
-  - Jobs page table and mobile card views
-  - Job details dialog
-  - Dashboard Recent Jobs section
-- Applied schema migration via `npm run db:push --force`
-- Notes table also updated with ON DELETE SET NULL for customer_id (cascades on job deletion)
-
-**Job Listings Optimization (November 11, 2025)**
-- Removed tracking ID from job listings for cleaner, more focused display
-- Jobs page table now shows: Customer, Phone, Coating Type, Items, Price, Status, Date
-- Dashboard recent jobs section updated to show customer name as primary identifier
-- Reduced row height (py-2.5 instead of py-4) for more compact listings
-- Tracking ID still available in job details view when viewing/editing individual jobs
-- Mobile card view also updated to remove tracking ID
-
-**Mobile Optimization (November 11, 2025)**
-- Comprehensive mobile optimization across Dashboard and Jobs pages
-- Dashboard mobile improvements:
-  - Header stacks vertically on mobile with responsive typography (2xl/3xl)
-  - Weather widget repositioned below header on mobile devices
-  - Stat tiles use 2-column grid on mobile with smaller fonts (xl/2xl/3xl)
-  - Revenue chart reduces to 250px height on mobile (vs 350px desktop)
-  - Dual temperature gauge scales to 180x180px on mobile (vs 220x220px desktop)
-  - Hash marks hidden on mobile for cleaner gauge appearance
-- Jobs page mobile card view:
-  - Table hidden on mobile (<768px), replaced with card-based layout
-  - Cards show essential info: tracking ID, customer, phone, status, price
-  - Coating type and date displayed as inline badges
-  - Keyboard accessible (Enter/Space keys) with role="button" semantics
-  - Tap to open job edit dialog
-- StatsCard component responsive padding and icon sizing
-- Consistent Tailwind breakpoints (sm: 640px, md: 768px) throughout
-
-**Dual Temperature Gauge with Needles (November 11, 2025)**
-- Added ceramic vs powder jobs comparison gauge to Analytic Center with speedometer styling
-- Displays two side-by-side gauges with 240° arc sweep (210° to -30°) showing job counts
-- Ceramic gauge arc uses chart-3 (orange) representing "hot" coating
-- Powder gauge arc uses chart-2 (teal) representing "cool" coating
-- Enhanced with black needle overlays that dynamically rotate based on job count
-  - Needle rotation formula: -120° + (value/maxJobs × 240°)
-  - Smooth 1000ms transition animations
-  - 85px length, 6px width with rounded ends
-  - Black/foreground color for universal visibility
-- Added 12 hash marks along the gauge sweep for precision reading
-  - 3px tall, 0.5px wide, 30% opacity
-  - Evenly distributed from -120° to +120°
-  - Black color matching needles
-- Integrated CountUp animations for numeric displays (2-second duration)
-- Added center hubs (24px diameter) with muted backgrounds
-- Dynamic max value: 50 above highest metric (replaces fixed 100 minimum)
-- Positioned between metric tiles and monthly revenue chart
-- No title on card (removed "Performance Metrics")
-- Increased size: inner radius 70px, outer radius 100px with 8px corner radius
-- Unfilled arc portions shown at 30% opacity
-- All elements include data-testid attributes for automated testing
-- Theme-aware colors adapt to light/dark mode via CSS variables
-- Dashboard order: Tiles → Gauges → Revenue Chart → Recent Jobs
-
-**Dashboard Tiles & Light Mode Colors (November 11, 2025)**
-- Reduced all Analytic Center tiles by 25% (smaller padding, fonts, icons)
-- Updated light mode color scheme:
-  - Sidebar: Changed to dark grey (25% lightness) with light text for contrast
-  - Main background: Changed to very light grey (97% lightness, almost white)
-  - Cards: White background to stand out against light grey canvas
-  - Improved contrast ratios for better readability
-
-**Analytic Center Rename & Reviews Widget (November 12, 2025)**
-- Renamed "Dashboard" to "Analytic Center" throughout application (page title, sidebar, settings, charts)
-- Added humorous customer reviews widget cycling through satirical testimonials
-- Reviews widget displays rotating 5-star reviews with fade transitions every 30 seconds
-- Contains 14 different comedic reviews with varying star ratings (editable in `client/src/components/ReviewsWidget.tsx`)
-- Includes interactive "Write a Review" button with playful toast notification
-- Responsive design: shown in header on desktop, separate section on mobile with compact styling
-- Compact mobile layout: reduced padding (p-3), smaller text, tighter spacing for better space utilization
-- Migrated localStorage key from "dashboard-tiles" to "analytic-center-tiles" with automatic preference migration
-- Dashboard layout reorganized: Reviews → Newest 10 Jobs → Metric Tiles → Graphs (temperature gauge + revenue chart)
-
-**Estimate to Job Conversion (November 11, 2025)**
-- Added "Convert to Job" button on estimate cards
-- Backend endpoint creates jobs from estimates with automatic customer lookup/creation
-- Coating type inference from service categories (powder/ceramic/both)
-- Status tracking prevents duplicate conversions
-- Navigates to Jobs page after successful conversion
-- Status badges on estimates (Draft, Sent, Approved, Rejected, Converted)
-
-**Monthly Revenue Line Graph (November 11, 2025)**
-- Replaced bar chart with eye-catching monthly revenue line graph
-- Shows revenue trends across all 12 months (Jan-Dec) for current year
-- Uses AreaChart from Recharts with gradient fill (teal/cyan chart-2 color)
-- Gradient fades from 80% opacity at top to 10% at bottom
-- Line features 3px stroke with circular data point markers (5px radius)
-- Active hover markers enlarge to 7px with primary color highlight
-- Y-axis formatted with currency ($), X-axis shows month abbreviations
-- Custom tooltips display month, year, and formatted revenue amount
-- Calculates revenue from jobs filtered by receivedDate (current year)
-- Guards against NaN with `Number(job.price || 0)` for missing prices
-- Chart always visible with 350px height in responsive container
-
 ## System Architecture
 
 ### Frontend Architecture
 
-**Framework & Tooling**
-- **React** with TypeScript for type-safe component development
-- **Vite** as the build tool and development server
-- **Wouter** for lightweight client-side routing
-- **TanStack Query** (React Query) for server state management and data fetching
-
-**UI Component System**
-- **shadcn/ui** component library with Radix UI primitives
-- **Tailwind CSS** for utility-first styling
-- Custom design system based on Linear and Material Design principles (documented in `design_guidelines.md`)
-- Consistent spacing primitives (2, 4, 6, 8) and typography hierarchy
-- Inter font family for all UI elements
-
-**State Management Approach**
-- Server state managed via TanStack Query with aggressive caching (`staleTime: Infinity`)
-- No global client state - forms use React Hook Form with local state
-- Query invalidation pattern for optimistic updates after mutations
-
-**Form Handling**
-- React Hook Form for form state and validation
-- Zod schemas (shared between client and server) for validation
-- `@hookform/resolvers` for Zod integration
+The frontend is built with **React** and **TypeScript**, using **Vite** for tooling. **Wouter** handles client-side routing, and **TanStack Query** manages server state with aggressive caching. UI components are based on **shadcn/ui** and **Radix UI primitives**, styled with **Tailwind CSS**. Forms are managed with **React Hook Form** and validated using **Zod schemas** shared with the backend.
 
 ### Backend Architecture
 
-**Server Framework**
-- **Express.js** with TypeScript
-- Custom middleware for request logging and JSON parsing
-- RESTful API design pattern
-
-**API Structure**
-- Resource-based endpoints (`/api/customers`, `/api/jobs`, `/api/estimates`, `/api/notes`)
-- Standard HTTP methods (GET, POST, PATCH, DELETE)
-- Zod schema validation for request bodies using shared schemas
-- Consistent error handling with appropriate status codes
-
-**Data Access Layer**
-- Storage abstraction via `IStorage` interface
-- `DatabaseStorage` implementation provides all CRUD operations
-- Separation of concerns between routes and data access logic
+The backend is built with **Express.js** and **TypeScript**, providing a **RESTful API** design. It includes custom middleware for logging and JSON parsing. API endpoints are resource-based and utilize **Zod schema validation** for request bodies. A `DatabaseStorage` implementation handles all CRUD operations, separating data access logic from routes. Authentication and role-based access control are implemented using **Replit Auth** with OAuth support and a custom permission system (Admin, Manager, Employee, Read-Only roles). Secure session management is handled via `connect-pg-simple`.
 
 ### Database Architecture
 
-**ORM & Schema**
-- **Drizzle ORM** for type-safe database operations
-- Schema defined in `shared/schema.ts` for code sharing between client and server
-- Automatic TypeScript type generation from database schema
+The application uses **PostgreSQL** with **Drizzle ORM** for type-safe database operations. The schema, defined in `shared/schema.ts`, includes tables for `customers`, `jobs`, `services`, `estimates`, `estimate_services`, `notes`, `users`, and `sessions`. Relationships include jobs linked to customers, many-to-many between estimates and services via `estimate_services`, and notes linked to jobs or customers. **Shared Zod schemas** generated from Drizzle ensure consistent data validation across the stack.
 
-**Database Schema**
-- **customers**: Core customer information (name, email, phone, address)
-- **jobs**: Work orders linked to customers with status and priority tracking
-- **services**: Reusable service definitions with pricing (categories: powder, ceramic, prep)
-- **estimates**: Service-based financial quotes with customer info and dates
-- **estimate_services**: Junction table linking estimates to services (stores service snapshot)
-- **notes**: Text notes linked to either jobs or customers
+### UI/UX Decisions
 
-**Relationships**
-- Jobs reference customers (many-to-one)
-- Estimates contain customer name and phone directly (denormalized for flexibility)
-- Estimate services reference estimates and services (many-to-many via junction table)
-- Notes reference either jobs or customers (many-to-one)
+The design follows principles similar to Linear and Material Design, using consistent spacing and typography with the Inter font family. The application supports both light and dark modes with theme-aware colors. Mobile optimization is a key focus, providing responsive layouts for dashboards and job listings, transitioning to card-based views on smaller screens. Key features like a dual temperature gauge, monthly revenue line graph, and a customer reviews widget enhance the user experience.
 
-**Data Validation**
-- Shared Zod schemas generated from Drizzle tables using `drizzle-zod`
-- Single source of truth for validation rules
-- Type safety from database to UI
+## External Dependencies
 
-### External Dependencies
-
-**Database Service**
-- **Neon Serverless PostgreSQL** via `@neondatabase/serverless`
-- WebSocket-based connection pooling for serverless environments
-- Connection string configured via `DATABASE_URL` environment variable
-
-**UI Component Libraries**
-- **Radix UI**: Headless, accessible component primitives (dialogs, dropdowns, menus, etc.)
-- **Lucide React**: Icon system
-- **date-fns**: Date formatting and manipulation
-- **embla-carousel-react**: Carousel/slider functionality
-
-**Development Tools**
-- **Replit-specific plugins**: Development banner, error overlay, and cartographer for enhanced development experience
-- **tsx**: TypeScript execution for development server
-- **esbuild**: Production build bundling for server code
-
-**Styling Dependencies**
-- **Tailwind CSS**: Utility-first CSS framework
-- **class-variance-authority**: Type-safe component variants
-- **tailwind-merge**: Intelligent class merging via `cn` utility
-
-**Type Safety**
-- TypeScript throughout the entire stack
-- Shared types between client and server via `shared/` directory
-- Path aliases for clean imports (`@/`, `@shared/`)
+*   **Database Service**: Neon Serverless PostgreSQL (`@neondatabase/serverless`)
+*   **UI Component Libraries**: Radix UI, Lucide React, embla-carousel-react
+*   **Date Handling**: date-fns
+*   **Styling**: Tailwind CSS, class-variance-authority, tailwind-merge
+*   **Development Tools**: Replit-specific plugins (development banner, error overlay, cartographer), tsx, esbuild
+*   **Authentication**: Replit Auth
+```
