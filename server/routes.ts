@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { isAuthenticated, isManagerOrAbove, isAdmin } from "./replitAuth";
 import { 
   insertCustomerSchema, 
   insertJobSchema, 
@@ -11,8 +12,48 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Customer routes
-  app.get("/api/customers", async (req, res) => {
+  // User info endpoint - for checking current user
+  app.get("/api/user", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const dbUser = await storage.getUser(user.claims.sub);
+      if (!dbUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(dbUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // User management routes (admin only)
+  app.get("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/users/:id/role", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (!["admin", "manager", "employee", "read-only"].includes(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+      const user = await storage.updateUserRole(req.params.id, role);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user role" });
+    }
+  });
+
+  // Customer routes (read requires auth, write requires manager+)
+  app.get("/api/customers", isAuthenticated, async (req, res) => {
     try {
       const customers = await storage.getAllCustomers();
       res.json(customers);
@@ -21,7 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customers/metrics", async (req, res) => {
+  app.get("/api/customers/metrics", isAuthenticated, async (req, res) => {
     try {
       const customers = await storage.getCustomersWithMetrics();
       res.json(customers);
@@ -30,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customers/:id", async (req, res) => {
+  app.get("/api/customers/:id", isAuthenticated, async (req, res) => {
     try {
       const customer = await storage.getCustomer(req.params.id);
       if (!customer) {
@@ -42,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/customers", async (req, res) => {
+  app.post("/api/customers", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertCustomerSchema.parse(req.body);
       const customer = await storage.createCustomer(validated);
@@ -52,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/customers/:id", async (req, res) => {
+  app.patch("/api/customers/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertCustomerSchema.partial().parse(req.body);
       const customer = await storage.updateCustomer(req.params.id, validated);
@@ -65,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/customers/:id", async (req, res) => {
+  app.delete("/api/customers/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteCustomer(req.params.id);
       if (!success) {
@@ -77,8 +118,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Job routes
-  app.get("/api/jobs", async (req, res) => {
+  // Job routes (read: all auth, write: manager+, update: employee+)
+  app.get("/api/jobs", isAuthenticated, async (req, res) => {
     try {
       const customerId = req.query.customerId as string | undefined;
       const jobs = customerId
@@ -90,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/jobs/:id", async (req, res) => {
+  app.get("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -102,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/jobs", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const { createJobWithCustomerSchema } = await import("@shared/schema");
       const validated = createJobWithCustomerSchema.parse(req.body);
@@ -152,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/jobs/:id", async (req, res) => {
+  app.patch("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       const validated = insertJobSchema.partial().parse(req.body);
       const job = await storage.updateJob(req.params.id, validated);
@@ -165,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/jobs/:id", async (req, res) => {
+  app.delete("/api/jobs/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteJob(req.params.id);
       if (!success) {
@@ -177,8 +218,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Service routes
-  app.get("/api/services", async (req, res) => {
+  // Service routes (read: all auth, write: manager+)
+  app.get("/api/services", isAuthenticated, async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
       const services = category
@@ -190,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/services/:id", async (req, res) => {
+  app.get("/api/services/:id", isAuthenticated, async (req, res) => {
     try {
       const service = await storage.getService(req.params.id);
       if (!service) {
@@ -202,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/services", async (req, res) => {
+  app.post("/api/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertServiceSchema.parse(req.body);
       
@@ -226,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/services/:id", async (req, res) => {
+  app.patch("/api/services/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertServiceSchema.partial().parse(req.body);
       
@@ -253,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/services/:id", async (req, res) => {
+  app.delete("/api/services/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteService(req.params.id);
       if (!success) {
@@ -265,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/most-popular-service", async (req, res) => {
+  app.get("/api/analytics/most-popular-service", isAuthenticated, async (req, res) => {
     try {
       const service = await storage.getMostPopularService();
       if (!service) {
@@ -277,8 +318,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Estimate routes
-  app.get("/api/estimates", async (req, res) => {
+  // Estimate routes (read: all auth, write: manager+)
+  app.get("/api/estimates", isAuthenticated, async (req, res) => {
     try {
       const estimates = await storage.getAllEstimates();
       res.json(estimates);
@@ -287,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/estimates/:id", async (req, res) => {
+  app.get("/api/estimates/:id", isAuthenticated, async (req, res) => {
     try {
       const estimate = await storage.getEstimate(req.params.id);
       if (!estimate) {
@@ -299,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/estimates", async (req, res) => {
+  app.post("/api/estimates", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertEstimateSchema.parse(req.body);
       const estimate = await storage.createEstimate(validated);
@@ -309,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/estimates/:id", async (req, res) => {
+  app.patch("/api/estimates/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertEstimateSchema.partial().parse(req.body);
       const estimate = await storage.updateEstimate(req.params.id, validated);
@@ -322,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/estimates/:id", async (req, res) => {
+  app.delete("/api/estimates/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteEstimate(req.params.id);
       if (!success) {
@@ -334,8 +375,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Estimate Services routes
-  app.get("/api/estimates/:estimateId/services", async (req, res) => {
+  // Estimate Services routes (read: all auth, write: manager+)
+  app.get("/api/estimates/:estimateId/services", isAuthenticated, async (req, res) => {
     try {
       const services = await storage.getEstimateServices(req.params.estimateId);
       res.json(services);
@@ -344,7 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/estimates/:estimateId/services", async (req, res) => {
+  app.post("/api/estimates/:estimateId/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertEstimateServiceSchema.parse({
         ...req.body,
@@ -369,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/estimates/:estimateId/services/:serviceId", async (req, res) => {
+  app.delete("/api/estimates/:estimateId/services/:serviceId", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.removeEstimateService(req.params.serviceId);
       if (!success) {
@@ -393,8 +434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Convert estimate to job
-  app.post("/api/estimates/:id/convert-to-job", async (req, res) => {
+  // Convert estimate to job (manager+)
+  app.post("/api/estimates/:id/convert-to-job", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const estimateId = req.params.id;
       
@@ -467,8 +508,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Note routes
-  app.get("/api/notes", async (req, res) => {
+  // Note routes (read: all auth, create: all auth, delete: manager+)
+  app.get("/api/notes", isAuthenticated, async (req, res) => {
     try {
       const jobId = req.query.jobId as string | undefined;
       const customerId = req.query.customerId as string | undefined;
@@ -487,7 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/notes", async (req, res) => {
+  app.post("/api/notes", isAuthenticated, async (req, res) => {
     try {
       const validated = insertNoteSchema.parse(req.body);
       const note = await storage.createNote(validated);
@@ -497,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/notes/:id", async (req, res) => {
+  app.delete("/api/notes/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteNote(req.params.id);
       if (!success) {
