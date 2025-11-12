@@ -44,10 +44,15 @@ const DEFAULT_TILES: TileId[] = [
   "most-popular-service",
 ];
 
+type JobWithCustomer = Job & {
+  customerName: string;
+  customerDeleted: boolean;
+};
+
 export default function Dashboard() {
   const [visibleTiles, setVisibleTiles] = useState<TileId[]>(DEFAULT_TILES);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [viewingJob, setViewingJob] = useState<Job | null>(null);
+  const [viewingJob, setViewingJob] = useState<JobWithCustomer | null>(null);
 
   useEffect(() => {
     // Migrate old dashboard-tiles to new analytic-center-tiles key
