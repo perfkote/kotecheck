@@ -100,10 +100,12 @@ Preferred communication style: Simple, everyday language.
 - Renamed "Dashboard" to "Analytic Center" throughout application (page title, sidebar, settings, charts)
 - Added humorous customer reviews widget cycling through satirical testimonials
 - Reviews widget displays rotating 5-star reviews with fade transitions every 30 seconds
-- Contains 14 different comedic reviews with varying star ratings
-- Includes interactive "Write a Review" button with playful alert message
-- Responsive design: shown in header on desktop, separate section on mobile
+- Contains 14 different comedic reviews with varying star ratings (editable in `client/src/components/ReviewsWidget.tsx`)
+- Includes interactive "Write a Review" button with playful toast notification
+- Responsive design: shown in header on desktop, separate section on mobile with compact styling
+- Compact mobile layout: reduced padding (p-3), smaller text, tighter spacing for better space utilization
 - Migrated localStorage key from "dashboard-tiles" to "analytic-center-tiles" with automatic preference migration
+- Dashboard layout reorganized: Reviews → Newest 10 Jobs → Metric Tiles → Graphs (temperature gauge + revenue chart)
 
 **Estimate to Job Conversion (November 11, 2025)**
 - Added "Convert to Job" button on estimate cards

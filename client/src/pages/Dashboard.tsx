@@ -139,7 +139,7 @@ export default function Dashboard() {
 
   const recentJobs = jobs
     .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime())
-    .slice(0, 5)
+    .slice(0, 10)
     .map(job => {
       const customer = customers.find(c => c.id === job.customerId);
       return {
@@ -260,6 +260,62 @@ export default function Dashboard() {
         <ReviewsWidget />
       </div>
 
+      {/* Recent Jobs Section */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-medium flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Newest Jobs
+          </h2>
+          <Link href="/jobs">
+            <Button variant="outline" size="sm" data-testid="button-view-all-jobs">
+              View All
+            </Button>
+          </Link>
+        </div>
+        <div className="space-y-3">
+          {recentJobs.length === 0 ? (
+            <div className="text-center py-12">
+              <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">No jobs yet</p>
+              <p className="text-sm text-muted-foreground">Create your first job to get started</p>
+            </div>
+          ) : (
+            recentJobs.map((job) => (
+              <div 
+                key={job.id} 
+                className="flex items-center justify-between gap-4 p-4 border rounded-lg hover-elevate transition-all"
+                data-testid={`card-job-${job.id}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className={`font-medium text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                      {job.customerName}
+                    </h3>
+                    {job.coatingType && (
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {job.coatingType}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{job.phoneNumber}</p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <div className="text-right">
+                    <p className="font-semibold">${Number(job.price).toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(job.receivedDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <StatusBadge status={job.status} type="job" />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* Metric Tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
         {visibleTileData.map((tile) => (
           <StatsCard 
@@ -273,6 +329,7 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Graphs Section */}
       <DualTemperatureGauge jobs={jobs} />
 
       <Card className="p-4 sm:p-6">
@@ -374,156 +431,6 @@ export default function Dashboard() {
           </AreaChart>
         </ResponsiveContainer>
       </Card>
-
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-medium flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Top Customers
-          </h2>
-          <Link href="/customers">
-            <Button variant="outline" size="sm" data-testid="button-view-all-customers">
-              View All
-            </Button>
-          </Link>
-        </div>
-        <div className="border rounded-md">
-          {/* Header Row */}
-          <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-4 p-3 bg-muted/50 border-b font-medium text-xs">
-            <div>Name</div>
-            <div>Customer Since</div>
-            <div>Total Spent</div>
-            <div>Active Jobs</div>
-          </div>
-          {/* Customer Rows */}
-          {customersWithMetrics
-            .sort((a, b) => b.totalSpent - a.totalSpent)
-            .slice(0, 5)
-            .map((customer) => (
-              <Link key={customer.id} href="/customers">
-                <div
-                  className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr] gap-4 p-3 border-b last:border-b-0 hover-elevate cursor-pointer transition-all text-sm"
-                  data-testid={`row-dashboard-customer-${customer.id}`}
-                >
-                  <div className="font-medium truncate">{customer.name}</div>
-                  <div className="text-muted-foreground">
-                    {new Date(customer.createdAt).toLocaleDateString()}
-                  </div>
-                  <div className="font-medium">
-                    ${customer.totalSpent.toFixed(2)}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {customer.activeJobsCount}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          {customersWithMetrics.length === 0 && (
-            <div className="text-center py-8">
-              <Users className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground text-sm">No customers yet</p>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-medium flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              Recent Jobs
-            </h2>
-            <Link href="/jobs">
-              <Button variant="outline" size="sm" data-testid="button-view-all-jobs">
-                View All
-              </Button>
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {recentJobs.length === 0 ? (
-              <div className="text-center py-12">
-                <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">No jobs yet</p>
-                <p className="text-sm text-muted-foreground">Create your first job to get started</p>
-              </div>
-            ) : (
-              recentJobs.map((job) => (
-                <div 
-                  key={job.id} 
-                  className="flex items-center justify-between gap-4 p-4 border rounded-lg hover-elevate transition-all"
-                  data-testid={`card-job-${job.id}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={`font-medium text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
-                        {job.customerName}
-                      </h3>
-                      {job.coatingType && (
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {job.coatingType}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{job.phoneNumber}</p>
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-right">
-                      <p className="font-semibold">${Number(job.price).toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(job.receivedDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <StatusBadge status={job.status} type="job" />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-xl font-medium mb-6">Quick Actions</h2>
-          <div className="space-y-3">
-            <Link href="/jobs">
-              <Button className="w-full justify-start" variant="outline" data-testid="button-create-job">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Job
-              </Button>
-            </Link>
-            <Link href="/customers">
-              <Button className="w-full justify-start" variant="outline" data-testid="button-add-customer">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Customer
-              </Button>
-            </Link>
-            <Link href="/estimates">
-              <Button className="w-full justify-start" variant="outline" data-testid="button-new-estimate">
-                <Plus className="w-4 h-4 mr-2" />
-                New Estimate
-              </Button>
-            </Link>
-          </div>
-          
-          <div className="mt-8 pt-6 border-t">
-            <h3 className="text-sm font-medium mb-4">Coating Types</h3>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Powder</span>
-                <Badge variant="secondary">{jobs.filter(j => j.coatingType && j.coatingType === "powder").length}</Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Ceramic</span>
-                <Badge variant="secondary">{jobs.filter(j => j.coatingType && j.coatingType === "ceramic").length}</Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Both</span>
-                <Badge variant="secondary">{jobs.filter(j => j.coatingType && j.coatingType === "both").length}</Badge>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
 
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <DialogContent>
