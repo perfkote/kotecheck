@@ -59,7 +59,7 @@ export default function Landing() {
             <img 
               src={coatCheckLogo} 
               alt="Coat Check" 
-              className="h-32 w-auto"
+              className="h-64 w-auto"
               data-testid="img-logo"
             />
           </div>
