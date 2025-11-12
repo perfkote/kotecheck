@@ -1,4 +1,4 @@
-import { Users, Briefcase, FileText, StickyNote, LayoutDashboard, Settings } from "lucide-react";
+import { Users, Briefcase, FileText, StickyNote, LayoutDashboard, Settings, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useIsAdmin } from "@/hooks/useAuth";
 import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
 
 const items = [
@@ -48,6 +49,7 @@ const items = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const isAdmin = useIsAdmin();
 
   return (
     <Sidebar>
@@ -73,6 +75,16 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/users"}>
+                    <Link href="/users" data-testid="link-users">
+                      <Shield />
+                      <span>Users</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
