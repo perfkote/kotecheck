@@ -1,7 +1,33 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, numeric, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, numeric, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Session storage table for Replit Auth
+// Reference: blueprint:javascript_log_in_with_replit
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table for Replit Auth with role-based permissions
+// Reference: blueprint:javascript_log_in_with_replit
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: text("role").notNull().default("employee"),
+  isLocalAdmin: integer("is_local_admin").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -175,3 +201,22 @@ export type EstimateService = typeof estimateServices.$inferSelect;
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;
+
+// User types - Reference: blueprint:javascript_log_in_with_replit
+export const insertUserSchema = createInsertSchema(users).omit({
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  role: z.enum(["admin", "manager", "employee", "read-only"]).default("employee"),
+});
+
+export const upsertUserSchema = createInsertSchema(users).omit({
+  role: true,
+  isLocalAdmin: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
