@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import coatCheckLogo from "@assets/49617362-2EA2-4D26-B4BB-432F691F436A_1762955195555.PNG";
 
 export default function Landing() {
   const { toast } = useToast();
@@ -54,7 +55,14 @@ export default function Landing() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold">Coat Check</CardTitle>
+          <div className="flex justify-center mb-2">
+            <img 
+              src={coatCheckLogo} 
+              alt="Coat Check" 
+              className="h-32 w-auto"
+              data-testid="img-logo"
+            />
+          </div>
           <CardDescription className="text-base">
             Coating Shop Management System
           </CardDescription>
