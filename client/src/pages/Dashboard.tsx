@@ -47,6 +47,7 @@ const DEFAULT_TILES: TileId[] = [
 export default function Dashboard() {
   const [visibleTiles, setVisibleTiles] = useState<TileId[]>(DEFAULT_TILES);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [viewingJob, setViewingJob] = useState<Job | null>(null);
 
   useEffect(() => {
     // Migrate old dashboard-tiles to new analytic-center-tiles key
@@ -284,7 +285,8 @@ export default function Dashboard() {
             recentJobs.map((job) => (
               <div 
                 key={job.id} 
-                className="flex items-center justify-between gap-4 p-2.5 border rounded-lg hover-elevate transition-all"
+                className="flex items-center justify-between gap-4 p-2.5 border rounded-lg hover-elevate transition-all cursor-pointer"
+                onClick={() => setViewingJob(job)}
                 data-testid={`card-job-${job.id}`}
               >
                 <div className="flex-1 min-w-0">
@@ -430,6 +432,86 @@ export default function Dashboard() {
           </AreaChart>
         </ResponsiveContainer>
       </Card>
+
+      <Dialog open={!!viewingJob} onOpenChange={(open) => !open && setViewingJob(null)}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-job-details">
+          <DialogHeader>
+            <DialogTitle>Job Details</DialogTitle>
+          </DialogHeader>
+          {viewingJob && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Tracking ID</p>
+                  <p className="font-mono font-semibold" data-testid="detail-tracking-id">{viewingJob.trackingId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <StatusBadge status={viewingJob.status} type="job" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Customer</p>
+                  <p 
+                    className={`font-medium ${viewingJob.customerId === null ? 'text-muted-foreground line-through' : ''}`}
+                    data-testid="detail-customer"
+                  >
+                    {viewingJob.customerName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
+                  <p data-testid="detail-phone">{viewingJob.phoneNumber}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Coating Type</p>
+                  <Badge variant="outline" className="capitalize">
+                    {viewingJob.coatingType}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Price</p>
+                  <p className="font-semibold text-lg" data-testid="detail-price">
+                    ${Number(viewingJob.price).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Received Date</p>
+                  <p data-testid="detail-received-date">
+                    {new Date(viewingJob.receivedDate).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              {viewingJob.items && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Items</p>
+                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-items">
+                    {viewingJob.items}
+                  </p>
+                </div>
+              )}
+
+              {viewingJob.detailedNotes && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Detailed Notes</p>
+                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-notes">
+                    {viewingJob.detailedNotes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <DialogContent>
