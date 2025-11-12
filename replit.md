@@ -12,6 +12,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**Powder Services Import (November 12, 2025)**
+- Imported 18 powder coating services from CSV (Performance Kote pricing)
+- Services include automotive and motorcycle parts (carbs, intakes, Harley components)
+- Price range: $50 (headlight buckets) to $600 (brake calipers with brackets)
+- All services categorized as "powder" and available in Estimates section
+- Import script created at `scripts/import-powder-services.ts` for future bulk imports
+
+**Dashboard Compact Job Listings (November 12, 2025)**
+- Removed phone numbers from dashboard job listings (shown only on Jobs page)
+- Reduced job card padding from p-4 to p-2.5 for more compact display
+- Reduced spacing between jobs from space-y-3 to space-y-2
+- Job listings now show: customer name, coating type, price, date, and status
+
+**Reviews Widget Randomization (November 12, 2025)**
+- Reviews now display in random order on each page load
+- Changed rotation interval from 30 seconds to 10 seconds for faster cycling
+- Updated to 15 hilarious customer reviews with varying star ratings
+- Reviews shuffle using `Math.random()` for unpredictable sequence
+
 **Customer Metrics & Dashboard Analytics (November 12, 2025)**
 - Redesigned Customers page from card grid to clean table/list layout
 - Added "Customer Since" and "Total Spent" columns to Customers table
