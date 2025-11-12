@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Customer, Job } from "@shared/schema";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import { WeatherWidget } from "@/components/WeatherWidget";
+import { ReviewsWidget } from "@/components/ReviewsWidget";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -234,7 +234,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
           <div className="hidden sm:block">
-            <WeatherWidget />
+            <ReviewsWidget />
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -255,9 +255,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Mobile weather widget */}
+      {/* Mobile reviews widget */}
       <div className="sm:hidden">
-        <WeatherWidget />
+        <ReviewsWidget />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-3 sm:gap-4 md:gap-6">

@@ -96,13 +96,14 @@ Preferred communication style: Simple, everyday language.
   - Cards: White background to stand out against light grey canvas
   - Improved contrast ratios for better readability
 
-**Analytic Center Rename & Weather Widget (November 11, 2025)**
+**Analytic Center Rename & Reviews Widget (November 12, 2025)**
 - Renamed "Dashboard" to "Analytic Center" throughout application (page title, sidebar, settings, charts)
-- Added live Orlando, FL weather widget displaying temperature and humidity
-- Weather widget shows trend arrows (up/down/stable) based on 3-hour comparison
-- Uses Open-Meteo API (free, no API key required) with 5-minute auto-refresh
+- Added humorous customer reviews widget cycling through satirical testimonials
+- Reviews widget displays rotating 5-star reviews with fade transitions every 30 seconds
+- Contains 14 different comedic reviews with varying star ratings
+- Includes interactive "Write a Review" button with playful alert message
+- Responsive design: shown in header on desktop, separate section on mobile
 - Migrated localStorage key from "dashboard-tiles" to "analytic-center-tiles" with automatic preference migration
-- Weather widget includes error handling and loading states
 
 **Estimate to Job Conversion (November 11, 2025)**
 - Added "Convert to Job" button on estimate cards
