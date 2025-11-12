@@ -28,6 +28,7 @@ const reviews: Review[] = [
 ];
 
 export function ReviewsWidget() {
+  const [shuffledReviews] = useState(() => [...reviews].sort(() => Math.random() - 0.5));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
   const { toast } = useToast();
@@ -36,15 +37,15 @@ export function ReviewsWidget() {
     const interval = setInterval(() => {
       setFadeOut(true);
       setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % reviews.length);
+        setCurrentIndex((prev) => (prev + 1) % shuffledReviews.length);
         setFadeOut(false);
       }, 1000);
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [shuffledReviews.length]);
 
-  const currentReview = reviews[currentIndex];
+  const currentReview = shuffledReviews[currentIndex];
 
   const handleFakeReview = () => {
     toast({
