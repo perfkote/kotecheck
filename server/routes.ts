@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { isAuthenticated, isManagerOrAbove, isAdmin } from "./replitAuth";
+import { isAuthenticated, isManagerOrAbove, isEmployeeOrAbove, isAdmin } from "./replitAuth";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { 
@@ -207,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/jobs", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.post("/api/jobs", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const { createJobWithCustomerSchema } = await import("@shared/schema");
       const validated = createJobWithCustomerSchema.parse(req.body);
@@ -270,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/jobs/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.delete("/api/jobs/:id", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteJob(req.params.id);
       if (!success) {
@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/estimates", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.post("/api/estimates", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const validated = insertEstimateSchema.parse(req.body);
       const estimate = await storage.createEstimate(validated);
@@ -414,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/estimates/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.patch("/api/estimates/:id", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const validated = insertEstimateSchema.partial().parse(req.body);
       const estimate = await storage.updateEstimate(req.params.id, validated);
@@ -427,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/estimates/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.delete("/api/estimates/:id", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteEstimate(req.params.id);
       if (!success) {
@@ -449,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/estimates/:estimateId/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.post("/api/estimates/:estimateId/services", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const validated = insertEstimateServiceSchema.parse({
         ...req.body,
@@ -474,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/estimates/:estimateId/services/:serviceId", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.delete("/api/estimates/:estimateId/services/:serviceId", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const success = await storage.removeEstimateService(req.params.serviceId);
       if (!success) {
@@ -499,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Convert estimate to job (manager+)
-  app.post("/api/estimates/:id/convert-to-job", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.post("/api/estimates/:id/convert-to-job", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const estimateId = req.params.id;
       

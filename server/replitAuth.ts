@@ -273,3 +273,17 @@ export const isManagerOrAbove: RequestHandler = async (req, res, next) => {
   
   next();
 };
+
+export const isEmployeeOrAbove: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+  if (!user?.claims?.sub) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  const dbUser = await storage.getUser(user.claims.sub);
+  if (!dbUser || (!["admin", "manager", "employee"].includes(dbUser.role) && !dbUser.isLocalAdmin)) {
+    return res.status(403).json({ message: "Forbidden: Employee, Manager, or Admin access required" });
+  }
+  
+  next();
+};
