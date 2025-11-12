@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated, isManagerOrAbove, isAdmin } from "./replitAuth";
+import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
 import { 
   insertCustomerSchema, 
   insertJobSchema, 
@@ -12,6 +14,15 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Rate limiter for password reset - 5 attempts per 15 minutes per IP
+  const passwordResetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 requests per window
+    message: { error: "Too many password reset attempts. Please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   // User info endpoint - for checking current user
   app.get("/api/user", isAuthenticated, async (req, res) => {
     try {
@@ -49,6 +60,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to update user role" });
+    }
+  });
+
+  // Password reset endpoint (local admin only)
+  app.post("/api/auth/reset-password", passwordResetLimiter, isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { currentPassword, newPassword } = req.body;
+
+      // Validate input
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current password and new password are required" });
+      }
+
+      // Check if user is local admin
+      const dbUser = await storage.getUser(user.claims.sub);
+      if (!dbUser || !dbUser.isLocalAdmin) {
+        return res.status(403).json({ error: "Password reset is only available for local admin users" });
+      }
+
+      // Verify current password
+      const localAdmin = await storage.getLocalAdmin();
+      if (!localAdmin || !localAdmin.passwordHash) {
+        return res.status(500).json({ error: "Local admin configuration error" });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, localAdmin.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Validate new password strength
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "New password must be at least 8 characters long" });
+      }
+
+      // Hash new password
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await storage.updateLocalAdminPassword(newPasswordHash);
+
+      // Force session regeneration for security
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+        }
+      });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ error: "Failed to reset password" });
     }
   });
 
