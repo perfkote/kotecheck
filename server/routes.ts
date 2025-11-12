@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/jobs/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/jobs/:id", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const validated = insertJobSchema.partial().parse(req.body);
       const job = await storage.updateJob(req.params.id, validated);
