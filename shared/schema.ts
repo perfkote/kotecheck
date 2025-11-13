@@ -67,8 +67,10 @@ export const estimates = pgTable("estimates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
+  serviceType: text("service_type").notNull(),
   date: timestamp("date").notNull().defaultNow(),
   desiredFinishDate: timestamp("desired_finish_date"),
+  notes: text("notes"),
   total: numeric("total", { precision: 10, scale: 2 }).notNull().default("0"),
   status: text("status").notNull().default("draft"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -104,7 +106,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   createdAt: true,
 }).extend({
   receivedDate: z.coerce.date().optional(),
-  coatingType: z.enum(["powder", "ceramic", "both"]),
+  coatingType: z.enum(["powder", "ceramic", "misc"]),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
@@ -121,6 +123,7 @@ export const insertEstimateSchema = createInsertSchema(estimates).omit({
   createdAt: true,
   total: true,
 }).extend({
+  serviceType: z.enum(["powder", "ceramic", "misc"]),
   date: z.coerce.date().optional(),
   desiredFinishDate: z.coerce.date().optional(),
 });
