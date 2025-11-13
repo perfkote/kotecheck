@@ -4,27 +4,36 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
-### Username/Password Authentication System (Latest)
+### Username/Password Authentication System (Latest - November 13, 2025)
 - **Complete Authentication Redesign**: Replaced Replit OAuth with simple username/password authentication
   - **Login System**: Clean login page with username/password form using shadcn components
   - **Session Management**: Secure sessions with PostgreSQL storage via `connect-pg-simple`
   - **Password Security**: Bcrypt hashing with salt rounds of 10
-  - **User Roles**: Simplified to two roles - Admin (full access) and Manager (estimates only)
+  - **Username Handling**: Case-insensitive lookups (LOWER() comparison in SQL)
+  - **User Roles**: Two roles - Admin (full access) and Manager (estimates + services read-only)
   - **Default Role**: New users default to "admin" role
-  - **Login Credentials**: Initial admin account - username: `admin`, password: `admin`
+  - **Test Users**: 
+    - Admin: username=`admin`, password=`admin` (case-insensitive)
+    - Manager: username=`manager`, password=`manager` (case-insensitive)
   
 - **Backend Implementation**:
   - Created `SessionUser` type (`{id, username, role}`) for frontend state
   - Separated API validation type (`InsertUser` with password) from storage type (`NewUserInsert` with passwordHash)
   - Authentication endpoints: `POST /api/login`, `POST /api/logout`, `GET /api/user`
   - Role-based middleware: `isAuthenticated`, `isAdmin`, `isManagerOrAbove`
-  - Permission matrix enforced on all API routes
+  - Permission matrix enforced on all API routes:
+    - **Admin only**: Customers, Jobs, Notes, Users, Services (POST/PATCH/DELETE), Convert-to-job
+    - **Manager+**: Estimates (full CRUD), Services (GET read-only)
 
 - **Frontend Integration**:
   - Updated `useAuth()` hook with login/logout mutations and SessionUser typing
   - Created dedicated `/login` page replacing Landing page for unauthenticated users
   - Updated header to display username (2-character initials for avatar)
   - Removed dependencies on firstName, lastName, profileImageUrl fields
+  - **ProtectedRoute**: Shows AccessDenied page for unauthorized access (no redirects)
+  - **Services Page**: Strict read-only UI for managers (all edit/delete controls hidden)
+  - **Sidebar**: Dynamically filters menu items based on user role
+  - **401 Handling**: Returns null instead of throwing error to prevent loading screen bugs
 
 ### Mobile Optimization
 - **Comprehensive Mobile Responsiveness**: All pages now fully optimized for mobile devices with consistent patterns:
@@ -46,8 +55,6 @@ Coat Check is a comprehensive coating job management application designed for co
 - **Jobs Page UX**: Job row clicks now show full details dialog instead of opening edit mode. Edit action moved to 3-dot dropdown menu for cleaner interaction.
 - **Customer Metrics**: Added "Total Jobs" column to Customer page showing complete job count (not just active jobs). Backend updated to return totalJobsCount metric.
 - **Jobs Page Sorting**: Non-closed jobs (status !== 'finished' and !== 'paid') now appear at top of list, sorted by newest date first. Closed jobs follow below, also sorted by newest date first.
-- **Employee Access Restrictions**: Employees can only access the estimates page. All other pages (dashboard, customers, jobs, services, notes, users) are restricted to managers and admins with frontend route guards and backend API protections.
-- **Default User Role**: New users default to "employee" role via database schema.
 - **Coating Type Standardization**: Updated all forms and backend to use "misc" instead of "both" for mixed coating jobs.
 - **UI Improvements**: All dropdown placeholders changed to "Select" for consistency.
 
@@ -63,13 +70,11 @@ The frontend is built with **React** and **TypeScript**, using **Vite** for tool
 
 ### Backend Architecture
 
-The backend is built with **Express.js** and **TypeScript**, providing a **RESTful API** design. It includes custom middleware for logging and JSON parsing. API endpoints are resource-based and utilize **Zod schema validation** for request bodies. A `DatabaseStorage` implementation handles all CRUD operations, separating data access logic from routes. Authentication and role-based access control are implemented using **Replit Auth** with OAuth support and a custom permission system:
-- **Admin**: Full access to all features including user management
-- **Manager**: Access to dashboard, customers, jobs, services, estimates, and notes
-- **Employee**: Access only to estimates (create, view, edit, delete)
-- **Read-Only**: View-only access (not currently implemented)
+The backend is built with **Express.js** and **TypeScript**, providing a **RESTful API** design. It includes custom middleware for logging and JSON parsing. API endpoints are resource-based and utilize **Zod schema validation** for request bodies. A `DatabaseStorage` implementation handles all CRUD operations, separating data access logic from routes. Authentication and role-based access control are implemented using **username/password authentication** with bcrypt hashing and a two-role permission system:
+- **Admin**: Full access to all features including user management, customers, jobs, services (full CRUD), estimates, and notes
+- **Manager**: Access to estimates (full CRUD) and services (read-only view only)
 
-Route protection is enforced via middleware (isAuthenticated, isManagerOrAbove, isEmployeeOrAbove, isAdmin) with frontend route guards redirecting unauthorized users. Secure session management is handled via `connect-pg-simple`.
+Route protection is enforced via middleware (`isAuthenticated`, `isAdmin`, `isManagerOrAbove`) with frontend route guards showing AccessDenied page for unauthorized access. Secure session management is handled via `connect-pg-simple`.
 
 ### Database Architecture
 
