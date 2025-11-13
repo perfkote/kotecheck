@@ -28,13 +28,19 @@ import { X } from "lucide-react";
 
 const formSchema = insertEstimateSchema.extend({
   serviceIds: z.array(z.string()).min(1, "At least one service is required"),
-  total: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
+  total: z.union([z.string(), z.number()]).transform(val => String(val)).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
+// Type for form submission that includes serviceIds
+type EstimateFormSubmission = Omit<FormData, 'serviceType'> & {
+  serviceType: "powder" | "ceramic" | "misc";
+  serviceIds: string[];
+};
+
 interface EstimateFormProps {
-  onSubmit: (data: FormData) => void;
+  onSubmit: (data: EstimateFormSubmission) => void;
   onCancel: () => void;
 }
 
@@ -73,7 +79,7 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
   // Update total field when service total changes (unless manually edited)
   useEffect(() => {
     if (selectedServices.length > 0 && !form.getValues("total")) {
-      form.setValue("total", serviceTotal);
+      form.setValue("total", String(serviceTotal));
     }
   }, [serviceTotal, selectedServices.length, form]);
 
@@ -91,7 +97,7 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
   const availableServices = services.filter(s => !selectedServices.includes(s.id));
 
   const handleSubmit = (data: FormData) => {
-    onSubmit(data);
+    onSubmit(data as EstimateFormSubmission);
   };
 
   return (

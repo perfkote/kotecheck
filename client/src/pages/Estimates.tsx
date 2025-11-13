@@ -30,8 +30,11 @@ export default function Estimates() {
   });
 
 
+  // Type for estimate creation with serviceIds
+  type EstimateCreationData = InsertEstimate & { serviceIds: string[] };
+
   const createMutation = useMutation({
-    mutationFn: async (estimate: InsertEstimate & { serviceIds: string[]; total?: number }) => {
+    mutationFn: async (estimate: EstimateCreationData) => {
       const estimateResponse = await apiRequest("POST", "/api/estimates", estimate);
       const newEstimate: Estimate = await estimateResponse.json();
       return newEstimate;
@@ -71,7 +74,7 @@ export default function Estimates() {
     },
   });
 
-  const handleSubmit = (data: InsertEstimate & { serviceIds: string[]; total?: number }) => {
+  const handleSubmit = (data: EstimateCreationData) => {
     createMutation.mutate(data);
   };
 
