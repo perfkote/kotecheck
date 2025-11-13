@@ -21,7 +21,6 @@ import {
   type Note, 
   type InsertNote,
   type User,
-  type UpsertUser,
   type InsertUser
 } from "@shared/schema";
 
@@ -78,14 +77,13 @@ export interface IStorage {
   createNote(note: InsertNote): Promise<Note>;
   deleteNote(id: string): Promise<boolean>;
 
-  // User operations - Reference: blueprint:javascript_log_in_with_replit
+  // User operations - Simple username/password authentication
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
-  getLocalAdmin(): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
-  createLocalAdmin(admin: InsertUser, passwordHash: string): Promise<User>;
-  updateLocalAdminPassword(passwordHash: string): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -387,73 +385,45 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  // User operations - Reference: blueprint:javascript_log_in_with_replit
+  // User operations - Simple username/password authentication
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    // Don't allow OAuth users to take over local admin account
-    if (userData.email === "admin@coatcheck.local") {
-      const localAdmin = await this.getLocalAdmin();
-      if (localAdmin && localAdmin.id !== userData.id) {
-        throw new Error("Cannot create OAuth user with local admin email");
-      }
-    }
-
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
 
-  async getLocalAdmin(): Promise<User | undefined> {
-    const [admin] = await db.select().from(users).where(eq(users.isLocalAdmin, 1));
-    return admin || undefined;
-  }
-
-  async updateUserRole(id: string, role: string): Promise<User | undefined> {
-    const [user] = await db
-      .update(users)
-      .set({ role, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return user || undefined;
-  }
-
-  async createLocalAdmin(admin: InsertUser, passwordHash: string): Promise<User> {
+  async createUser(userData: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
-        ...admin,
-        isLocalAdmin: 1,
-        role: "admin",
-        passwordHash,
+        username: userData.username,
+        passwordHash: userData.passwordHash,
+        role: userData.role,
       })
       .returning();
     return user;
   }
 
-  async updateLocalAdminPassword(passwordHash: string): Promise<User | undefined> {
+  async updateUserRole(id: string, role: string): Promise<User | undefined> {
     const [user] = await db
       .update(users)
-      .set({ passwordHash, updatedAt: new Date() })
-      .where(eq(users.isLocalAdmin, 1))
+      .set({ role })
+      .where(eq(users.id, id))
       .returning();
     return user || undefined;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

@@ -1,8 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupAuth } from "./replitAuth";
-import { initializeAdmin } from "./initAdmin";
+import { setupAuth } from "./auth";
 
 const app = express();
 
@@ -49,10 +48,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize local admin account with hashed password
-  await initializeAdmin();
-  
-  // Setup authentication before routes - Reference: blueprint:javascript_log_in_with_replit
+  // Setup authentication before routes
   await setupAuth(app);
   
   const server = await registerRoutes(app);
