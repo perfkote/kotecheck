@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Customer, InsertCustomer } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
-import { canCreateCustomers } from "@/lib/authUtils";
+import { canCreateCustomers, canAccessCustomers } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +43,13 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
   const { toast } = useToast();
+
+  // Redirect employees away from this page
+  useEffect(() => {
+    if (user && !canAccessCustomers(user)) {
+      setLocation("/estimates");
+    }
+  }, [user, setLocation]);
 
   const { data: customers = [], isLoading } = useQuery<CustomerWithMetrics[]>({
     queryKey: ["/api/customers/metrics"],

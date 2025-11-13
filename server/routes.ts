@@ -116,8 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer routes (read requires auth, write requires manager+)
-  app.get("/api/customers", isAuthenticated, async (req, res) => {
+  // Customer routes (read requires manager+, write requires manager+)
+  app.get("/api/customers", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const customers = await storage.getAllCustomers();
       res.json(customers);
@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customers/metrics", isAuthenticated, async (req, res) => {
+  app.get("/api/customers/metrics", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const customers = await storage.getCustomersWithMetrics();
       res.json(customers);
@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customers/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/customers/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const customer = await storage.getCustomer(req.params.id);
       if (!customer) {
@@ -182,8 +182,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Job routes (read: all auth, write: manager+, update: employee+)
-  app.get("/api/jobs", isAuthenticated, async (req, res) => {
+  // Job routes (read: manager+, write: manager+)
+  app.get("/api/jobs", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const customerId = req.query.customerId as string | undefined;
       const jobs = customerId
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/jobs/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/jobs/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -207,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/jobs", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
+  app.post("/api/jobs", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const { createJobWithCustomerSchema } = await import("@shared/schema");
       const validated = createJobWithCustomerSchema.parse(req.body);
@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/jobs/:id", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
+  app.patch("/api/jobs/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertJobSchema.partial().parse(req.body);
       const job = await storage.updateJob(req.params.id, validated);
@@ -270,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/jobs/:id", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
+  app.delete("/api/jobs/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const success = await storage.deleteJob(req.params.id);
       if (!success) {
@@ -282,8 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Service routes (read: all auth, write: manager+)
-  app.get("/api/services", isAuthenticated, async (req, res) => {
+  // Service routes (read: manager+, write: manager+)
+  app.get("/api/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
       const services = category
@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/services/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/services/:id", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const service = await storage.getService(req.params.id);
       if (!service) {
@@ -370,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/most-popular-service", isAuthenticated, async (req, res) => {
+  app.get("/api/analytics/most-popular-service", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const service = await storage.getMostPopularService();
       if (!service) {
@@ -535,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Determine coating type based on services
-      let coatingType: "powder" | "ceramic" | "both" = "powder";
+      let coatingType: "powder" | "ceramic" | "misc" = "powder";
       const serviceCategories = new Set(estimateServices.map(s => {
         // Try to infer category from service name if not available
         const serviceName = s.serviceName.toLowerCase();
@@ -545,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       if (serviceCategories.has("powder") && serviceCategories.has("ceramic")) {
-        coatingType = "both";
+        coatingType = "misc";
       } else if (serviceCategories.has("ceramic")) {
         coatingType = "ceramic";
       }
@@ -572,8 +572,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Note routes (read: all auth, create: all auth, delete: manager+)
-  app.get("/api/notes", isAuthenticated, async (req, res) => {
+  // Note routes (read: manager+, create: manager+, delete: manager+)
+  app.get("/api/notes", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const jobId = req.query.jobId as string | undefined;
       const customerId = req.query.customerId as string | undefined;
@@ -592,7 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/notes", isAuthenticated, async (req, res) => {
+  app.post("/api/notes", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const validated = insertNoteSchema.parse(req.body);
       const note = await storage.createNote(validated);

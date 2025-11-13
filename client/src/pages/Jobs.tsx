@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Job, Customer, CreateJobWithCustomer } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
-import { canCreateJobs, canDeleteJobs } from "@/lib/authUtils";
+import { canCreateJobs, canDeleteJobs, canAccessJobs } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,7 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function Jobs() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
@@ -53,6 +53,13 @@ export default function Jobs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
+
+  // Redirect employees away from this page
+  useEffect(() => {
+    if (user && !canAccessJobs(user)) {
+      setLocation("/estimates");
+    }
+  }, [user, setLocation]);
 
   // Read customer query parameter and set initial search
   useEffect(() => {
@@ -395,7 +402,7 @@ export default function Jobs() {
                 customerId: editingJob.customerId || undefined,
                 phoneNumber: editingJob.phoneNumber,
                 receivedDate: new Date(editingJob.receivedDate),
-                coatingType: editingJob.coatingType as "powder" | "ceramic" | "both",
+                coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc",
                 items: editingJob.items || "",
                 detailedNotes: editingJob.detailedNotes || "",
                 price: Number(editingJob.price),

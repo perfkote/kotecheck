@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useIsAdmin } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessUsers } from "@/lib/authUtils";
 import type { User } from "@shared/schema";
 import {
   Table,
@@ -24,12 +27,20 @@ import { Badge } from "@/components/ui/badge";
 import { Shield } from "lucide-react";
 
 export default function Users() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const isAdmin = useIsAdmin();
+
+  // Redirect non-admins away from this page
+  useEffect(() => {
+    if (user && !canAccessUsers(user)) {
+      setLocation("/estimates");
+    }
+  }, [user, setLocation]);
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    enabled: isAdmin,
+    enabled: canAccessUsers(user),
   });
 
   const updateRoleMutation = useMutation({
@@ -60,7 +71,7 @@ export default function Users() {
     },
   });
 
-  if (!isAdmin) {
+  if (!canAccessUsers(user)) {
     return (
       <div className="text-center py-12">
         <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

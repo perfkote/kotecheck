@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessDashboard } from "@/lib/authUtils";
 import type { Note, InsertNote } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,9 +20,18 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function Notes() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [newNote, setNewNote] = useState("");
   const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
+
+  // Redirect employees away from this page
+  useEffect(() => {
+    if (user && !canAccessDashboard(user)) {
+      setLocation("/estimates");
+    }
+  }, [user, setLocation]);
 
   const { data: notes = [], isLoading } = useQuery<Note[]>({
     queryKey: ["/api/notes"],

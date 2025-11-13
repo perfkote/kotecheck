@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Service, InsertService } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
-import { canCreateServices } from "@/lib/authUtils";
+import { canCreateServices, canAccessServices } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -37,10 +38,18 @@ import { Badge } from "@/components/ui/badge";
 import { MoneyInput } from "@/components/MoneyInput";
 
 export default function Services() {
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const { toast } = useToast();
+
+  // Redirect employees away from this page
+  useEffect(() => {
+    if (user && !canAccessServices(user)) {
+      setLocation("/estimates");
+    }
+  }, [user, setLocation]);
 
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],

@@ -11,45 +11,19 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useIsAdmin } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
+import { 
+  canAccessDashboard, 
+  canAccessCustomers, 
+  canAccessJobs, 
+  canAccessServices, 
+  canAccessUsers 
+} from "@/lib/authUtils";
 import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
-
-const items = [
-  {
-    title: "Analytic Center",
-    url: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Customers",
-    url: "/customers",
-    icon: Users,
-  },
-  {
-    title: "Jobs",
-    url: "/jobs",
-    icon: Briefcase,
-  },
-  {
-    title: "Services",
-    url: "/services",
-    icon: Settings,
-  },
-  {
-    title: "Estimates",
-    url: "/estimates",
-    icon: FileText,
-  },
-  {
-    title: "Notes",
-    url: "/notes",
-    icon: StickyNote,
-  },
-];
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const isAdmin = useIsAdmin();
+  const { user } = useAuth();
 
   return (
     <Sidebar>
@@ -65,17 +39,65 @@ export function AppSidebar() {
           </div>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
+              {canAccessDashboard(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/"}>
+                    <Link href="/" data-testid="link-analytic center">
+                      <LayoutDashboard />
+                      <span>Analytic Center</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-              {isAdmin && (
+              )}
+              {canAccessCustomers(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/customers"}>
+                    <Link href="/customers" data-testid="link-customers">
+                      <Users />
+                      <span>Customers</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {canAccessJobs(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/jobs"}>
+                    <Link href="/jobs" data-testid="link-jobs">
+                      <Briefcase />
+                      <span>Jobs</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {canAccessServices(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/services"}>
+                    <Link href="/services" data-testid="link-services">
+                      <Settings />
+                      <span>Services</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/estimates"}>
+                  <Link href="/estimates" data-testid="link-estimates">
+                    <FileText />
+                    <span>Estimates</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {canAccessDashboard(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/notes"}>
+                    <Link href="/notes" data-testid="link-notes">
+                      <StickyNote />
+                      <span>Notes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {canAccessUsers(user) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/users"}>
                     <Link href="/users" data-testid="link-users">

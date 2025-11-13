@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessDashboard } from "@/lib/authUtils";
 import type { Customer, Job } from "@shared/schema";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -50,9 +53,18 @@ type JobWithCustomer = Job & {
 };
 
 export default function Dashboard() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [visibleTiles, setVisibleTiles] = useState<TileId[]>(DEFAULT_TILES);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [viewingJob, setViewingJob] = useState<JobWithCustomer | null>(null);
+
+  // Redirect employees away from this page
+  useEffect(() => {
+    if (user && !canAccessDashboard(user)) {
+      setLocation("/estimates");
+    }
+  }, [user, setLocation]);
 
   useEffect(() => {
     // Migrate old dashboard-tiles to new analytic-center-tiles key
