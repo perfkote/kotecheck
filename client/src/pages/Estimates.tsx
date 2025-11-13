@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Estimate, Service, InsertEstimate, Job } from "@shared/schema";
+import type { Estimate, InsertEstimate, Job } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { canCreateEstimates } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, Settings, ArrowRight } from "lucide-react";
+import { Plus, Search, ArrowRight, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Dialog,
@@ -29,25 +29,11 @@ export default function Estimates() {
     queryKey: ["/api/estimates"],
   });
 
-  const { data: services = [] } = useQuery<Service[]>({
-    queryKey: ["/api/services"],
-  });
 
   const createMutation = useMutation({
-    mutationFn: async ({ estimate, services }: { estimate: InsertEstimate; services: any[] }) => {
-      // Create the estimate first
+    mutationFn: async (estimate: InsertEstimate) => {
       const estimateResponse = await apiRequest("POST", "/api/estimates", estimate);
       const newEstimate: Estimate = await estimateResponse.json();
-      
-      // Then add all services to it
-      for (const service of services) {
-        await apiRequest("POST", `/api/estimates/${newEstimate.id}/services`, {
-          serviceId: service.serviceId,
-          serviceName: service.serviceName,
-          servicePrice: service.servicePrice.toString(),
-        });
-      }
-      
       return newEstimate;
     },
     onSuccess: () => {
@@ -85,8 +71,8 @@ export default function Estimates() {
     },
   });
 
-  const handleSubmit = (data: InsertEstimate, selectedServices: any[]) => {
-    createMutation.mutate({ estimate: data, services: selectedServices });
+  const handleSubmit = (data: InsertEstimate) => {
+    createMutation.mutate(data);
   };
 
   const filteredEstimates = estimates.filter(estimate =>
@@ -106,12 +92,6 @@ export default function Estimates() {
           <p className="text-muted-foreground mt-1">Create and manage customer estimates</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/services">
-            <Button variant="outline" data-testid="button-manage-services">
-              <Settings className="w-4 h-4 mr-2" />
-              Manage Services
-            </Button>
-          </Link>
           {canCreateEstimates(user) && (
             <Button onClick={() => setIsDialogOpen(true)} data-testid="button-new-estimate">
               <Plus className="w-4 h-4 mr-2" />
@@ -222,10 +202,6 @@ export default function Estimates() {
           <EstimateForm
             onSubmit={handleSubmit}
             onCancel={() => setIsDialogOpen(false)}
-            services={services}
-            onServiceCreated={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-            }}
           />
         </DialogContent>
       </Dialog>

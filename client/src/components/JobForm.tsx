@@ -244,7 +244,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                   <SelectContent>
                     <SelectItem value="powder">Powder</SelectItem>
                     <SelectItem value="ceramic">Ceramic</SelectItem>
-                    <SelectItem value="both">Both</SelectItem>
+                    <SelectItem value="misc">Misc</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
