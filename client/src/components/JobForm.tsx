@@ -276,30 +276,32 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
               <FormLabel>Services</FormLabel>
               <div className="space-y-3">
                 {selectedServices.length > 0 && (
-                  <div className="space-y-2" data-testid="selected-services-list">
+                  <div className="space-y-1" data-testid="selected-services-list">
                     {selectedServices.map((serviceId) => {
                       const service = services.find(s => s.id === serviceId);
                       if (!service) return null;
                       return (
-                        <Card key={serviceId} className="p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{service.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                ${parseFloat(service.price).toFixed(2)}
-                              </p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeService(serviceId)}
-                              data-testid={`button-remove-service-${serviceId}`}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                        <div 
+                          key={serviceId} 
+                          className="flex items-center justify-between py-2 px-3 rounded-md border bg-card hover-elevate"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span className="font-medium truncate">{service.name}</span>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                              ${parseFloat(service.price).toFixed(2)}
+                            </span>
                           </div>
-                        </Card>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeService(serviceId)}
+                            data-testid={`button-remove-service-${serviceId}`}
+                            className="h-8 w-8 flex-shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       );
                     })}
                   </div>
@@ -363,36 +365,35 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
           )}
         />
 
-        {selectedServices.length > 0 && (
-          <div className="rounded-md border p-4 bg-muted/50" data-testid="service-total-summary">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Service Total:</span>
-              <span className="text-lg font-bold">${serviceTotal.toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Price (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder={selectedServices.length > 0 ? `Auto: $${serviceTotal.toFixed(2)}` : "0.00"}
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                    value={field.value ?? ""}
-                    data-testid="input-price"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              // Auto-populate with service total if no custom price is set
+              const displayValue = field.value ?? (selectedServices.length > 0 ? serviceTotal : undefined);
+              
+              return (
+                <FormItem>
+                  <FormLabel>Price {selectedServices.length > 0 && '(Editable)'}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      value={displayValue ?? ""}
+                      data-testid="input-price"
+                    />
+                  </FormControl>
+                  {selectedServices.length > 0 && !field.value && (
+                    <p className="text-xs text-muted-foreground">Auto-calculated from services: ${serviceTotal.toFixed(2)}</p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
