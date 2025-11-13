@@ -8,7 +8,7 @@ import { canCreateServices, canAccessServices } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Settings as SettingsIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -161,7 +161,75 @@ export default function Services() {
         )}
       </div>
 
-      <Card>
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {services.length === 0 ? (
+          <Card className="p-12 text-center">
+            <SettingsIcon className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No services yet</p>
+            <p className="text-sm text-muted-foreground">Add your first service to get started</p>
+          </Card>
+        ) : (
+          services.map((service) => (
+            <Card 
+              key={service.id}
+              className="p-4 hover-elevate cursor-pointer"
+              data-testid={`card-service-${service.id}`}
+              onClick={() => handleEdit(service)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleEdit(service);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex-1">
+                  <div className="font-semibold text-base">{service.name}</div>
+                  <Badge className={`${getCategoryColor(service.category)} mt-2`}>
+                    {service.category}
+                  </Badge>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="font-bold text-xl">${parseFloat(service.price).toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">Price</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(service);
+                  }}
+                  data-testid={`button-edit-mobile-${service.id}`}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                {canCreateServices(user) && (
+                  <Button
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteMutation.mutate(service.id);
+                    }}
+                    data-testid={`button-delete-mobile-${service.id}`}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <Card className="hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
