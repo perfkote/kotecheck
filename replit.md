@@ -4,6 +4,22 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
+### Mobile Optimization (Latest)
+- **Comprehensive Mobile Responsiveness**: All pages now fully optimized for mobile devices with consistent patterns:
+  - **Page Padding**: All pages use `px-4 sm:px-0` for mobile edge padding
+  - **Responsive Spacing**: Progressive spacing using `space-y-5 sm:space-y-6 md:space-y-8`
+  - **Touch Targets**: All interactive elements meet 44px minimum touch target requirement
+  - **Card-Based Views**: Mobile views use cards (md:hidden) with desktop tables (hidden md:block) at 768px breakpoint
+  
+- **Dashboard Mobile**: Single-column metric tiles, 180px chart height on mobile (260px desktop), stacked recent jobs cards, dual temperature gauge with flex-wrap
+- **Customers Mobile**: Full card view with customer info, metrics, and action buttons properly sized
+- **Services Mobile**: Card view with default button sizes (not sm) for proper touch targets
+- **Users Mobile**: Card view with per-user mutation loading states (no global disabling)
+- **Jobs Mobile**: Card view with status badges, customer info, and job details; newest jobs first sorting
+- **Notes Mobile**: Responsive cards with stacked author/timestamp, full-width filter on mobile, smaller avatars
+- **Estimates Mobile**: Stacked estimate cards, full-width search and buttons on mobile, dark mode status badges
+
+### Previous Features
 - **Service-Based Estimates**: Estimates form now displays all available services from the database (replacing hardcoded Powder/Ceramic/Misc dropdown). Backend automatically derives serviceType from selected service category, creates estimate_service linkage, and sets total based on service price.
 - **Jobs Page UX**: Job row clicks now show full details dialog instead of opening edit mode. Edit action moved to 3-dot dropdown menu for cleaner interaction.
 - **Customer Metrics**: Added "Total Jobs" column to Customer page showing complete job count (not just active jobs). Backend updated to return totalJobsCount metric.
