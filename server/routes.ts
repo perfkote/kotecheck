@@ -495,39 +495,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/estimates", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
-      // Extract serviceId from request (not part of estimate schema)
-      const { serviceId, ...estimateData } = req.body;
+      // Extract serviceIds and total from request (not part of estimate schema)
+      const { serviceIds, total, ...estimateData } = req.body;
       
-      if (!serviceId) {
-        return res.status(400).json({ error: "Service selection is required" });
+      if (!serviceIds || !Array.isArray(serviceIds) || serviceIds.length === 0) {
+        return res.status(400).json({ error: "At least one service is required" });
       }
       
-      // Get the service to derive serviceType and price
-      const service = await storage.getService(serviceId);
-      if (!service) {
-        return res.status(400).json({ error: "Selected service not found" });
+      // Get all selected services and calculate total
+      const selectedServices = await Promise.all(
+        serviceIds.map((id: string) => storage.getService(id))
+      );
+      
+      // Check if any service is not found
+      const missingService = selectedServices.findIndex((s) => !s);
+      if (missingService !== -1) {
+        return res.status(400).json({ error: "One or more selected services not found" });
       }
       
-      // Derive serviceType from service category
-      const serviceType = service.category === "prep" ? "misc" : service.category;
+      // Calculate total from services (or use provided total if given)
+      const calculatedTotal = selectedServices.reduce(
+        (sum, service) => sum + parseFloat(service!.price),
+        0
+      );
+      const finalTotal = total !== undefined ? total : calculatedTotal;
       
-      // Create estimate with derived serviceType and total from service price
+      // Derive serviceType from first service category
+      const firstService = selectedServices[0]!;
+      const serviceType = firstService.category === "prep" ? "misc" : firstService.category;
+      
+      // Create estimate with derived serviceType and calculated total
       const validated = insertEstimateSchema.parse({
         ...estimateData,
         serviceType,
-        total: String(service.price),
+        total: String(finalTotal),
       });
       
       const estimate = await storage.createEstimate(validated);
       
-      // Link the service to the estimate
-      await storage.addEstimateService({
-        estimateId: estimate.id,
-        serviceId: service.id,
-        serviceName: service.name,
-        servicePrice: String(service.price),
-        quantity: 1,
-      });
+      // Link all services to the estimate
+      await Promise.all(
+        selectedServices.map((service) =>
+          storage.addEstimateService({
+            estimateId: estimate.id,
+            serviceId: service!.id,
+            serviceName: service!.name,
+            servicePrice: String(service!.price),
+            quantity: 1,
+          })
+        )
+      );
       
       res.status(201).json(estimate);
     } catch (error) {
