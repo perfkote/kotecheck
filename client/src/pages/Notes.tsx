@@ -81,17 +81,15 @@ export default function Notes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Notes</h1>
-          <p className="text-muted-foreground mt-1">Activity log and comments</p>
-        </div>
+    <div className="space-y-5 sm:space-y-6 px-4 sm:px-0">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-semibold">Notes</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">Activity log and comments</p>
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-lg font-medium mb-4">Add New Note</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Add New Note</h2>
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <Textarea
             placeholder="Write a note..."
             value={newNote}
@@ -99,7 +97,7 @@ export default function Notes() {
             className="min-h-24"
             data-testid="input-note-content"
           />
-          <div className="flex items-center justify-end gap-4">
+          <div className="flex items-center justify-end">
             <Button type="submit" disabled={!newNote.trim() || createMutation.isPending} data-testid="button-add-note">
               <Plus className="w-4 h-4 mr-2" />
               Add Note
@@ -108,9 +106,10 @@ export default function Notes() {
         </form>
       </Card>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-muted-foreground">Filter:</label>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-48" data-testid="select-filter-type">
+          <SelectTrigger className="w-full sm:w-48" data-testid="select-filter-type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -121,28 +120,28 @@ export default function Notes() {
         </Select>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredNotes.length === 0 ? (
-          <Card className="p-8">
+          <Card className="p-8 sm:p-12">
             <p className="text-muted-foreground text-center">No notes yet</p>
           </Card>
         ) : (
           filteredNotes.map((note) => (
-            <Card key={note.id} className="p-6" data-testid={`card-note-${note.id}`}>
-              <div className="flex gap-4">
-                <Avatar>
-                  <AvatarFallback>
+            <Card key={note.id} className="p-4 sm:p-6" data-testid={`card-note-${note.id}`}>
+              <div className="flex gap-3 sm:gap-4">
+                <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+                  <AvatarFallback className="text-xs sm:text-sm">
                     {note.author.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium">{note.author}</span>
-                    <span className="text-sm text-muted-foreground">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                    <span className="font-medium text-sm sm:text-base">{note.author}</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       {new Date(note.createdAt).toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-foreground">{note.content}</p>
+                  <p className="text-sm sm:text-base text-foreground break-words">{note.content}</p>
                 </div>
               </div>
             </Card>

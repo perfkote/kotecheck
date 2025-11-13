@@ -85,11 +85,11 @@ export default function Estimates() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-5 sm:space-y-6 px-4 sm:px-0">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-semibold">Estimates</h1>
-          <p className="text-muted-foreground mt-1">Create and manage customer estimates</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Estimates</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Create and manage customer estimates</p>
         </div>
         <div className="flex items-center gap-2">
           {canCreateEstimates(user) && (
@@ -101,8 +101,8 @@ export default function Estimates() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search estimates..."
@@ -114,28 +114,28 @@ export default function Estimates() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4">
         {filteredEstimates.length === 0 ? (
-          <Card className="p-12 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Plus className="w-8 h-8 text-primary" />
+          <Card className="p-8 sm:p-12 text-center">
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">No estimates yet</h3>
-                <p className="text-muted-foreground mt-1">
+                <h3 className="font-semibold text-base sm:text-lg">No estimates yet</h3>
+                <p className="text-sm text-muted-foreground mt-1">
                   Create your first estimate to get started. Make sure to set up your services first!
                 </p>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Link href="/services">
-                  <Button variant="outline">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-2 w-full sm:w-auto">
+                <Link href="/services" className="w-full sm:w-auto">
+                  <Button variant="outline" className="w-full sm:w-auto">
                     <Settings className="w-4 h-4 mr-2" />
                     Manage Services
                   </Button>
                 </Link>
                 {canCreateEstimates(user) && (
-                  <Button onClick={() => setIsDialogOpen(true)}>
+                  <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
                     <Plus className="w-4 h-4 mr-2" />
                     New Estimate
                   </Button>
@@ -145,43 +145,44 @@ export default function Estimates() {
           </Card>
         ) : (
           filteredEstimates.map((estimate) => (
-            <Card key={estimate.id} className="p-6 hover-elevate" data-testid={`card-estimate-${estimate.id}`}>
-              <div className="flex items-start justify-between gap-4">
+            <Card key={estimate.id} className="p-4 sm:p-6 hover-elevate" data-testid={`card-estimate-${estimate.id}`}>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                 <div className="space-y-2 flex-1">
                   <div>
-                    <h3 className="font-semibold text-lg">{estimate.customerName}</h3>
-                    <p className="text-muted-foreground">{estimate.phone}</p>
+                    <h3 className="font-semibold text-base sm:text-lg">{estimate.customerName}</h3>
+                    <p className="text-sm text-muted-foreground">{estimate.phone}</p>
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     <span>Date: {new Date(estimate.date).toLocaleDateString()}</span>
                     {estimate.desiredFinishDate && (
-                      <span className="ml-4">
+                      <span className="block sm:inline sm:ml-4 mt-1 sm:mt-0">
                         Desired Finish: {new Date(estimate.desiredFinishDate).toLocaleDateString()}
                       </span>
                     )}
                   </div>
-                  <div className="text-sm">
+                  <div className="text-xs sm:text-sm">
                     <span className={`inline-block px-2 py-1 rounded-md ${
-                      estimate.status === "converted" ? "bg-green-100 text-green-800" :
-                      estimate.status === "approved" ? "bg-blue-100 text-blue-800" :
-                      estimate.status === "sent" ? "bg-purple-100 text-purple-800" :
-                      estimate.status === "rejected" ? "bg-red-100 text-red-800" :
-                      "bg-gray-100 text-gray-800"
+                      estimate.status === "converted" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" :
+                      estimate.status === "approved" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" :
+                      estimate.status === "sent" ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100" :
+                      estimate.status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" :
+                      "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
                     }`}>
                       {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
                     </span>
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-3">
-                  <div>
-                    <div className="text-2xl font-bold">${parseFloat(estimate.total).toFixed(2)}</div>
-                    <div className="text-sm text-muted-foreground mt-1">Total</div>
+                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3">
+                  <div className="text-left sm:text-right">
+                    <div className="text-xl sm:text-2xl font-bold">${parseFloat(estimate.total).toFixed(2)}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Total</div>
                   </div>
                   {estimate.status !== "converted" && (
                     <Button 
                       onClick={() => convertToJobMutation.mutate(estimate.id)}
                       disabled={convertToJobMutation.isPending}
                       data-testid={`button-convert-${estimate.id}`}
+                      className="whitespace-nowrap"
                     >
                       <ArrowRight className="w-4 h-4 mr-2" />
                       Convert to Job
