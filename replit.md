@@ -4,7 +4,22 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
-### Multi-Service Jobs System (Latest - November 13, 2025)
+### Multi-Service Estimates System (Latest - November 13, 2025)
+- **Complete Multi-Service Implementation for Estimates**: Estimates now support multiple service selection, matching the Jobs feature
+  - **EstimateForm Component**: 
+    - Add multiple services via dropdown
+    - **Space-Efficient Layout**: Services displayed as compact single-line rows (not cards) to maximize vertical space
+    - Each row shows: service name + price + remove button (X icon) in one line
+    - **Editable Total**: Total field auto-populates with service sum and can be customized on-the-fly
+    - Helper text shows "Auto-calculated from services: $XX.XX" when using auto value
+    - Total field label indicates "(Editable)" when services are selected
+  - **Type Safety**: Proper TypeScript types throughout (EstimateFormSubmission, EstimateCreationData)
+  - **Backend Routes**: POST /api/estimates accepts `serviceIds` array, auto-calculates total from services (manual override supported)
+  - **Form Validation**: Requires at least one service to be selected
+  - **Zod Schema**: Uses `.transform()` to normalize total to string for backend compatibility
+  - **Testing**: End-to-end tests confirmed multi-service selection, compact row layout, editable pricing, and estimate persistence
+
+### Multi-Service Jobs System (November 13, 2025)
 - **Complete Multi-Service Implementation**: Jobs can now have multiple services with individual add/remove capability
   - **Database Schema**: Created `job_services` junction table for many-to-many relationship (jobId, serviceId, serviceName, servicePrice, quantity)
   - **Backward Compatibility**: Kept legacy `serviceId` column in jobs table to prevent production migration failures during publishing
