@@ -31,7 +31,7 @@ export default function Estimates() {
 
 
   const createMutation = useMutation({
-    mutationFn: async (estimate: InsertEstimate & { serviceId: string }) => {
+    mutationFn: async (estimate: InsertEstimate & { serviceIds: string[]; total?: number }) => {
       const estimateResponse = await apiRequest("POST", "/api/estimates", estimate);
       const newEstimate: Estimate = await estimateResponse.json();
       return newEstimate;
@@ -71,7 +71,7 @@ export default function Estimates() {
     },
   });
 
-  const handleSubmit = (data: InsertEstimate & { serviceId: string }) => {
+  const handleSubmit = (data: InsertEstimate & { serviceIds: string[]; total?: number }) => {
     createMutation.mutate(data);
   };
 
