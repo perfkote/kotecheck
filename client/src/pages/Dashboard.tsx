@@ -244,13 +244,13 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+    <div className="space-y-5 sm:space-y-6 md:space-y-8 px-4 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 md:gap-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold">Analytic Center</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">Welcome to your coating management hub</p>
         </div>
-        <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-wrap">
           <div className="hidden sm:block">
             <ReviewsWidget />
           </div>
@@ -278,8 +278,63 @@ export default function Dashboard() {
         <ReviewsWidget />
       </div>
 
-      {/* Recent Jobs Section */}
-      <Card className="p-6">
+      {/* Recent Jobs Section - Mobile cards */}
+      <div className="md:hidden space-y-3">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-medium flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Newest Jobs
+          </h2>
+          <Link href="/jobs">
+            <Button variant="outline" data-testid="button-view-all-jobs-mobile">
+              View All
+            </Button>
+          </Link>
+        </div>
+        {recentJobs.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No jobs yet</p>
+            <p className="text-sm text-muted-foreground">Create your first job to get started</p>
+          </Card>
+        ) : (
+          recentJobs.map((job) => (
+            <Card 
+              key={job.id}
+              className="p-4 hover-elevate cursor-pointer"
+              onClick={() => setViewingJob(job)}
+              data-testid={`card-job-mobile-${job.id}`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex-1">
+                  <h3 className={`font-semibold text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                    {job.customerName}
+                  </h3>
+                  {job.coatingType && (
+                    <Badge variant="outline" className="capitalize mt-2">
+                      {job.coatingType}
+                    </Badge>
+                  )}
+                </div>
+                <StatusBadge status={job.status} type="job" />
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t">
+                <div>
+                  <div className="text-xs text-muted-foreground">Price</div>
+                  <div className="font-bold text-lg">${Number(job.price).toFixed(2)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground">Received</div>
+                  <div className="text-sm">{new Date(job.receivedDate).toLocaleDateString()}</div>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Recent Jobs Section - Desktop table */}
+      <Card className="hidden md:block p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-medium flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -334,15 +389,15 @@ export default function Dashboard() {
       </Card>
 
       {/* Metric Tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-10 gap-3 sm:gap-4">
         {visibleTileData.map((tile) => (
           <StatsCard 
             key={tile.id}
             title={tile.title} 
             value={tile.value} 
             icon={tile.icon}
-            className={tile.id === "most-common-product" ? "col-span-2 md:col-span-3 lg:col-span-5" : "lg:col-span-2"}
-            valueClassName={tile.id === "most-common-product" ? "text-lg sm:text-xl whitespace-nowrap" : undefined}
+            className={tile.id === "most-common-product" ? "sm:col-span-2 md:col-span-3 lg:col-span-5" : "lg:col-span-2"}
+            valueClassName={tile.id === "most-common-product" ? "text-lg sm:text-xl" : undefined}
           />
         ))}
       </div>
@@ -356,7 +411,7 @@ export default function Dashboard() {
           <h2 className="text-lg sm:text-xl font-medium">Monthly Revenue - {currentYear}</h2>
           <span className="text-xs text-muted-foreground ml-auto hidden sm:inline">Revenue per month</span>
         </div>
-        <ResponsiveContainer width="100%" height={250} className="sm:hidden">
+        <ResponsiveContainer width="100%" height={180} className="md:hidden">
           <AreaChart data={monthlyRevenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -364,14 +419,13 @@ export default function Dashboard() {
                 <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
               dataKey="month" 
               tick={{ fontSize: 10 }}
               stroke="hsl(var(--muted-foreground))"
             />
             <YAxis 
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9 }}
               stroke="hsl(var(--muted-foreground))"
               tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
             />
