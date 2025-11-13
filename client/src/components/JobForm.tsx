@@ -205,21 +205,28 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
           <FormField
             control={form.control}
             name="receivedDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Received Date</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                    onChange={(e) => field.onChange(new Date(e.target.value))}
-                    data-testid="input-received-date"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const dateValue = field.value instanceof Date && !isNaN(field.value.getTime())
+                ? field.value.toISOString().split('T')[0]
+                : '';
+              return (
+                <FormItem>
+                  <FormLabel>Received Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={dateValue}
+                      onChange={(e) => {
+                        const newDate = new Date(e.target.value);
+                        field.onChange(newDate);
+                      }}
+                      data-testid="input-received-date"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
