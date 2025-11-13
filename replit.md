@@ -12,12 +12,14 @@ Coat Check is a comprehensive coating job management application designed for co
   - **Backend Routes**: POST/PATCH /api/jobs accept `serviceIds` array, auto-calculate price from services (manual override supported)
   - **JobForm Component**: 
     - Add multiple services via dropdown above items field
-    - Each service displayed in Card with name, price, and remove button (X icon)
-    - Service total summary at bottom showing sum of all selected services
-    - Price field optional with auto-calculated placeholder
+    - **Space-Efficient Layout**: Services displayed as compact single-line rows (not cards) to maximize vertical space
+    - Each row shows: service name + price + remove button (X icon) in one line
+    - **Editable Total**: Price field auto-populates with service total and can be customized on-the-fly
+    - Helper text shows "Auto-calculated from services: $XX.XX" when using auto value
+    - Price field label indicates "(Editable)" when services are selected
   - **Form Validation**: Requires at least one service to be selected
   - **Migration Applied**: Database schema updated using `npm run db:push --force`
-  - **Testing**: End-to-end test confirmed adding/removing multiple services, service total calculation, and job persistence work correctly
+  - **Testing**: End-to-end tests confirmed adding/removing services, compact row layout, editable pricing, and job persistence work correctly
 
 ### Username/Password Authentication System (November 13, 2025)
 - **Complete Authentication Redesign**: Replaced Replit OAuth with simple username/password authentication

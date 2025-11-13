@@ -39,7 +39,6 @@ import {
 import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
-import { Card } from "@/components/ui/card";
 
 type FormData = z.infer<typeof createJobSchemaWithValidation>;
 
