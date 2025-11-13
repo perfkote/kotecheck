@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEstimateSchema } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { insertEstimateSchema, type Service } from "@shared/schema";
 import { z } from "zod";
 import {
   Form,
@@ -22,7 +23,11 @@ import {
 } from "@/components/ui/select";
 import { formatPhoneNumber, formatMoney } from "@/lib/formatters";
 
-type FormData = z.infer<typeof insertEstimateSchema>;
+const formSchema = insertEstimateSchema.extend({
+  serviceId: z.string().min(1, "Please select a service"),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 interface EstimateFormProps {
   onSubmit: (data: FormData) => void;
@@ -30,12 +35,17 @@ interface EstimateFormProps {
 }
 
 export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
+  const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+  });
+
   const form = useForm<FormData>({
-    resolver: zodResolver(insertEstimateSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       customerName: "",
       phone: "",
       serviceType: "powder",
+      serviceId: "",
       date: new Date(),
       notes: "",
       status: "draft",
@@ -91,20 +101,22 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
 
         <FormField
           control={form.control}
-          name="serviceType"
+          name="serviceId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Service Type</FormLabel>
+              <FormLabel>Service</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger data-testid="select-service-type">
-                    <SelectValue placeholder="Select" />
+                  <SelectTrigger data-testid="select-service" disabled={servicesLoading}>
+                    <SelectValue placeholder={servicesLoading ? "Loading..." : "Select"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="powder">Powder</SelectItem>
-                  <SelectItem value="ceramic">Ceramic</SelectItem>
-                  <SelectItem value="misc">Misc</SelectItem>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - {formatMoney(service.price)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />

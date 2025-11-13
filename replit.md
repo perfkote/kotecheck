@@ -4,11 +4,13 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
-- **Simplified Estimates**: Replaced complex service catalog with serviceType enum (powder/ceramic/misc) stored directly on estimates table. Added notes field for additional information.
-- **Mobile-Optimized EstimateForm**: New simplified form with serviceType dropdown, notes field, and removed Desired Finish Date from UI (kept in database schema).
-- **Coating Type Standardization**: Updated all forms and backend to use "misc" instead of "both" for mixed coating jobs. Migrated 13 existing jobs.
+- **Service-Based Estimates**: Estimates form now displays all available services from the database (replacing hardcoded Powder/Ceramic/Misc dropdown). Backend automatically derives serviceType from selected service category, creates estimate_service linkage, and sets total based on service price.
+- **Jobs Page UX**: Job row clicks now show full details dialog instead of opening edit mode. Edit action moved to 3-dot dropdown menu for cleaner interaction.
+- **Customer Metrics**: Added "Total Jobs" column to Customer page showing complete job count (not just active jobs). Backend updated to return totalJobsCount metric.
+- **Jobs Page Sorting**: Non-closed jobs (status !== 'finished' and !== 'paid') now appear at top of list, sorted alphabetically by customer name. Closed jobs follow below, also alphabetically sorted.
 - **Employee Access Restrictions**: Employees can only access the estimates page. All other pages (dashboard, customers, jobs, services, notes, users) are restricted to managers and admins with frontend route guards and backend API protections.
 - **Default User Role**: New users default to "employee" role via database schema.
+- **Coating Type Standardization**: Updated all forms and backend to use "misc" instead of "both" for mixed coating jobs.
 - **UI Improvements**: All dropdown placeholders changed to "Select" for consistency.
 
 ## User Preferences

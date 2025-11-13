@@ -406,10 +406,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/estimates", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
-      const validated = insertEstimateSchema.parse(req.body);
+      // Extract serviceId from request (not part of estimate schema)
+      const { serviceId, ...estimateData } = req.body;
+      
+      if (!serviceId) {
+        return res.status(400).json({ error: "Service selection is required" });
+      }
+      
+      // Get the service to derive serviceType and price
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(400).json({ error: "Selected service not found" });
+      }
+      
+      // Derive serviceType from service category
+      const serviceType = service.category === "prep" ? "misc" : service.category;
+      
+      // Create estimate with derived serviceType
+      const validated = insertEstimateSchema.parse({
+        ...estimateData,
+        serviceType,
+        total: service.price,
+      });
+      
       const estimate = await storage.createEstimate(validated);
+      
+      // Link the service to the estimate
+      await storage.addEstimateService({
+        estimateId: estimate.id,
+        serviceId: service.id,
+        serviceName: service.name,
+        servicePrice: service.price,
+        quantity: 1,
+      });
+      
       res.status(201).json(estimate);
     } catch (error) {
+      console.error("Error creating estimate:", error);
       res.status(400).json({ error: "Invalid estimate data" });
     }
   });

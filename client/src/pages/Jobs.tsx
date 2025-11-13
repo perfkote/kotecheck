@@ -157,7 +157,19 @@ export default function Jobs() {
       const matchesStatus = statusFilter === "all" || job.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime());
+    .sort((a, b) => {
+      // Check if jobs are closed (finished or paid statuses are terminal)
+      const aIsClosed = a.status === 'paid' || a.status === 'finished';
+      const bIsClosed = b.status === 'paid' || b.status === 'finished';
+      
+      // Sort non-closed jobs first
+      if (aIsClosed !== bIsClosed) {
+        return aIsClosed ? 1 : -1;
+      }
+      
+      // Within same closed/non-closed group, sort alphabetically by customer name
+      return a.customerName.localeCompare(b.customerName);
+    });
 
   if (jobsLoading) {
     return <div className="p-8">Loading...</div>;
@@ -218,11 +230,11 @@ export default function Jobs() {
               key={job.id}
               className="p-4 hover-elevate cursor-pointer"
               data-testid={`card-job-${job.id}`}
-              onClick={() => setEditingJob(job)}
+              onClick={() => setViewingJob(job)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setEditingJob(job);
+                  setViewingJob(job);
                 }
               }}
               role="button"
@@ -305,7 +317,7 @@ export default function Jobs() {
                     key={job.id} 
                     className="border-b last:border-b-0 hover-elevate transition-colors cursor-pointer" 
                     data-testid={`row-job-${job.id}`}
-                    onClick={() => setEditingJob(job)}
+                    onClick={() => setViewingJob(job)}
                   >
                     <td className="py-2.5 px-4">
                       <span className={`font-medium ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>

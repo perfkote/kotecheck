@@ -28,6 +28,7 @@ import {
 export interface CustomerWithMetrics extends Customer {
   totalSpent: number;
   activeJobsCount: number;
+  totalJobsCount: number;
 }
 
 export interface PopularService {
@@ -109,6 +110,7 @@ export class DatabaseStorage implements IStorage {
         createdAt: customers.createdAt,
         totalSpent: sql<string>`coalesce(sum(${jobs.price}), '0')`,
         activeJobsCount: sql<number>`coalesce(sum(case when ${jobs.status} IN ('received', 'prepped', 'coated', 'finished') then 1 else 0 end), 0)`,
+        totalJobsCount: sql<number>`count(${jobs.id})`,
       })
       .from(customers)
       .leftJoin(jobs, eq(jobs.customerId, customers.id))
@@ -124,6 +126,7 @@ export class DatabaseStorage implements IStorage {
       createdAt: row.createdAt,
       totalSpent: parseFloat(row.totalSpent) || 0,
       activeJobsCount: Number(row.activeJobsCount) || 0,
+      totalJobsCount: Number(row.totalJobsCount) || 0,
     }));
   }
 

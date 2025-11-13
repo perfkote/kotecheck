@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 interface CustomerWithMetrics extends Customer {
   totalSpent: number;
   activeJobsCount: number;
+  totalJobsCount: number;
 }
 
 export default function Customers() {
@@ -194,12 +195,13 @@ export default function Customers() {
 
       <div className="border rounded-md">
         {/* Header Row */}
-        <div className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_auto] gap-4 p-4 bg-muted/50 border-b font-medium text-sm">
+        <div className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-4 p-4 bg-muted/50 border-b font-medium text-sm">
           <div>Name</div>
           <div>Contact</div>
           <div>Customer Since</div>
           <div>Total Spent</div>
           <div>Active Jobs</div>
+          <div>Total Jobs</div>
           <div className="w-12"></div>
         </div>
 
@@ -207,7 +209,7 @@ export default function Customers() {
         {filteredCustomers.map((customer) => (
           <div
             key={customer.id}
-            className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_auto] gap-4 p-4 border-b last:border-b-0 hover-elevate cursor-pointer transition-all"
+            className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-4 p-4 border-b last:border-b-0 hover-elevate cursor-pointer transition-all"
             data-testid={`row-customer-${customer.id}`}
             onClick={() => setEditingCustomer(customer)}
           >
@@ -224,6 +226,9 @@ export default function Customers() {
             </div>
             <div className="text-sm">
               {customer.activeJobsCount}
+            </div>
+            <div className="text-sm">
+              {customer.totalJobsCount || 0}
             </div>
             <div>
               <DropdownMenu>
