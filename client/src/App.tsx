@@ -1,4 +1,4 @@
-import { Switch, Route, Link } from "wouter";
+import { Switch, Route, Link, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,11 +6,20 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-import { getRoleName } from "@/lib/authUtils";
-import Landing from "@/pages/Landing";
+import { 
+  getRoleName, 
+  canAccessDashboard, 
+  canAccessCustomers, 
+  canAccessJobs, 
+  canAccessServices, 
+  canAccessEstimates, 
+  canAccessNotes, 
+  canAccessUsers 
+} from "@/lib/authUtils";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Customers from "@/pages/Customers";
 import Jobs from "@/pages/Jobs";
@@ -19,17 +28,47 @@ import Estimates from "@/pages/Estimates";
 import Notes from "@/pages/Notes";
 import Users from "@/pages/Users";
 import Profile from "@/pages/Profile";
+import AccessDenied from "@/pages/AccessDenied";
+
+// Route guard component
+function ProtectedRoute({ 
+  component: Component, 
+  canAccess 
+}: { 
+  component: React.ComponentType; 
+  canAccess: (user: any) => boolean;
+}) {
+  const { user } = useAuth();
+  
+  if (!canAccess(user)) {
+    return <AccessDenied />;
+  }
+  
+  return <Component />;
+}
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/customers" component={Customers} />
-      <Route path="/jobs" component={Jobs} />
-      <Route path="/services" component={Services} />
+      <Route path="/">
+        {() => <ProtectedRoute component={Dashboard} canAccess={canAccessDashboard} />}
+      </Route>
+      <Route path="/customers">
+        {() => <ProtectedRoute component={Customers} canAccess={canAccessCustomers} />}
+      </Route>
+      <Route path="/jobs">
+        {() => <ProtectedRoute component={Jobs} canAccess={canAccessJobs} />}
+      </Route>
+      <Route path="/services">
+        {() => <ProtectedRoute component={Services} canAccess={canAccessServices} />}
+      </Route>
       <Route path="/estimates" component={Estimates} />
-      <Route path="/notes" component={Notes} />
-      <Route path="/users" component={Users} />
+      <Route path="/notes">
+        {() => <ProtectedRoute component={Notes} canAccess={canAccessNotes} />}
+      </Route>
+      <Route path="/users">
+        {() => <ProtectedRoute component={Users} canAccess={canAccessUsers} />}
+      </Route>
       <Route path="/profile" component={Profile} />
     </Switch>
   );
@@ -43,7 +82,7 @@ function AuthenticatedApp() {
   };
 
   const initials = user
-    ? `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase()
+    ? user.username.substring(0, 2).toUpperCase()
     : "U";
 
   return (
@@ -58,14 +97,13 @@ function AuthenticatedApp() {
                 <div className="flex items-center gap-3 cursor-pointer hover-elevate rounded-md p-2" data-testid="link-profile">
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium" data-testid="text-user-name">
-                      {user?.firstName} {user?.lastName}
+                      {user?.username}
                     </p>
                     <p className="text-xs text-muted-foreground" data-testid="text-user-role">
                       {user?.role ? getRoleName(user.role) : ""}
                     </p>
                   </div>
                   <Avatar data-testid="avatar-user">
-                    <AvatarImage src={user?.profileImageUrl || undefined} />
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </div>
@@ -102,9 +140,10 @@ function App() {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuth();
 
-  if (isLoading) {
+  // Only show loading if we're actually loading and haven't received a 401 error
+  if (isLoading && !error) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center space-y-2">
@@ -116,7 +155,7 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return <Landing />;
+    return <Login />;
   }
 
   return <AuthenticatedApp />;

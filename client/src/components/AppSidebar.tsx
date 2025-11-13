@@ -17,6 +17,7 @@ import {
   canAccessCustomers, 
   canAccessJobs, 
   canAccessServices, 
+  canAccessNotes,
   canAccessUsers 
 } from "@/lib/authUtils";
 import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
@@ -87,7 +88,7 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {canAccessDashboard(user) && (
+              {canAccessNotes(user) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/notes"}>
                     <Link href="/notes" data-testid="link-notes">

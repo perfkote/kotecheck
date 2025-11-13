@@ -114,6 +114,14 @@ export default function Services() {
   });
 
   const handleSubmit = (data: InsertService) => {
+    if (!canCreateServices(user)) {
+      toast({ 
+        title: "Unauthorized", 
+        description: "You don't have permission to modify services", 
+        variant: "destructive" 
+      });
+      return;
+    }
     if (editingService) {
       updateMutation.mutate({ id: editingService.id, data });
     } else {
@@ -122,6 +130,14 @@ export default function Services() {
   };
 
   const handleEdit = (service: Service) => {
+    if (!canCreateServices(user)) {
+      toast({ 
+        title: "Unauthorized", 
+        description: "You don't have permission to modify services", 
+        variant: "destructive" 
+      });
+      return;
+    }
     setEditingService(service);
     form.reset({
       name: service.name,
@@ -132,9 +148,29 @@ export default function Services() {
   };
 
   const handleNew = () => {
+    if (!canCreateServices(user)) {
+      toast({ 
+        title: "Unauthorized", 
+        description: "You don't have permission to modify services", 
+        variant: "destructive" 
+      });
+      return;
+    }
     setEditingService(null);
     form.reset({ name: "", category: "powder", price: 0 });
     setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!canCreateServices(user)) {
+      toast({ 
+        title: "Unauthorized", 
+        description: "You don't have permission to modify services", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    deleteMutation.mutate(id);
   };
 
   const getCategoryColor = (category: string) => {
@@ -173,17 +209,17 @@ export default function Services() {
           services.map((service) => (
             <Card 
               key={service.id}
-              className="p-4 hover-elevate cursor-pointer"
+              className={canCreateServices(user) ? "p-4 hover-elevate cursor-pointer" : "p-4"}
               data-testid={`card-service-${service.id}`}
-              onClick={() => handleEdit(service)}
-              onKeyDown={(e) => {
+              onClick={canCreateServices(user) ? () => handleEdit(service) : undefined}
+              onKeyDown={canCreateServices(user) ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   handleEdit(service);
                 }
-              }}
-              role="button"
-              tabIndex={0}
+              } : undefined}
+              role={canCreateServices(user) ? "button" : undefined}
+              tabIndex={canCreateServices(user) ? 0 : undefined}
             >
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1">
@@ -197,32 +233,32 @@ export default function Services() {
                   <div className="text-xs text-muted-foreground">Price</div>
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-3 border-t">
-                <Button
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEdit(service);
-                  }}
-                  data-testid={`button-edit-mobile-${service.id}`}
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                {canCreateServices(user) && (
+              {canCreateServices(user) && (
+                <div className="flex items-center justify-end gap-2 pt-3 border-t">
                   <Button
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteMutation.mutate(service.id);
+                      handleEdit(service);
+                    }}
+                    data-testid={`button-edit-mobile-${service.id}`}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(service.id);
                     }}
                     data-testid={`button-delete-mobile-${service.id}`}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </Card>
           ))
         )}
@@ -258,26 +294,26 @@ export default function Services() {
                     </td>
                     <td className="p-4 text-right font-medium">${parseFloat(service.price).toFixed(2)}</td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleEdit(service)}
-                          data-testid={`button-edit-${service.id}`}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        {canCreateServices(user) && (
+                      {canCreateServices(user) && (
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => deleteMutation.mutate(service.id)}
+                            onClick={() => handleEdit(service)}
+                            data-testid={`button-edit-${service.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(service.id)}
                             data-testid={`button-delete-${service.id}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))

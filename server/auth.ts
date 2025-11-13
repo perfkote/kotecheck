@@ -57,9 +57,10 @@ export async function setupAuth(app: Express) {
             return done(null, false, { message: "Invalid username or password" });
           }
 
-          // Return user session data (only id and role)
+          // Return user session data (id, username, role)
           return done(null, {
             id: user.id,
+            username: user.username,
             role: user.role,
           });
         } catch (error) {
@@ -69,9 +70,9 @@ export async function setupAuth(app: Express) {
     )
   );
 
-  // Serialize only id and role to session
+  // Serialize id, username, and role to session
   passport.serializeUser((user: any, done) => {
-    done(null, { id: user.id, role: user.role });
+    done(null, { id: user.id, username: user.username, role: user.role });
   });
 
   // Deserialize from session
@@ -103,6 +104,7 @@ export async function setupAuth(app: Express) {
             success: true, 
             user: {
               id: user.id,
+              username: user.username,
               role: user.role,
             }
           });

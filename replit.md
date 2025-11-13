@@ -4,7 +4,29 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
-### Mobile Optimization (Latest)
+### Username/Password Authentication System (Latest)
+- **Complete Authentication Redesign**: Replaced Replit OAuth with simple username/password authentication
+  - **Login System**: Clean login page with username/password form using shadcn components
+  - **Session Management**: Secure sessions with PostgreSQL storage via `connect-pg-simple`
+  - **Password Security**: Bcrypt hashing with salt rounds of 10
+  - **User Roles**: Simplified to two roles - Admin (full access) and Manager (estimates only)
+  - **Default Role**: New users default to "admin" role
+  - **Login Credentials**: Initial admin account - username: `admin`, password: `admin`
+  
+- **Backend Implementation**:
+  - Created `SessionUser` type (`{id, username, role}`) for frontend state
+  - Separated API validation type (`InsertUser` with password) from storage type (`NewUserInsert` with passwordHash)
+  - Authentication endpoints: `POST /api/login`, `POST /api/logout`, `GET /api/user`
+  - Role-based middleware: `isAuthenticated`, `isAdmin`, `isManagerOrAbove`
+  - Permission matrix enforced on all API routes
+
+- **Frontend Integration**:
+  - Updated `useAuth()` hook with login/logout mutations and SessionUser typing
+  - Created dedicated `/login` page replacing Landing page for unauthenticated users
+  - Updated header to display username (2-character initials for avatar)
+  - Removed dependencies on firstName, lastName, profileImageUrl fields
+
+### Mobile Optimization
 - **Comprehensive Mobile Responsiveness**: All pages now fully optimized for mobile devices with consistent patterns:
   - **Page Padding**: All pages use `px-4 sm:px-0` for mobile edge padding
   - **Responsive Spacing**: Progressive spacing using `space-y-5 sm:space-y-6 md:space-y-8`

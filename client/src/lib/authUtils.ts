@@ -1,86 +1,132 @@
-import type { User } from "@shared/schema";
+import type { SessionUser } from "@shared/schema";
 
-export function canCreateCustomers(user: User | undefined): boolean {
+// Permission Model:
+// - Admin: Full access to everything
+// - Manager: Estimates only (create/update/delete) + Services (read-only)
+
+export function isAdmin(user: SessionUser | undefined | null): boolean {
   if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+  return user.role === "admin";
 }
 
-export function canCreateJobs(user: User | undefined): boolean {
+export function isManager(user: SessionUser | undefined | null): boolean {
   if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+  return user.role === "manager";
 }
 
-export function canUpdateJobs(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+// Dashboard Access: Admin only
+export function canAccessDashboard(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function canDeleteJobs(user: User | undefined): boolean {
+// Estimates: Admin and Manager can manage
+export function canAccessEstimates(user: SessionUser | undefined | null): boolean {
   if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+  return user.role === "admin" || user.role === "manager";
 }
 
-export function canCreateEstimates(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.role === "employee" || user.isLocalAdmin === 1;
+export function canCreateEstimates(user: SessionUser | undefined | null): boolean {
+  return canAccessEstimates(user);
 }
 
-export function canUpdateEstimates(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.role === "employee" || user.isLocalAdmin === 1;
+export function canUpdateEstimates(user: SessionUser | undefined | null): boolean {
+  return canAccessEstimates(user);
 }
 
-export function canDeleteEstimates(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.role === "employee" || user.isLocalAdmin === 1;
+export function canDeleteEstimates(user: SessionUser | undefined | null): boolean {
+  return canAccessEstimates(user);
 }
 
-export function canAccessJobs(user: User | undefined): boolean {
+// Services: Admin and Manager can read, only Admin can manage
+export function canAccessServices(user: SessionUser | undefined | null): boolean {
   if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+  return user.role === "admin" || user.role === "manager";
 }
 
-export function canAccessCustomers(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+export function canCreateServices(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function canAccessServices(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+export function canUpdateServices(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function canAccessUsers(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.isLocalAdmin === 1;
+export function canDeleteServices(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function canAccessDashboard(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+// Customers: Admin only
+export function canAccessCustomers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function canCreateServices(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+export function canCreateCustomers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function canDeleteNotes(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.role === "manager" || user.isLocalAdmin === 1;
+export function canUpdateCustomers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
-export function isAdmin(user: User | undefined): boolean {
-  if (!user) return false;
-  return user.role === "admin" || user.isLocalAdmin === 1;
+export function canDeleteCustomers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+// Jobs: Admin only
+export function canAccessJobs(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canCreateJobs(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canUpdateJobs(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canDeleteJobs(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+// Notes: Admin only
+export function canAccessNotes(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canCreateNotes(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canUpdateNotes(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canDeleteNotes(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+// Users: Admin only
+export function canAccessUsers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canCreateUsers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canUpdateUsers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canDeleteUsers(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
 }
 
 export function getRoleName(role: string): string {
   const roleNames: Record<string, string> = {
-    admin: "Administrator",
+    admin: "Admin",
     manager: "Manager",
-    employee: "Employee",
-    "read-only": "Read-Only",
   };
   return roleNames[role] || role;
 }

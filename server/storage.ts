@@ -21,7 +21,7 @@ import {
   type Note, 
   type InsertNote,
   type User,
-  type InsertUser
+  type NewUserInsert
 } from "@shared/schema";
 
 export interface CustomerWithMetrics extends Customer {
@@ -81,7 +81,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: NewUserInsert): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
 }
@@ -400,7 +400,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
-  async createUser(userData: InsertUser): Promise<User> {
+  async createUser(userData: NewUserInsert): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({

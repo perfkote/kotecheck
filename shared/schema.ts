@@ -200,6 +200,7 @@ export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;
 
 // User types for simple username/password authentication
+// API layer schema (for validating incoming requests with password)
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -211,11 +212,25 @@ export const insertUserSchema = createInsertSchema(users).omit({
   passwordHash: true,
 });
 
+// Storage layer schema (for creating users with hashed password)
+export const newUserInsertSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
+export const sessionUserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  role: z.enum(["admin", "manager"]),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type NewUserInsert = z.infer<typeof newUserInsertSchema>;
 export type User = typeof users.$inferSelect;
+export type SessionUser = z.infer<typeof sessionUserSchema>;
 export type LoginCredentials = z.infer<typeof loginSchema>;

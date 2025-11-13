@@ -538,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Convert estimate to job (manager+)
-  app.post("/api/estimates/:id/convert-to-job", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.post("/api/estimates/:id/convert-to-job", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const estimateId = req.params.id;
       
