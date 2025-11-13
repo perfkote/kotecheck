@@ -218,43 +218,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/jobs", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { createJobWithCustomerSchema } = await import("@shared/schema");
-      const validated = createJobWithCustomerSchema.parse(req.body);
+      const { createJobSchemaWithValidation } = await import("@shared/schema");
+      const validated = createJobSchemaWithValidation.parse(req.body);
       
+      // Resolve service IDs to service records
+      const serviceRecords = await Promise.all(
+        validated.serviceIds.map(id => storage.getService(id))
+      );
+      
+      // Check if any services are missing
+      const missingIndex = serviceRecords.findIndex(s => !s);
+      if (missingIndex !== -1) {
+        return res.status(404).json({ error: `Service not found: ${validated.serviceIds[missingIndex]}` });
+      }
+      
+      const services = serviceRecords.map(service => ({
+        serviceId: service!.id,
+        serviceName: service!.name,
+        servicePrice: service!.price.toString(),
+        quantity: 1,
+      }));
+
+      // Prepare new customer data if provided
+      let newCustomer: any = undefined;
       let customerId = validated.customerId;
       
-      // If creating a new customer
       if (validated.customerName) {
-        // Check if a customer with this name already exists (case-insensitive)
+        // Check if customer already exists
         const existing = await storage.findCustomerByName(validated.customerName);
-        
         if (existing) {
-          // Use the existing customer
           customerId = existing.id;
         } else {
-          // Create a new customer
-          const newCustomer = await storage.createCustomer({
+          newCustomer = {
             name: validated.customerName,
             email: validated.customerEmail || undefined,
-          });
-          customerId = newCustomer.id;
+          };
         }
       }
-      
-      if (!customerId) {
-        return res.status(400).json({ error: "Customer ID is required" });
-      }
-      
-      // Create the job with the resolved customer ID
-      const job = await storage.createJob({
-        customerId,
-        phoneNumber: validated.phoneNumber,
-        receivedDate: validated.receivedDate || new Date(),
-        coatingType: validated.coatingType,
-        items: validated.items,
-        detailedNotes: validated.detailedNotes,
-        price: validated.price,
-        status: validated.status,
+
+      // Calculate total price from services (can be overridden by user input)
+      const serviceTotal = services.reduce((sum, svc) => sum + (Number(svc.servicePrice) * svc.quantity), 0);
+      const finalPrice = validated.price ?? serviceTotal;
+
+      // Create job with services
+      const job = await storage.createJobWithServices({
+        job: {
+          customerId,
+          phoneNumber: validated.phoneNumber,
+          receivedDate: validated.receivedDate || new Date(),
+          coatingType: validated.coatingType,
+          items: validated.items,
+          detailedNotes: validated.detailedNotes,
+          price: finalPrice,
+          status: validated.status || "received",
+        },
+        services,
+        newCustomer,
       });
       
       res.status(201).json(job);
@@ -268,14 +287,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/jobs/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const validated = insertJobSchema.partial().parse(req.body);
-      const job = await storage.updateJob(req.params.id, validated);
-      if (!job) {
-        return res.status(404).json({ error: "Job not found" });
+      const { updateJobSchema } = await import("@shared/schema");
+      const validated = updateJobSchema.parse(req.body);
+      
+      // Check if serviceIds are being explicitly updated (present in request body)
+      if (Array.isArray(req.body.serviceIds)) {
+        // Get current job services
+        const currentServices = await storage.getJobServices(req.params.id);
+        const currentServiceIds = new Set(currentServices.map(s => s.serviceId));
+        const newServiceIds = new Set(validated.serviceIds || []);
+        
+        // Determine services to add and remove
+        const toRemove = currentServices
+          .filter(s => !newServiceIds.has(s.serviceId))
+          .map(s => s.id);
+        
+        const toAddIds = (validated.serviceIds || []).filter(id => !currentServiceIds.has(id));
+        const toAddRecords = await Promise.all(
+          toAddIds.map(id => storage.getService(id))
+        );
+        
+        // Check if any services are missing
+        const missingIndex = toAddRecords.findIndex(s => !s);
+        if (missingIndex !== -1) {
+          return res.status(404).json({ error: `Service not found: ${toAddIds[missingIndex]}` });
+        }
+        
+        const toAdd = toAddRecords.map(service => ({
+          serviceId: service!.id,
+          serviceName: service!.name,
+          servicePrice: service!.price.toString(),
+          quantity: 1,
+        }));
+        
+        // Calculate price from services if not explicitly provided
+        let finalPrice: number;
+        if (validated.price !== undefined) {
+          // Use provided price
+          finalPrice = validated.price;
+        } else if ((validated.serviceIds || []).length > 0) {
+          // Recalculate from services
+          const allServices = await Promise.all(
+            (validated.serviceIds || []).map(id => storage.getService(id))
+          );
+          finalPrice = allServices.reduce((sum, svc) => sum + (svc ? Number(svc.price) : 0), 0);
+        } else {
+          // Empty serviceIds means no services, price = 0
+          finalPrice = 0;
+        }
+        
+        // Extract job updates (excluding serviceIds and price)
+        const { serviceIds, price, ...otherUpdates } = validated;
+        // Always include recalculated price when services change
+        const job = await storage.updateJobWithServices(req.params.id, { ...otherUpdates, price: finalPrice }, { toAdd, toRemove });
+        
+        if (!job) {
+          return res.status(404).json({ error: "Job not found" });
+        }
+        res.json(job);
+      } else {
+        // serviceIds not provided - preserve existing services, just update job fields
+        const { serviceIds, ...jobUpdates } = validated;
+        const job = await storage.updateJob(req.params.id, jobUpdates);
+        if (!job) {
+          return res.status(404).json({ error: "Job not found" });
+        }
+        res.json(job);
       }
-      res.json(job);
     } catch (error) {
-      res.status(400).json({ error: "Invalid job data" });
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid job data" });
+      }
+      res.status(500).json({ error: "Failed to update job" });
     }
   });
 

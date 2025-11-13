@@ -40,7 +40,6 @@ export const jobs = pgTable("jobs", {
   customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }),
   phoneNumber: text("phone_number").notNull(),
   receivedDate: timestamp("received_date").notNull().defaultNow(),
-  serviceId: varchar("service_id").references(() => services.id),
   coatingType: text("coating_type"),
   items: text("items"),
   detailedNotes: text("detailed_notes"),
@@ -81,6 +80,16 @@ export const estimateServices = pgTable("estimate_services", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const jobServices = pgTable("job_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  serviceId: varchar("service_id").notNull().references(() => services.id),
+  serviceName: text("service_name").notNull(),
+  servicePrice: numeric("service_price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jobId: varchar("job_id").references(() => jobs.id, { onDelete: "cascade" }),
@@ -101,9 +110,17 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   createdAt: true,
 }).extend({
   receivedDate: z.coerce.date().optional(),
-  serviceId: z.string().min(1, "Service is required"),
   coatingType: z.enum(["powder", "ceramic", "misc"]).optional(),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
+});
+
+// API schema for creating jobs with multiple services
+export const createJobSchema = insertJobSchema.omit({ customerId: true, price: true }).extend({
+  customerId: z.string().optional(),
+  customerName: z.string().optional(),
+  customerEmail: z.string().email().optional().or(z.literal("")),
+  serviceIds: z.array(z.string()).min(1, "At least one service is required"),
+  price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
 });
 
 export const insertServiceSchema = createInsertSchema(services).omit({
@@ -128,22 +145,24 @@ export const insertEstimateServiceSchema = createInsertSchema(estimateServices).
   createdAt: true,
 });
 
+export const insertJobServiceSchema = createInsertSchema(jobServices).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertNoteSchema = createInsertSchema(notes).omit({
   id: true,
   createdAt: true,
 });
 
-// Extended schema for creating jobs with optional new customer
-export const createJobWithCustomerSchema = insertJobSchema
-  .omit({ customerId: true })
-  .extend({
-    // Make customerId optional for new customer creation
-    customerId: z.string().optional(),
-    // Allow creating a new customer inline
-    customerName: z.string().optional(),
-    customerEmail: z.string().email().optional().or(z.literal("")),
-  })
-  .superRefine((data, ctx) => {
+// API schema for updating jobs with service mutations
+export const updateJobSchema = insertJobSchema.partial().extend({
+  serviceIds: z.array(z.string()).optional(),
+  price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
+});
+
+// Add validation to createJobSchema for customer selection
+export const createJobSchemaWithValidation = createJobSchema.superRefine((data, ctx) => {
   // Trim string fields
   if (data.customerName) {
     data.customerName = data.customerName.trim();
@@ -187,7 +206,7 @@ export type Customer = typeof customers.$inferSelect;
 
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
-export type CreateJobWithCustomer = z.infer<typeof createJobWithCustomerSchema>;
+export type CreateJobInput = z.infer<typeof createJobSchemaWithValidation>;
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
@@ -197,6 +216,9 @@ export type Estimate = typeof estimates.$inferSelect;
 
 export type InsertEstimateService = z.infer<typeof insertEstimateServiceSchema>;
 export type EstimateService = typeof estimateServices.$inferSelect;
+
+export type InsertJobService = z.infer<typeof insertJobServiceSchema>;
+export type JobService = typeof jobServices.$inferSelect;
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;

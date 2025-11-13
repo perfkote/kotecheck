@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Job, Customer, CreateJobWithCustomer } from "@shared/schema";
+import type { Job, Customer, CreateJobInput } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { canCreateJobs, canDeleteJobs, canAccessJobs } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
@@ -416,7 +416,7 @@ export default function Jobs() {
                 customerId: editingJob.customerId || undefined,
                 phoneNumber: editingJob.phoneNumber,
                 receivedDate: new Date(editingJob.receivedDate),
-                serviceId: editingJob.serviceId || "",
+                serviceIds: [],
                 coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc" | undefined,
                 items: editingJob.items || "",
                 detailedNotes: editingJob.detailedNotes || "",

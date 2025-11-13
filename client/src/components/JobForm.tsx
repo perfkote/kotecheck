@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createJobWithCustomerSchema } from "@shared/schema";
+import { createJobSchemaWithValidation } from "@shared/schema";
 import type { Service } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -36,11 +36,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumber } from "@/lib/formatters";
+import { Card } from "@/components/ui/card";
 
-type FormData = z.infer<typeof createJobWithCustomerSchema>;
+type FormData = z.infer<typeof createJobSchemaWithValidation>;
 
 interface JobFormProps {
   onSubmit: (data: FormData) => void;
@@ -52,26 +53,45 @@ interface JobFormProps {
 export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: JobFormProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],
   });
 
   const form = useForm<FormData>({
-    resolver: zodResolver(createJobWithCustomerSchema),
+    resolver: zodResolver(createJobSchemaWithValidation),
     defaultValues: defaultValues || {
       customerId: "",
       customerName: "",
       phoneNumber: "",
       receivedDate: new Date(),
-      serviceId: "",
+      serviceIds: [],
       coatingType: undefined,
       items: "",
       detailedNotes: "",
-      price: 0,
+      price: undefined,
       status: "received",
     },
   });
+
+  // Initialize selected services from default values
+  useEffect(() => {
+    if (defaultValues?.serviceIds) {
+      setSelectedServices(defaultValues.serviceIds);
+    }
+  }, [defaultValues?.serviceIds]);
+
+  // Update form serviceIds when selectedServices changes
+  useEffect(() => {
+    form.setValue("serviceIds", selectedServices);
+  }, [selectedServices, form]);
+
+  // Calculate service total
+  const serviceTotal = selectedServices.reduce((sum, serviceId) => {
+    const service = services.find(s => s.id === serviceId);
+    return sum + (service ? parseFloat(service.price) : 0);
+  }, 0);
 
   // Filter customers based on search
   const filteredCustomers = customers.filter((customer) =>
@@ -91,6 +111,19 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
     (c) => c.id === form.watch("customerId")
   );
   const displayValue = selectedCustomer?.name || form.watch("customerName") || "";
+
+  const addService = (serviceId: string) => {
+    if (!selectedServices.includes(serviceId)) {
+      setSelectedServices([...selectedServices, serviceId]);
+    }
+  };
+
+  const removeService = (serviceId: string) => {
+    setSelectedServices(selectedServices.filter(id => id !== serviceId));
+  };
+
+  // Get available services (not already selected)
+  const availableServices = services.filter(s => !selectedServices.includes(s.id));
 
   return (
     <Form {...form}>
@@ -208,59 +241,89 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
           )}
         />
 
-        <div className="grid grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="receivedDate"
-            render={({ field }) => {
-              const dateValue = field.value instanceof Date && !isNaN(field.value.getTime())
-                ? field.value.toISOString().split('T')[0]
-                : '';
-              return (
-                <FormItem>
-                  <FormLabel>Received Date</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      value={dateValue}
-                      onChange={(e) => {
-                        const newDate = new Date(e.target.value);
-                        field.onChange(newDate);
-                      }}
-                      data-testid="input-received-date"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
-          />
-
-          <FormField
-            control={form.control}
-            name="serviceId"
-            render={({ field }) => (
+        <FormField
+          control={form.control}
+          name="receivedDate"
+          render={({ field }) => {
+            const dateValue = field.value instanceof Date && !isNaN(field.value.getTime())
+              ? field.value.toISOString().split('T')[0]
+              : '';
+            return (
               <FormItem>
-                <FormLabel>Service</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger data-testid="select-service">
-                      <SelectValue placeholder="Select service" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {services.map((service) => (
-                      <SelectItem key={service.id} value={service.id} data-testid={`option-service-${service.id}`}>
-                        {service.name} - ${parseFloat(service.price).toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormLabel>Received Date</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    value={dateValue}
+                    onChange={(e) => {
+                      const newDate = new Date(e.target.value);
+                      field.onChange(newDate);
+                    }}
+                    data-testid="input-received-date"
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
-            )}
-          />
-        </div>
+            );
+          }}
+        />
+
+        <FormField
+          control={form.control}
+          name="serviceIds"
+          render={() => (
+            <FormItem>
+              <FormLabel>Services</FormLabel>
+              <div className="space-y-3">
+                {selectedServices.length > 0 && (
+                  <div className="space-y-2" data-testid="selected-services-list">
+                    {selectedServices.map((serviceId) => {
+                      const service = services.find(s => s.id === serviceId);
+                      if (!service) return null;
+                      return (
+                        <Card key={serviceId} className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">{service.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                ${parseFloat(service.price).toFixed(2)}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeService(serviceId)}
+                              data-testid={`button-remove-service-${serviceId}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {availableServices.length > 0 && (
+                  <Select onValueChange={addService} value="">
+                    <SelectTrigger data-testid="select-add-service">
+                      <SelectValue placeholder="Add service..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableServices.map((service) => (
+                        <SelectItem key={service.id} value={service.id} data-testid={`option-service-${service.id}`}>
+                          {service.name} - ${parseFloat(service.price).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -300,19 +363,30 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
           )}
         />
 
+        {selectedServices.length > 0 && (
+          <div className="rounded-md border p-4 bg-muted/50" data-testid="service-total-summary">
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Service Total:</span>
+              <span className="text-lg font-bold">${serviceTotal.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price</FormLabel>
+                <FormLabel>Price (Optional)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder="0.00"
+                    placeholder={selectedServices.length > 0 ? `Auto: $${serviceTotal.toFixed(2)}` : "0.00"}
                     {...field}
+                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    value={field.value ?? ""}
                     data-testid="input-price"
                   />
                 </FormControl>

@@ -6,6 +6,7 @@ import {
   services,
   estimates,
   estimateServices,
+  jobServices,
   notes,
   users,
   type Customer, 
@@ -18,6 +19,8 @@ import {
   type InsertEstimate,
   type EstimateService,
   type InsertEstimateService,
+  type JobService,
+  type InsertJobService,
   type Note, 
   type InsertNote,
   type User,
@@ -49,7 +52,9 @@ export interface IStorage {
   getAllJobs(): Promise<Job[]>;
   getJobsByCustomerId(customerId: string): Promise<Job[]>;
   createJob(job: InsertJob): Promise<Job>;
+  createJobWithServices(payload: { job: InsertJob; services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; newCustomer?: InsertCustomer }): Promise<Job>;
   updateJob(id: string, job: Partial<InsertJob>): Promise<Job | undefined>;
+  updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
 
   getService(id: string): Promise<Service | undefined>;
@@ -69,6 +74,10 @@ export interface IStorage {
   getEstimateServices(estimateId: string): Promise<EstimateService[]>;
   addEstimateService(estimateService: InsertEstimateService): Promise<EstimateService>;
   removeEstimateService(id: string): Promise<boolean>;
+
+  getJobServices(jobId: string): Promise<JobService[]>;
+  addJobService(jobService: InsertJobService): Promise<JobService>;
+  removeJobService(id: string): Promise<boolean>;
 
   getNote(id: string): Promise<Note | undefined>;
   getAllNotes(): Promise<Note[]>;
@@ -198,6 +207,109 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return job;
+  }
+
+  async createJobWithServices(payload: { job: InsertJob; services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; newCustomer?: InsertCustomer }): Promise<Job> {
+    // Transaction: optionally create customer, create job, then create job_services
+    return await db.transaction(async (tx) => {
+      let customerId = payload.job.customerId;
+
+      // Create new customer if provided
+      if (payload.newCustomer) {
+        const [customer] = await tx.insert(customers).values(payload.newCustomer).returning();
+        customerId = customer.id;
+      }
+
+      // Generate tracking ID
+      const allJobs = await tx.select().from(jobs);
+      let maxNumber = 0;
+      for (const job of allJobs) {
+        const match = job.trackingId.match(/JOB-(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+      const jobNumber = maxNumber + 1;
+      const trackingId = `JOB-${jobNumber.toString().padStart(4, '0')}`;
+
+      // Create job
+      const [job] = await tx
+        .insert(jobs)
+        .values({
+          ...payload.job,
+          customerId,
+          trackingId,
+          price: payload.job.price.toString(),
+        })
+        .returning();
+
+      // Create job_services entries
+      if (payload.services.length > 0) {
+        await tx.insert(jobServices).values(
+          payload.services.map(svc => ({
+            ...svc,
+            jobId: job.id,
+            servicePrice: svc.servicePrice.toString(),
+          }))
+        );
+      }
+
+      return job;
+    });
+  }
+
+  async updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }): Promise<Job | undefined> {
+    return await db.transaction(async (tx) => {
+      // Update job
+      const { price, ...rest } = updates;
+      const dbUpdates: any = {
+        ...rest,
+        ...(price !== undefined && { price: price.toString() }),
+      };
+
+      // Only update completedAt when status actually changes
+      if (updates.status) {
+        const [currentJob] = await tx.select().from(jobs).where(eq(jobs.id, id));
+        if (currentJob) {
+          if (updates.status === "paid" && currentJob.status !== "paid") {
+            dbUpdates.completedAt = new Date();
+          } else if (updates.status !== "paid" && currentJob.status === "paid") {
+            dbUpdates.completedAt = null;
+          }
+        }
+      }
+
+      const [job] = await tx
+        .update(jobs)
+        .set(dbUpdates)
+        .where(eq(jobs.id, id))
+        .returning();
+
+      if (!job) return undefined;
+
+      // Remove specified services
+      if (services.toRemove.length > 0) {
+        for (const serviceId of services.toRemove) {
+          await tx.delete(jobServices).where(eq(jobServices.id, serviceId));
+        }
+      }
+
+      // Add new services
+      if (services.toAdd.length > 0) {
+        await tx.insert(jobServices).values(
+          services.toAdd.map(svc => ({
+            ...svc,
+            jobId: job.id,
+            servicePrice: svc.servicePrice.toString(),
+          }))
+        );
+      }
+
+      return job;
+    });
   }
 
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
@@ -352,6 +464,26 @@ export class DatabaseStorage implements IStorage {
 
   async removeEstimateService(id: string): Promise<boolean> {
     const result = await db.delete(estimateServices).where(eq(estimateServices.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getJobServices(jobId: string): Promise<JobService[]> {
+    return await db.select().from(jobServices).where(eq(jobServices.jobId, jobId));
+  }
+
+  async addJobService(insertJobService: InsertJobService): Promise<JobService> {
+    const [jobService] = await db
+      .insert(jobServices)
+      .values({
+        ...insertJobService,
+        servicePrice: insertJobService.servicePrice.toString(),
+      })
+      .returning();
+    return jobService;
+  }
+
+  async removeJobService(id: string): Promise<boolean> {
+    const result = await db.delete(jobServices).where(eq(jobServices.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
