@@ -4,7 +4,16 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
-### Username/Password Authentication System (Latest - November 13, 2025)
+### Service-Based Jobs (Latest - November 13, 2025)
+- **Jobs Form Redesign**: Replaced "coating type" dropdown with "services" dropdown in create/edit job forms
+  - **Database Schema**: Added `serviceId` field to jobs table (references services.id)
+  - **Backwards Compatibility**: Made `coatingType` field nullable to preserve existing jobs
+  - **Services Dropdown**: Displays all available services from database with name and price format
+  - **Form Validation**: New jobs require serviceId to be selected
+  - **Migration Applied**: Database schema updated using Drizzle push with `--force` flag
+  - **Testing**: End-to-end test confirmed services dropdown works correctly in create job flow
+
+### Username/Password Authentication System (November 13, 2025)
 - **Complete Authentication Redesign**: Replaced Replit OAuth with simple username/password authentication
   - **Login System**: Clean login page with username/password form using shadcn components
   - **Session Management**: Secure sessions with PostgreSQL storage via `connect-pg-simple`

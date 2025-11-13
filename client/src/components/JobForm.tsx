@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createJobWithCustomerSchema } from "@shared/schema";
+import type { Service } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Form,
@@ -51,6 +53,10 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
+  const { data: services = [] } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(createJobWithCustomerSchema),
     defaultValues: defaultValues || {
@@ -58,7 +64,8 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
       customerName: "",
       phoneNumber: "",
       receivedDate: new Date(),
-      coatingType: "powder",
+      serviceId: "",
+      coatingType: undefined,
       items: "",
       detailedNotes: "",
       price: 0,
@@ -231,20 +238,22 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
 
           <FormField
             control={form.control}
-            name="coatingType"
+            name="serviceId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Coating Type</FormLabel>
+                <FormLabel>Service</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger data-testid="select-coating-type">
-                      <SelectValue />
+                    <SelectTrigger data-testid="select-service">
+                      <SelectValue placeholder="Select service" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="powder">Powder</SelectItem>
-                    <SelectItem value="ceramic">Ceramic</SelectItem>
-                    <SelectItem value="misc">Misc</SelectItem>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.id} data-testid={`option-service-${service.id}`}>
+                        {service.name} - ${parseFloat(service.price).toFixed(2)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

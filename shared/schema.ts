@@ -40,7 +40,8 @@ export const jobs = pgTable("jobs", {
   customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }),
   phoneNumber: text("phone_number").notNull(),
   receivedDate: timestamp("received_date").notNull().defaultNow(),
-  coatingType: text("coating_type").notNull(),
+  serviceId: varchar("service_id").references(() => services.id),
+  coatingType: text("coating_type"),
   items: text("items"),
   detailedNotes: text("detailed_notes"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
@@ -100,7 +101,8 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   createdAt: true,
 }).extend({
   receivedDate: z.coerce.date().optional(),
-  coatingType: z.enum(["powder", "ceramic", "misc"]),
+  serviceId: z.string().min(1, "Service is required"),
+  coatingType: z.enum(["powder", "ceramic", "misc"]).optional(),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
