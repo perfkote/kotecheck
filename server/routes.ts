@@ -283,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Service routes (read: manager+, write: manager+)
-  app.get("/api/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
+  app.get("/api/services", isAuthenticated, isEmployeeOrAbove, async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
       const services = category
@@ -422,11 +422,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Derive serviceType from service category
       const serviceType = service.category === "prep" ? "misc" : service.category;
       
-      // Create estimate with derived serviceType
+      // Create estimate with derived serviceType and total from service price
       const validated = insertEstimateSchema.parse({
         ...estimateData,
         serviceType,
-        total: service.price,
+        total: String(service.price),
       });
       
       const estimate = await storage.createEstimate(validated);
@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimateId: estimate.id,
         serviceId: service.id,
         serviceName: service.name,
-        servicePrice: service.price,
+        servicePrice: String(service.price),
         quantity: 1,
       });
       

@@ -121,7 +121,6 @@ export const insertServiceSchema = createInsertSchema(services).omit({
 export const insertEstimateSchema = createInsertSchema(estimates).omit({
   id: true,
   createdAt: true,
-  total: true,
 }).extend({
   serviceType: z.enum(["powder", "ceramic", "misc"]),
   date: z.coerce.date().optional(),

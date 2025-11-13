@@ -114,7 +114,7 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
                 <SelectContent>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
-                      {service.name} - {formatMoney(service.price)}
+                      {service.name} - {formatMoney(String(service.price))}
                     </SelectItem>
                   ))}
                 </SelectContent>
