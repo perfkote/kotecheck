@@ -108,7 +108,7 @@ export class DatabaseStorage implements IStorage {
         projectList: customers.projectList,
         createdAt: customers.createdAt,
         totalSpent: sql<string>`coalesce(sum(${jobs.price}), '0')`,
-        activeJobsCount: sql<number>`coalesce(sum(case when ${jobs.status} != 'completed' then 1 else 0 end), 0)`,
+        activeJobsCount: sql<number>`coalesce(sum(case when ${jobs.status} IN ('received', 'prepped', 'coated', 'finished') then 1 else 0 end), 0)`,
       })
       .from(customers)
       .leftJoin(jobs, eq(jobs.customerId, customers.id))
@@ -212,12 +212,12 @@ export class DatabaseStorage implements IStorage {
       const [currentJob] = await db.select().from(jobs).where(eq(jobs.id, id));
       
       if (currentJob) {
-        // Transitioning TO completed: set completedAt if not already set
-        if (updates.status === "completed" && currentJob.status !== "completed") {
+        // Transitioning TO paid: set completedAt if not already set
+        if (updates.status === "paid" && currentJob.status !== "paid") {
           dbUpdates.completedAt = new Date();
         }
-        // Transitioning AWAY FROM completed: clear completedAt
-        else if (updates.status !== "completed" && currentJob.status === "completed") {
+        // Transitioning AWAY FROM paid: clear completedAt
+        else if (updates.status !== "paid" && currentJob.status === "paid") {
           dbUpdates.completedAt = null;
         }
       }

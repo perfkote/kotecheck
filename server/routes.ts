@@ -559,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items: servicesText,
         detailedNotes: `Converted from estimate on ${new Date().toLocaleDateString()}`,
         price: parseFloat(estimate.total),
-        status: "pending",
+        status: "received",
       });
       
       // Update estimate status to "converted"

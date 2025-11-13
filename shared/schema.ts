@@ -50,7 +50,7 @@ export const jobs = pgTable("jobs", {
   items: text("items"),
   detailedNotes: text("detailed_notes"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"),
+  status: text("status").notNull().default("received"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

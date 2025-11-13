@@ -104,10 +104,10 @@ export default function Dashboard() {
     queryKey: ["/api/analytics/most-popular-service"],
   });
 
-  const activeJobs = jobs.filter(j => j.status === "in-progress" || j.status === "pending");
-  const completedJobs = jobs.filter(j => j.status === "completed");
+  const activeJobs = jobs.filter(j => j.status === "received" || j.status === "prepped" || j.status === "coated" || j.status === "finished");
+  const completedJobs = jobs.filter(j => j.status === "paid");
   const totalRevenue = jobs
-    .filter(j => j.status === "completed")
+    .filter(j => j.status === "paid")
     .reduce((sum, job) => sum + Number(job.price || 0), 0);
 
   // Calculate average job length (in days)

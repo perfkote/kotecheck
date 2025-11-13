@@ -62,7 +62,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
       items: "",
       detailedNotes: "",
       price: 0,
-      status: "pending",
+      status: "received",
     },
   });
 
@@ -318,10 +318,11 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="received">Received</SelectItem>
+                    <SelectItem value="prepped">Prepped</SelectItem>
+                    <SelectItem value="coated">Coated</SelectItem>
+                    <SelectItem value="finished">Finished</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

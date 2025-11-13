@@ -188,10 +188,11 @@ export default function Jobs() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="prepped">Prepped</SelectItem>
+            <SelectItem value="coated">Coated</SelectItem>
+            <SelectItem value="finished">Finished</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -9,11 +9,15 @@ export function StatusBadge({ status, type = "job" }: StatusBadgeProps) {
   const getVariant = () => {
     if (type === "job") {
       switch (status) {
-        case "completed":
+        case "paid":
           return "default";
-        case "in-progress":
+        case "finished":
           return "secondary";
-        case "pending":
+        case "coated":
+          return "secondary";
+        case "prepped":
+          return "outline";
+        case "received":
           return "outline";
         case "cancelled":
           return "destructive";
