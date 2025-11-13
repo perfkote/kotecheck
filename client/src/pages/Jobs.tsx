@@ -167,8 +167,10 @@ export default function Jobs() {
         return aIsClosed ? 1 : -1;
       }
       
-      // Within same closed/non-closed group, sort alphabetically by customer name
-      return a.customerName.localeCompare(b.customerName);
+      // Within same closed/non-closed group, sort by newest date first
+      const aDate = new Date(a.receivedDate).getTime();
+      const bDate = new Date(b.receivedDate).getTime();
+      return bDate - aDate;
     });
 
   if (jobsLoading) {

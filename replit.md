@@ -7,7 +7,7 @@ Coat Check is a comprehensive coating job management application designed for co
 - **Service-Based Estimates**: Estimates form now displays all available services from the database (replacing hardcoded Powder/Ceramic/Misc dropdown). Backend automatically derives serviceType from selected service category, creates estimate_service linkage, and sets total based on service price.
 - **Jobs Page UX**: Job row clicks now show full details dialog instead of opening edit mode. Edit action moved to 3-dot dropdown menu for cleaner interaction.
 - **Customer Metrics**: Added "Total Jobs" column to Customer page showing complete job count (not just active jobs). Backend updated to return totalJobsCount metric.
-- **Jobs Page Sorting**: Non-closed jobs (status !== 'finished' and !== 'paid') now appear at top of list, sorted alphabetically by customer name. Closed jobs follow below, also alphabetically sorted.
+- **Jobs Page Sorting**: Non-closed jobs (status !== 'finished' and !== 'paid') now appear at top of list, sorted by newest date first. Closed jobs follow below, also sorted by newest date first.
 - **Employee Access Restrictions**: Employees can only access the estimates page. All other pages (dashboard, customers, jobs, services, notes, users) are restricted to managers and admins with frontend route guards and backend API protections.
 - **Default User Role**: New users default to "employee" role via database schema.
 - **Coating Type Standardization**: Updated all forms and backend to use "misc" instead of "both" for mixed coating jobs.
