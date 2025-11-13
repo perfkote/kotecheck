@@ -7,7 +7,7 @@ Coat Check is a comprehensive coating job management application designed for co
 ### Multi-Service Jobs System (Latest - November 13, 2025)
 - **Complete Multi-Service Implementation**: Jobs can now have multiple services with individual add/remove capability
   - **Database Schema**: Created `job_services` junction table for many-to-many relationship (jobId, serviceId, serviceName, servicePrice, quantity)
-  - **Removed Legacy Field**: Removed single `serviceId` column from jobs table
+  - **Backward Compatibility**: Kept legacy `serviceId` column in jobs table to prevent production migration failures during publishing
   - **Storage Layer**: Implemented `createJobWithServices` and `updateJobWithServices` with PostgreSQL transactions for atomic operations
   - **Backend Routes**: POST/PATCH /api/jobs accept `serviceIds` array, auto-calculate price from services (manual override supported)
   - **JobForm Component**: 
@@ -19,6 +19,7 @@ Coat Check is a comprehensive coating job management application designed for co
     - Price field label indicates "(Editable)" when services are selected
   - **Form Validation**: Requires at least one service to be selected
   - **Migration Applied**: Database schema updated using `npm run db:push --force`
+  - **Publishing Fix**: Restored `serviceId` column for backward compatibility to resolve production deployment migration failures
   - **Testing**: End-to-end tests confirmed adding/removing services, compact row layout, editable pricing, and job persistence work correctly
 
 ### Username/Password Authentication System (November 13, 2025)

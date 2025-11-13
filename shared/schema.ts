@@ -40,6 +40,7 @@ export const jobs = pgTable("jobs", {
   customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }),
   phoneNumber: text("phone_number").notNull(),
   receivedDate: timestamp("received_date").notNull().defaultNow(),
+  serviceId: varchar("service_id").references(() => services.id),
   coatingType: text("coating_type"),
   items: text("items"),
   detailedNotes: text("detailed_notes"),
