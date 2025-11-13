@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CustomerForm } from "@/components/CustomerForm";
-import { Plus, Search, MoreVertical } from "lucide-react";
+import { Plus, Search, MoreVertical, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface CustomerWithMetrics extends Customer {
   totalSpent: number;
@@ -193,7 +195,60 @@ export default function Customers() {
         </Select>
       </div>
 
-      <div className="border rounded-md">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {filteredCustomers.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No customers found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your search</p>
+          </Card>
+        ) : (
+          filteredCustomers.map((customer) => (
+            <Card 
+              key={customer.id}
+              className="p-4 hover-elevate cursor-pointer"
+              data-testid={`card-customer-${customer.id}`}
+              onClick={() => setEditingCustomer(customer)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setEditingCustomer(customer);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex-1">
+                  <div className="font-semibold text-base">{customer.name}</div>
+                  <div className="text-sm text-muted-foreground">{customer.phone || '—'}</div>
+                  {customer.email && (
+                    <div className="text-xs text-muted-foreground">{customer.email}</div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="font-semibold text-lg">${customer.totalSpent.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">Total Spent</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                <Badge variant="outline" className="text-xs">
+                  {customer.activeJobsCount} active
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {customer.totalJobsCount} total
+                </Badge>
+                <span>•</span>
+                <span>Since {new Date(customer.createdAt).toLocaleDateString()}</span>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block border rounded-md">
         {/* Header Row */}
         <div className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-4 p-4 bg-muted/50 border-b font-medium text-sm">
           <div>Name</div>
@@ -206,73 +261,81 @@ export default function Customers() {
         </div>
 
         {/* Customer Rows */}
-        {filteredCustomers.map((customer) => (
-          <div
-            key={customer.id}
-            className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-4 p-4 border-b last:border-b-0 hover-elevate cursor-pointer transition-all"
-            data-testid={`row-customer-${customer.id}`}
-            onClick={() => setEditingCustomer(customer)}
-          >
-            <div className="font-medium">{customer.name}</div>
-            <div className="text-sm text-muted-foreground">
-              <div>{customer.phone || '—'}</div>
-              {customer.email && <div className="text-xs">{customer.email}</div>}
-            </div>
-            <div className="text-sm">
-              {new Date(customer.createdAt).toLocaleDateString()}
-            </div>
-            <div className="text-sm font-medium">
-              ${customer.totalSpent.toFixed(2)}
-            </div>
-            <div className="text-sm">
-              {customer.activeJobsCount}
-            </div>
-            <div className="text-sm">
-              {customer.totalJobsCount || 0}
-            </div>
-            <div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" data-testid={`button-menu-${customer.id}`}>
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
-                    data-testid="menu-edit"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingCustomer(customer);
-                    }}
-                  >
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    data-testid="menu-view-jobs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`);
-                    }}
-                  >
-                    View Jobs
-                  </DropdownMenuItem>
-                  {canCreateCustomers(user) && (
+        {filteredCustomers.length === 0 ? (
+          <div className="p-12 text-center">
+            <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No customers found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your search</p>
+          </div>
+        ) : (
+          filteredCustomers.map((customer) => (
+            <div
+              key={customer.id}
+              className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-4 p-4 border-b last:border-b-0 hover-elevate cursor-pointer transition-all"
+              data-testid={`row-customer-${customer.id}`}
+              onClick={() => setEditingCustomer(customer)}
+            >
+              <div className="font-medium">{customer.name}</div>
+              <div className="text-sm text-muted-foreground">
+                <div>{customer.phone || '—'}</div>
+                {customer.email && <div className="text-xs">{customer.email}</div>}
+              </div>
+              <div className="text-sm">
+                {new Date(customer.createdAt).toLocaleDateString()}
+              </div>
+              <div className="text-sm font-medium">
+                ${customer.totalSpent.toFixed(2)}
+              </div>
+              <div className="text-sm">
+                {customer.activeJobsCount}
+              </div>
+              <div className="text-sm">
+                {customer.totalJobsCount || 0}
+              </div>
+              <div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" data-testid={`button-menu-${customer.id}`}>
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
                     <DropdownMenuItem 
-                      className="text-destructive" 
-                      data-testid="menu-delete"
+                      data-testid="menu-edit"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteMutation.mutate(customer.id);
+                        setEditingCustomer(customer);
                       }}
                     >
-                      Delete
+                      Edit
                     </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuItem 
+                      data-testid="menu-view-jobs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/jobs?customer=${encodeURIComponent(customer.name)}`);
+                      }}
+                    >
+                      View Jobs
+                    </DropdownMenuItem>
+                    {canCreateCustomers(user) && (
+                      <DropdownMenuItem 
+                        className="text-destructive" 
+                        data-testid="menu-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate(customer.id);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
