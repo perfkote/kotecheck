@@ -4,14 +4,20 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 13, 2025)
 
-### Service-Based Jobs (Latest - November 13, 2025)
-- **Jobs Form Redesign**: Replaced "coating type" dropdown with "services" dropdown in create/edit job forms
-  - **Database Schema**: Added `serviceId` field to jobs table (references services.id)
-  - **Backwards Compatibility**: Made `coatingType` field nullable to preserve existing jobs
-  - **Services Dropdown**: Displays all available services from database with name and price format
-  - **Form Validation**: New jobs require serviceId to be selected
-  - **Migration Applied**: Database schema updated using Drizzle push with `--force` flag
-  - **Testing**: End-to-end test confirmed services dropdown works correctly in create job flow
+### Multi-Service Jobs System (Latest - November 13, 2025)
+- **Complete Multi-Service Implementation**: Jobs can now have multiple services with individual add/remove capability
+  - **Database Schema**: Created `job_services` junction table for many-to-many relationship (jobId, serviceId, serviceName, servicePrice, quantity)
+  - **Removed Legacy Field**: Removed single `serviceId` column from jobs table
+  - **Storage Layer**: Implemented `createJobWithServices` and `updateJobWithServices` with PostgreSQL transactions for atomic operations
+  - **Backend Routes**: POST/PATCH /api/jobs accept `serviceIds` array, auto-calculate price from services (manual override supported)
+  - **JobForm Component**: 
+    - Add multiple services via dropdown above items field
+    - Each service displayed in Card with name, price, and remove button (X icon)
+    - Service total summary at bottom showing sum of all selected services
+    - Price field optional with auto-calculated placeholder
+  - **Form Validation**: Requires at least one service to be selected
+  - **Migration Applied**: Database schema updated using `npm run db:push --force`
+  - **Testing**: End-to-end test confirmed adding/removing multiple services, service total calculation, and job persistence work correctly
 
 ### Username/Password Authentication System (November 13, 2025)
 - **Complete Authentication Redesign**: Replaced Replit OAuth with simple username/password authentication
