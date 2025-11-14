@@ -1,127 +1,6 @@
 ## Overview
 
-Coat Check is a comprehensive coating job management application designed for coating businesses. It provides a clean, productivity-focused interface for tracking customers, jobs, estimates, and notes. The system supports customer relationship management, detailed job tracking with various coating types (powder/ceramic/misc), efficient estimate creation with simplified service selection, and internal note-taking. The application aims to streamline operations and enhance productivity for coating businesses.
-
-## Recent Changes (November 14, 2025)
-
-### User Creation Feature (Latest - November 14, 2025)
-- **Admin User Creation**: Administrators can now create new users directly from the Users page
-  - **New User Button**: Added "New User" button in Users page header
-  - **User Creation Dialog**: Clean dialog with username, password, and role fields
-  - **Role Management**: Updated Users page to only show supported roles (Admin and Manager)
-  - **Simplified UI**: Removed OAuth-specific fields, showing only: Username, Role, Created date
-  - **Form Validation**: Username (min 3 chars), password (min 6 chars), role selection required
-  - **Mobile-Responsive**: Dialog follows same mobile-first pattern as other forms
-  - **Security**: Passwords hashed with bcrypt, admin-only access enforced
-
-### Mobile Optimization Enhancement (November 14, 2025)
-- **Comprehensive Mobile UX Improvements**: Enhanced mobile experience across all dialogs and forms
-  - **Responsive Dialogs**: All dialogs now use full-width on mobile with progressive sizing (`max-w-full sm:max-w-2xl lg:max-w-3xl`)
-  - **Adaptive Padding**: Dialog padding scales from mobile to desktop (`p-4 sm:p-6`)
-  - **Service Selection Rows**: Multi-service rows stack vertically on mobile, horizontal on desktop
-    - Mobile: Service name and price stack in column layout
-    - Desktop: Service name and price display inline
-    - Improved touch targets with larger remove buttons (44px)
-  - **Form Spacing**: Standardized responsive spacing across all forms (`space-y-5 sm:space-y-6`)
-  - **Touch-Friendly**: All interactive elements meet 44px minimum touch target size
-  - **Pages Updated**: Estimates, Jobs, Dashboard, Customers, Services dialogs all optimized
-  - **Forms Updated**: EstimateForm and JobForm with mobile-first service selection layout
-  - **Bug Fix**: Fixed Total field auto-update in EstimateForm - now properly updates when adding multiple services, with smart state reset when dialog closes or services are removed
-
-### Job Editing Fix (November 14, 2025)
-- **Fixed Job Editing with Services**: Jobs can now be edited with their existing services properly loaded
-  - **Backend Enhancement**: GET /api/jobs now returns `JobWithServices` type including services array and serviceIds
-  - **Bulk Loading**: Implemented `enrichJobsWithServices` helper using `inArray` for efficient N+1-free service loading
-  - **Type Safety**: Added `JobWithServices` type extending Job with `services: JobService[]` and `serviceIds: string[]`
-  - **Frontend Integration**: Edit dialog now properly populates `serviceIds` from job data instead of empty array
-  - **Performance**: All job services loaded in single query per batch of jobs (no N+1 queries)
-
-### Multi-Service Estimates System (November 13, 2025)
-- **Complete Multi-Service Implementation for Estimates**: Estimates now support multiple service selection, matching the Jobs feature
-  - **EstimateForm Component**: 
-    - Add multiple services via dropdown
-    - **Space-Efficient Layout**: Services displayed as compact single-line rows (not cards) to maximize vertical space
-    - Each row shows: service name + price + remove button (X icon) in one line
-    - **Editable Total**: Total field auto-populates with service sum and can be customized on-the-fly
-    - Helper text shows "Auto-calculated from services: $XX.XX" when using auto value
-    - Total field label indicates "(Editable)" when services are selected
-  - **Type Safety**: Proper TypeScript types throughout (EstimateFormSubmission, EstimateCreationData)
-  - **Backend Routes**: POST /api/estimates accepts `serviceIds` array, auto-calculates total from services (manual override supported)
-  - **Form Validation**: Requires at least one service to be selected
-  - **Zod Schema**: Uses `.transform()` to normalize total to string for backend compatibility
-  - **Testing**: End-to-end tests confirmed multi-service selection, compact row layout, editable pricing, and estimate persistence
-
-### Multi-Service Jobs System (November 13, 2025)
-- **Complete Multi-Service Implementation**: Jobs can now have multiple services with individual add/remove capability
-  - **Database Schema**: Created `job_services` junction table for many-to-many relationship (jobId, serviceId, serviceName, servicePrice, quantity)
-  - **Backward Compatibility**: Kept legacy `serviceId` column in jobs table to prevent production migration failures during publishing
-  - **Storage Layer**: Implemented `createJobWithServices` and `updateJobWithServices` with PostgreSQL transactions for atomic operations
-  - **Backend Routes**: POST/PATCH /api/jobs accept `serviceIds` array, auto-calculate price from services (manual override supported)
-  - **JobForm Component**: 
-    - Add multiple services via dropdown above items field
-    - **Space-Efficient Layout**: Services displayed as compact single-line rows (not cards) to maximize vertical space
-    - Each row shows: service name + price + remove button (X icon) in one line
-    - **Editable Total**: Price field auto-populates with service total and can be customized on-the-fly
-    - Helper text shows "Auto-calculated from services: $XX.XX" when using auto value
-    - Price field label indicates "(Editable)" when services are selected
-  - **Form Validation**: Requires at least one service to be selected
-  - **Migration Applied**: Database schema updated using `npm run db:push --force`
-  - **Publishing Fix**: Restored `serviceId` column for backward compatibility to resolve production deployment migration failures
-  - **Testing**: End-to-end tests confirmed adding/removing services, compact row layout, editable pricing, and job persistence work correctly
-
-### Username/Password Authentication System (November 13, 2025)
-- **Complete Authentication Redesign**: Replaced Replit OAuth with simple username/password authentication
-  - **Login System**: Clean login page with username/password form using shadcn components
-  - **Session Management**: Secure sessions with PostgreSQL storage via `connect-pg-simple`
-  - **Password Security**: Bcrypt hashing with salt rounds of 10
-  - **Username Handling**: Case-insensitive lookups (LOWER() comparison in SQL)
-  - **User Roles**: Two roles - Admin (full access) and Manager (estimates + services read-only)
-  - **Default Role**: New users default to "admin" role
-  - **Test Users**: 
-    - Admin: username=`admin`, password=`admin` (case-insensitive)
-    - Manager: username=`manager`, password=`manager` (case-insensitive)
-  
-- **Backend Implementation**:
-  - Created `SessionUser` type (`{id, username, role}`) for frontend state
-  - Separated API validation type (`InsertUser` with password) from storage type (`NewUserInsert` with passwordHash)
-  - Authentication endpoints: `POST /api/login`, `POST /api/logout`, `GET /api/user`
-  - Role-based middleware: `isAuthenticated`, `isAdmin`, `isManagerOrAbove`
-  - Permission matrix enforced on all API routes:
-    - **Admin only**: Customers, Jobs, Notes, Users, Services (POST/PATCH/DELETE), Convert-to-job
-    - **Manager+**: Estimates (full CRUD), Services (GET read-only)
-
-- **Frontend Integration**:
-  - Updated `useAuth()` hook with login/logout mutations and SessionUser typing
-  - Created dedicated `/login` page replacing Landing page for unauthenticated users
-  - Updated header to display username (2-character initials for avatar)
-  - Removed dependencies on firstName, lastName, profileImageUrl fields
-  - **ProtectedRoute**: Shows AccessDenied page for unauthorized access (no redirects)
-  - **Services Page**: Strict read-only UI for managers (all edit/delete controls hidden)
-  - **Sidebar**: Dynamically filters menu items based on user role
-  - **401 Handling**: Returns null instead of throwing error to prevent loading screen bugs
-
-### Mobile Optimization
-- **Comprehensive Mobile Responsiveness**: All pages now fully optimized for mobile devices with consistent patterns:
-  - **Page Padding**: All pages use `px-4 sm:px-0` for mobile edge padding
-  - **Responsive Spacing**: Progressive spacing using `space-y-5 sm:space-y-6 md:space-y-8`
-  - **Touch Targets**: All interactive elements meet 44px minimum touch target requirement
-  - **Card-Based Views**: Mobile views use cards (md:hidden) with desktop tables (hidden md:block) at 768px breakpoint
-  
-- **Dashboard Mobile**: Single-column metric tiles, 180px chart height on mobile (260px desktop), stacked recent jobs cards, dual temperature gauge with flex-wrap
-- **Customers Mobile**: Full card view with customer info, metrics, and action buttons properly sized
-- **Services Mobile**: Card view with default button sizes (not sm) for proper touch targets
-- **Users Mobile**: Card view with per-user mutation loading states (no global disabling)
-- **Jobs Mobile**: Card view with status badges, customer info, and job details; newest jobs first sorting
-- **Notes Mobile**: Responsive cards with stacked author/timestamp, full-width filter on mobile, smaller avatars
-- **Estimates Mobile**: Stacked estimate cards, full-width search and buttons on mobile, dark mode status badges
-
-### Previous Features
-- **Service-Based Estimates**: Estimates form now displays all available services from the database (replacing hardcoded Powder/Ceramic/Misc dropdown). Backend automatically derives serviceType from selected service category, creates estimate_service linkage, and sets total based on service price.
-- **Jobs Page UX**: Job row clicks now show full details dialog instead of opening edit mode. Edit action moved to 3-dot dropdown menu for cleaner interaction.
-- **Customer Metrics**: Added "Total Jobs" column to Customer page showing complete job count (not just active jobs). Backend updated to return totalJobsCount metric.
-- **Jobs Page Sorting**: Non-closed jobs (status !== 'finished' and !== 'paid') now appear at top of list, sorted by newest date first. Closed jobs follow below, also sorted by newest date first.
-- **Coating Type Standardization**: Updated all forms and backend to use "misc" instead of "both" for mixed coating jobs.
-- **UI Improvements**: All dropdown placeholders changed to "Select" for consistency.
+Coat Check is a coating job management application designed to streamline operations and enhance productivity for coating businesses. It provides a clean, productivity-focused interface for tracking customers, jobs, estimates, and notes. The system supports customer relationship management, detailed job tracking with various coating types (powder/ceramic/misc), efficient estimate creation with multi-service selection, and internal note-taking.
 
 ## User Preferences
 
@@ -131,23 +10,23 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-The frontend is built with **React** and **TypeScript**, using **Vite** for tooling. **Wouter** handles client-side routing, and **TanStack Query** manages server state with aggressive caching. UI components are based on **shadcn/ui** and **Radix UI primitives**, styled with **Tailwind CSS**. Forms are managed with **React Hook Form** and validated using **Zod schemas** shared with the backend.
+The frontend is built with **React** and **TypeScript**, using **Vite** for tooling. **Wouter** handles client-side routing, and **TanStack Query** manages server state with aggressive caching. UI components are based on **shadcn/ui** and **Radix UI primitives**, styled with **Tailwind CSS**. Forms are managed with **React Hook Form** and validated using **Zod schemas** shared with the backend. The application features comprehensive mobile optimization, providing responsive layouts for all pages and components, transitioning to card-based views on smaller screens.
 
 ### Backend Architecture
 
 The backend is built with **Express.js** and **TypeScript**, providing a **RESTful API** design. It includes custom middleware for logging and JSON parsing. API endpoints are resource-based and utilize **Zod schema validation** for request bodies. A `DatabaseStorage` implementation handles all CRUD operations, separating data access logic from routes. Authentication and role-based access control are implemented using **username/password authentication** with bcrypt hashing and a two-role permission system:
-- **Admin**: Full access to all features including user management, customers, jobs, services (full CRUD), estimates, and notes
-- **Manager**: Access to estimates (full CRUD) and services (read-only view only)
+- **Admin**: Full access to all features including user management, customers, jobs, services (full CRUD), estimates, and notes.
+- **Manager**: Access to estimates (full CRUD) and services (read-only view only).
 
-Route protection is enforced via middleware (`isAuthenticated`, `isAdmin`, `isManagerOrAbove`) with frontend route guards showing AccessDenied page for unauthorized access. Secure session management is handled via `connect-pg-simple`.
+Route protection is enforced via middleware (`isAuthenticated`, `isAdmin`, `isManagerOrAbove`) with frontend route guards showing an AccessDenied page for unauthorized access. Secure session management is handled via `connect-pg-simple`.
 
 ### Database Architecture
 
-The application uses **PostgreSQL** with **Drizzle ORM** for type-safe database operations. The schema, defined in `shared/schema.ts`, includes tables for `customers`, `jobs`, `services`, `estimates`, `estimate_services`, `notes`, `users`, and `sessions`. Relationships include jobs linked to customers, many-to-many between estimates and services via `estimate_services`, and notes linked to jobs or customers. **Shared Zod schemas** generated from Drizzle ensure consistent data validation across the stack.
+The application uses **PostgreSQL** with **Drizzle ORM** for type-safe database operations. The schema includes tables for `customers`, `jobs`, `services`, `estimates`, `estimate_services`, `notes`, `users`, and `sessions`. Relationships include jobs linked to customers, many-to-many between estimates and services via `estimate_services`, and notes linked to jobs or customers. **Shared Zod schemas** generated from Drizzle ensure consistent data validation across the stack.
 
 ### UI/UX Decisions
 
-The design follows principles similar to Linear and Material Design, using consistent spacing and typography with the Inter font family. The application supports both light and dark modes with theme-aware colors. Mobile optimization is a key focus, providing responsive layouts for dashboards and job listings, transitioning to card-based views on smaller screens. Key features like a dual temperature gauge, monthly revenue line graph, and a customer reviews widget enhance the user experience.
+The design follows principles similar to Linear and Material Design, using consistent spacing and typography with the Inter font family. The application supports both light and dark modes with theme-aware colors. Mobile optimization is a key focus, providing responsive layouts for dashboards and job listings, transitioning to card-based views on smaller screens. Key features include a dual temperature gauge, monthly revenue line graph, and a customer reviews widget.
 
 ## External Dependencies
 
@@ -155,6 +34,3 @@ The design follows principles similar to Linear and Material Design, using consi
 *   **UI Component Libraries**: Radix UI, Lucide React, embla-carousel-react
 *   **Date Handling**: date-fns
 *   **Styling**: Tailwind CSS, class-variance-authority, tailwind-merge
-*   **Development Tools**: Replit-specific plugins (development banner, error overlay, cartographer), tsx, esbuild
-*   **Authentication**: Replit Auth
-```
