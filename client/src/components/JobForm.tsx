@@ -176,9 +176,8 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                               onSelect={() => {
                                 form.setValue("customerId", customer.id);
                                 form.setValue("customerName", "");
-                                if (customer.phone) {
-                                  form.setValue("phoneNumber", customer.phone);
-                                }
+                                const formattedPhone = customer.phone ? formatPhoneNumber(customer.phone) : "";
+                                form.setValue("phoneNumber", formattedPhone);
                                 setOpen(false);
                                 setSearchValue("");
                               }}
@@ -236,6 +235,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                     const formatted = formatPhoneNumber(e.target.value);
                     field.onChange(formatted);
                   }}
+                  autoComplete="off"
                   data-testid="input-phone-number" 
                 />
               </FormControl>

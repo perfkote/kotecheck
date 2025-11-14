@@ -396,11 +396,13 @@ export default function Jobs() {
           <DialogHeader>
             <DialogTitle>Create New Job</DialogTitle>
           </DialogHeader>
-          <JobForm
-            customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
-            onSubmit={(data) => createMutation.mutate(data)}
-            onCancel={() => setIsDialogOpen(false)}
-          />
+          {isDialogOpen && (
+            <JobForm
+              customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
+              onSubmit={(data) => createMutation.mutate(data)}
+              onCancel={() => setIsDialogOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
