@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { isAuthenticated, isManagerOrAbove, isAdmin } from "./auth";
+import { isAuthenticated, isManagerOrAbove, isAdmin, isFullAdmin } from "./auth";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { 
@@ -40,8 +40,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User management routes (admin only)
-  app.get("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+  // User management routes (full admin only)
+  app.get("/api/users", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       // Remove password hashes from response
@@ -52,10 +52,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/users/:id/role", isAuthenticated, isAdmin, async (req, res) => {
+  app.patch("/api/users/:id/role", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
       const { role } = req.body;
-      if (!["admin", "manager"].includes(role)) {
+      if (!["full_admin", "admin", "manager"].includes(role)) {
         return res.status(400).json({ error: "Invalid role" });
       }
       const user = await storage.updateUserRole(req.params.id, role);
@@ -70,8 +70,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create user endpoint (admin only)
-  app.post("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+  // Create user endpoint (full admin only)
+  app.post("/api/users", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
       // Validate input using insertUserSchema
       const validationResult = insertUserSchema.safeParse(req.body);
@@ -113,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete user endpoint (admin only)
-  app.delete("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.delete("/api/users/:id", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
       const success = await storage.deleteUser(req.params.id);
       if (!success) {

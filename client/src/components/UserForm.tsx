@@ -94,7 +94,8 @@ export function UserForm({ onSubmit, onCancel }: UserFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="admin">Administrator</SelectItem>
+                  <SelectItem value="full_admin">Full Administrator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                 </SelectContent>
               </Select>

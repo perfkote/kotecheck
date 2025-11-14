@@ -46,9 +46,14 @@ export function useAuth() {
   };
 }
 
+export function useIsFullAdmin() {
+  const { user } = useAuth();
+  return user?.role === "full_admin";
+}
+
 export function useIsAdmin() {
   const { user } = useAuth();
-  return user?.role === "admin";
+  return user?.role === "full_admin" || user?.role === "admin";
 }
 
 export function useIsManager() {
@@ -58,12 +63,12 @@ export function useIsManager() {
 
 export function useIsManagerOrAbove() {
   const { user } = useAuth();
-  return user?.role === "admin" || user?.role === "manager";
+  return user?.role === "full_admin" || user?.role === "admin" || user?.role === "manager";
 }
 
-// General edit permission: Admin only (for most features)
+// General edit permission: Admin or Full Admin (for most features)
 // For estimates, use canManageEstimates() from authUtils instead
 export function useCanEdit() {
   const { user } = useAuth();
-  return user?.role === "admin";
+  return user?.role === "full_admin" || user?.role === "admin";
 }
