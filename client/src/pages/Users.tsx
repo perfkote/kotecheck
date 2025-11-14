@@ -54,10 +54,8 @@ export default function Users() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: InsertUser) => {
-      return await apiRequest("/api/users", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/users", data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -158,52 +156,35 @@ export default function Users() {
             >
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1">
-                  <div className="font-semibold text-base" data-testid={`text-user-name-mobile-${user.id}`}>
-                    {user.firstName} {user.lastName}
+                  <div className="font-semibold text-base" data-testid={`text-username-mobile-${user.id}`}>
+                    {user.username}
                   </div>
-                  <div className="text-sm text-muted-foreground" data-testid={`text-user-email-mobile-${user.id}`}>
-                    {user.email}
+                  <div className="text-sm text-muted-foreground">
+                    Created {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                   </div>
-                </div>
-                <div>
-                  {user.isLocalAdmin === 1 ? (
-                    <Badge variant="secondary" data-testid={`badge-type-mobile-${user.id}`}>
-                      Local Admin
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" data-testid={`badge-type-mobile-${user.id}`}>
-                      OAuth User
-                    </Badge>
-                  )}
                 </div>
               </div>
               <div className="pt-3 border-t">
                 <div className="text-xs text-muted-foreground mb-2">
                   Role {updateRoleMutation.isPending && user.id === updateRoleMutation.variables?.userId && "(updating...)"}
                 </div>
-                {user.isLocalAdmin === 1 ? (
-                  <Badge variant="default" data-testid={`badge-role-mobile-${user.id}`}>
-                    {getRoleName(user.role)}
-                  </Badge>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <Select
-                      value={user.role}
-                      onValueChange={(role) =>
-                        updateRoleMutation.mutate({ userId: user.id, role })
-                      }
-                      disabled={updateRoleMutation.isPending && user.id === updateRoleMutation.variables?.userId}
-                    >
-                      <SelectTrigger className="w-full min-h-[44px]" data-testid={`select-role-mobile-${user.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Administrator</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                <div className="flex flex-col gap-2">
+                  <Select
+                    value={user.role}
+                    onValueChange={(role) =>
+                      updateRoleMutation.mutate({ userId: user.id, role })
+                    }
+                    disabled={updateRoleMutation.isPending && user.id === updateRoleMutation.variables?.userId}
+                  >
+                    <SelectTrigger className="w-full min-h-[44px]" data-testid={`select-role-mobile-${user.id}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrator</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </Card>
           ))
@@ -215,55 +196,43 @@ export default function Users() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Username</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead>Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
               users.map((user) => (
                 <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                  <TableCell className="font-medium" data-testid={`text-user-name-${user.id}`}>
-                    {user.firstName} {user.lastName}
-                  </TableCell>
-                  <TableCell data-testid={`text-user-email-${user.id}`}>{user.email}</TableCell>
-                  <TableCell>
-                    {user.isLocalAdmin === 1 ? (
-                      <Badge variant="default" data-testid={`badge-role-${user.id}`}>
-                        {getRoleName(user.role)}
-                      </Badge>
-                    ) : (
-                      <Select
-                        value={user.role}
-                        onValueChange={(role) =>
-                          updateRoleMutation.mutate({ userId: user.id, role })
-                        }
-                        disabled={updateRoleMutation.isPending && user.id === updateRoleMutation.variables?.userId}
-                      >
-                        <SelectTrigger className="w-40" data-testid={`select-role-${user.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Administrator</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <TableCell className="font-medium" data-testid={`text-username-${user.id}`}>
+                    {user.username}
                   </TableCell>
                   <TableCell>
-                    {user.isLocalAdmin === 1 ? (
-                      <Badge variant="secondary" data-testid={`badge-type-${user.id}`}>Local Admin</Badge>
-                    ) : (
-                      <Badge variant="outline" data-testid={`badge-type-${user.id}`}>OAuth User</Badge>
-                    )}
+                    <Select
+                      value={user.role}
+                      onValueChange={(role) =>
+                        updateRoleMutation.mutate({ userId: user.id, role })
+                      }
+                      disabled={updateRoleMutation.isPending && user.id === updateRoleMutation.variables?.userId}
+                    >
+                      <SelectTrigger className="w-40" data-testid={`select-role-${user.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrator</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell data-testid={`text-created-${user.id}`}>
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))
