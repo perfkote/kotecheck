@@ -221,6 +221,12 @@ export type EstimateService = typeof estimateServices.$inferSelect;
 export type InsertJobService = z.infer<typeof insertJobServiceSchema>;
 export type JobService = typeof jobServices.$inferSelect;
 
+// Enriched job type that includes associated services
+export type JobWithServices = Job & {
+  services: JobService[];
+  serviceIds: string[];
+};
+
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;
 

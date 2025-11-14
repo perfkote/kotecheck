@@ -2,9 +2,17 @@
 
 Coat Check is a comprehensive coating job management application designed for coating businesses. It provides a clean, productivity-focused interface for tracking customers, jobs, estimates, and notes. The system supports customer relationship management, detailed job tracking with various coating types (powder/ceramic/misc), efficient estimate creation with simplified service selection, and internal note-taking. The application aims to streamline operations and enhance productivity for coating businesses.
 
-## Recent Changes (November 13, 2025)
+## Recent Changes (November 14, 2025)
 
-### Multi-Service Estimates System (Latest - November 13, 2025)
+### Job Editing Fix (Latest - November 14, 2025)
+- **Fixed Job Editing with Services**: Jobs can now be edited with their existing services properly loaded
+  - **Backend Enhancement**: GET /api/jobs now returns `JobWithServices` type including services array and serviceIds
+  - **Bulk Loading**: Implemented `enrichJobsWithServices` helper using `inArray` for efficient N+1-free service loading
+  - **Type Safety**: Added `JobWithServices` type extending Job with `services: JobService[]` and `serviceIds: string[]`
+  - **Frontend Integration**: Edit dialog now properly populates `serviceIds` from job data instead of empty array
+  - **Performance**: All job services loaded in single query per batch of jobs (no N+1 queries)
+
+### Multi-Service Estimates System (November 13, 2025)
 - **Complete Multi-Service Implementation for Estimates**: Estimates now support multiple service selection, matching the Jobs feature
   - **EstimateForm Component**: 
     - Add multiple services via dropdown

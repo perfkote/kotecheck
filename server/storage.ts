@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { 
   customers,
@@ -11,7 +11,8 @@ import {
   users,
   type Customer, 
   type InsertCustomer, 
-  type Job, 
+  type Job,
+  type JobWithServices,
   type InsertJob,
   type Service,
   type InsertService,
@@ -49,8 +50,8 @@ export interface IStorage {
   deleteCustomer(id: string): Promise<boolean>;
 
   getJob(id: string): Promise<Job | undefined>;
-  getAllJobs(): Promise<Job[]>;
-  getJobsByCustomerId(customerId: string): Promise<Job[]>;
+  getAllJobs(): Promise<JobWithServices[]>;
+  getJobsByCustomerId(customerId: string): Promise<JobWithServices[]>;
   createJob(job: InsertJob): Promise<Job>;
   createJobWithServices(payload: { job: InsertJob; services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; newCustomer?: InsertCustomer }): Promise<Job>;
   updateJob(id: string, job: Partial<InsertJob>): Promise<Job | undefined>;
@@ -171,12 +172,41 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
-  async getAllJobs(): Promise<Job[]> {
-    return await db.select().from(jobs);
+  // Helper to efficiently enrich jobs with their services (avoids N+1)
+  private async enrichJobsWithServices(jobsList: Job[]): Promise<JobWithServices[]> {
+    if (jobsList.length === 0) return [];
+    
+    const jobIds = jobsList.map(j => j.id);
+    const allJobServices = await db
+      .select()
+      .from(jobServices)
+      .where(inArray(jobServices.jobId, jobIds));
+    
+    // Group services by jobId
+    const servicesByJobId = new Map<string, JobService[]>();
+    for (const svc of allJobServices) {
+      if (!servicesByJobId.has(svc.jobId)) {
+        servicesByJobId.set(svc.jobId, []);
+      }
+      servicesByJobId.get(svc.jobId)!.push(svc);
+    }
+    
+    // Enrich each job with its services
+    return jobsList.map(job => ({
+      ...job,
+      services: servicesByJobId.get(job.id) || [],
+      serviceIds: (servicesByJobId.get(job.id) || []).map(s => s.serviceId),
+    }));
   }
 
-  async getJobsByCustomerId(customerId: string): Promise<Job[]> {
-    return await db.select().from(jobs).where(eq(jobs.customerId, customerId));
+  async getAllJobs(): Promise<JobWithServices[]> {
+    const jobsList = await db.select().from(jobs);
+    return this.enrichJobsWithServices(jobsList);
+  }
+
+  async getJobsByCustomerId(customerId: string): Promise<JobWithServices[]> {
+    const jobsList = await db.select().from(jobs).where(eq(jobs.customerId, customerId));
+    return this.enrichJobsWithServices(jobsList);
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Job, Customer, CreateJobInput } from "@shared/schema";
+import type { Job, JobWithServices, Customer, CreateJobInput } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { canCreateJobs, canDeleteJobs, canAccessJobs } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,9 @@ export default function Jobs() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingJob, setEditingJob] = useState<Job | null>(null);
-  const [viewingJob, setViewingJob] = useState<Job | null>(null);
-  const [deletingJob, setDeletingJob] = useState<Job | null>(null);
+  const [editingJob, setEditingJob] = useState<JobWithServices | null>(null);
+  const [viewingJob, setViewingJob] = useState<JobWithServices | null>(null);
+  const [deletingJob, setDeletingJob] = useState<JobWithServices | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
@@ -70,7 +70,7 @@ export default function Jobs() {
     }
   }, [location, searchQuery]);
 
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery<JobWithServices[]>({
     queryKey: ["/api/jobs"],
   });
 
@@ -79,7 +79,7 @@ export default function Jobs() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: CreateJobWithCustomer) =>
+    mutationFn: (data: CreateJobInput) =>
       apiRequest("POST", "/api/jobs", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
@@ -101,7 +101,7 @@ export default function Jobs() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateJobWithCustomer> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateJobInput> }) =>
       apiRequest("PATCH", `/api/jobs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
@@ -416,7 +416,7 @@ export default function Jobs() {
                 customerId: editingJob.customerId || undefined,
                 phoneNumber: editingJob.phoneNumber,
                 receivedDate: new Date(editingJob.receivedDate),
-                serviceIds: [],
+                serviceIds: editingJob.serviceIds || [],
                 coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc" | undefined,
                 items: editingJob.items || "",
                 detailedNotes: editingJob.detailedNotes || "",
