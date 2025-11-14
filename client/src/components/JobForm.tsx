@@ -46,7 +46,7 @@ interface JobFormProps {
   onSubmit: (data: FormData) => void;
   onCancel: () => void;
   defaultValues?: Partial<FormData>;
-  customers?: Array<{ id: string; name: string }>;
+  customers?: Array<{ id: string; name: string; phone?: string | null }>;
 }
 
 export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: JobFormProps) {
@@ -176,6 +176,9 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                               onSelect={() => {
                                 form.setValue("customerId", customer.id);
                                 form.setValue("customerName", "");
+                                if (customer.phone) {
+                                  form.setValue("phoneNumber", customer.phone);
+                                }
                                 setOpen(false);
                                 setSearchValue("");
                               }}
