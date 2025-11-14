@@ -4,7 +4,17 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 14, 2025)
 
-### Mobile Optimization Enhancement (Latest - November 14, 2025)
+### User Creation Feature (Latest - November 14, 2025)
+- **Admin User Creation**: Administrators can now create new users directly from the Users page
+  - **New User Button**: Added "New User" button in Users page header
+  - **User Creation Dialog**: Clean dialog with username, password, and role fields
+  - **Role Management**: Updated Users page to only show supported roles (Admin and Manager)
+  - **Simplified UI**: Removed OAuth-specific fields, showing only: Username, Role, Created date
+  - **Form Validation**: Username (min 3 chars), password (min 6 chars), role selection required
+  - **Mobile-Responsive**: Dialog follows same mobile-first pattern as other forms
+  - **Security**: Passwords hashed with bcrypt, admin-only access enforced
+
+### Mobile Optimization Enhancement (November 14, 2025)
 - **Comprehensive Mobile UX Improvements**: Enhanced mobile experience across all dialogs and forms
   - **Responsive Dialogs**: All dialogs now use full-width on mobile with progressive sizing (`max-w-full sm:max-w-2xl lg:max-w-3xl`)
   - **Adaptive Padding**: Dialog padding scales from mobile to desktop (`p-4 sm:p-6`)
