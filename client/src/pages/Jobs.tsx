@@ -397,7 +397,7 @@ export default function Jobs() {
             <DialogTitle>Create New Job</DialogTitle>
           </DialogHeader>
           <JobForm
-            customers={customers.map(c => ({ id: c.id, name: c.name }))}
+            customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
             onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setIsDialogOpen(false)}
           />
@@ -411,7 +411,7 @@ export default function Jobs() {
           </DialogHeader>
           {editingJob && (
             <JobForm
-              customers={customers.map(c => ({ id: c.id, name: c.name }))}
+              customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
               defaultValues={{
                 customerId: editingJob.customerId || undefined,
                 phoneNumber: editingJob.phoneNumber,

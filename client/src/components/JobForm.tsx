@@ -202,6 +202,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                             onSelect={() => {
                               form.setValue("customerId", "");
                               form.setValue("customerName", searchValue.trim());
+                              form.setValue("phoneNumber", "");
                               setOpen(false);
                               setSearchValue("");
                             }}
