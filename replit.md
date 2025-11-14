@@ -16,6 +16,7 @@ Coat Check is a comprehensive coating job management application designed for co
   - **Touch-Friendly**: All interactive elements meet 44px minimum touch target size
   - **Pages Updated**: Estimates, Jobs, Dashboard, Customers, Services dialogs all optimized
   - **Forms Updated**: EstimateForm and JobForm with mobile-first service selection layout
+  - **Bug Fix**: Fixed Total field auto-update in EstimateForm - now properly updates when adding multiple services, with smart state reset when dialog closes or services are removed
 
 ### Job Editing Fix (November 14, 2025)
 - **Fixed Job Editing with Services**: Jobs can now be edited with their existing services properly loaded
