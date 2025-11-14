@@ -96,8 +96,12 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
   // Get available services (not already selected)
   const availableServices = services.filter(s => !selectedServices.includes(s.id));
 
-  const handleSubmit = (data: FormData) => {
-    onSubmit(data as EstimateFormSubmission);
+  const handleSubmit = async (data: FormData) => {
+    try {
+      await onSubmit(data as EstimateFormSubmission);
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
   };
 
   return (

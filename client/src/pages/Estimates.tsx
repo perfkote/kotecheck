@@ -44,7 +44,8 @@ export default function Estimates() {
       toast({ title: "Success", description: "Estimate created successfully" });
       setIsDialogOpen(false);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Failed to create estimate:", error);
       toast({ title: "Error", description: "Failed to create estimate", variant: "destructive" });
     },
   });
@@ -74,8 +75,8 @@ export default function Estimates() {
     },
   });
 
-  const handleSubmit = (data: EstimateCreationData) => {
-    createMutation.mutate(data);
+  const handleSubmit = async (data: EstimateCreationData) => {
+    await createMutation.mutateAsync(data);
   };
 
   const filteredEstimates = estimates.filter(estimate =>
@@ -198,7 +199,12 @@ export default function Estimates() {
         )}
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+          createMutation.reset();
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Estimate</DialogTitle>
