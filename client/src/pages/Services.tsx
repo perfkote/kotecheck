@@ -324,7 +324,7 @@ export default function Services() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-full sm:max-w-md lg:max-w-2xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>{editingService ? "Edit Service" : "Add Service"}</DialogTitle>
           </DialogHeader>

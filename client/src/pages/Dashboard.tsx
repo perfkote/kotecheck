@@ -505,7 +505,7 @@ export default function Dashboard() {
       </Card>
 
       <Dialog open={!!viewingJob} onOpenChange={(open) => !open && setViewingJob(null)}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-job-details">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6" data-testid="dialog-job-details">
           <DialogHeader>
             <DialogTitle>Job Details</DialogTitle>
           </DialogHeader>

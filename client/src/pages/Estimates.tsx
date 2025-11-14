@@ -205,7 +205,7 @@ export default function Estimates() {
           createMutation.reset();
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>New Estimate</DialogTitle>
           </DialogHeader>

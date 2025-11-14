@@ -131,7 +131,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
         (errors) => {
           console.error("Form validation errors:", errors);
         }
-      )} className="space-y-6">
+      )} className="space-y-5 sm:space-y-6">
         <FormField
           control={form.control}
           name="customerId"
@@ -282,11 +282,11 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                       return (
                         <div 
                           key={serviceId} 
-                          className="flex items-center justify-between py-2 px-3 rounded-md border bg-card hover-elevate"
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-3 px-3 sm:px-4 rounded-md border bg-card hover-elevate"
                         >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <span className="font-medium truncate">{service.name}</span>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                            <span className="font-medium text-sm sm:text-base">{service.name}</span>
+                            <span className="text-sm text-muted-foreground">
                               ${parseFloat(service.price).toFixed(2)}
                             </span>
                           </div>
@@ -296,7 +296,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                             size="icon"
                             onClick={() => removeService(serviceId)}
                             data-testid={`button-remove-service-${serviceId}`}
-                            className="h-8 w-8 flex-shrink-0"
+                            className="h-9 w-9 flex-shrink-0 self-end sm:self-center"
                           >
                             <X className="h-4 w-4" />
                           </Button>
