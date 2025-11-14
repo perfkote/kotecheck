@@ -14,11 +14,12 @@ The frontend is built with **React** and **TypeScript**, using **Vite** for tool
 
 ### Backend Architecture
 
-The backend is built with **Express.js** and **TypeScript**, providing a **RESTful API** design. It includes custom middleware for logging and JSON parsing. API endpoints are resource-based and utilize **Zod schema validation** for request bodies. A `DatabaseStorage` implementation handles all CRUD operations, separating data access logic from routes. Authentication and role-based access control are implemented using **username/password authentication** with bcrypt hashing and a two-role permission system:
-- **Admin**: Full access to all features including user management, customers, jobs, services (full CRUD), estimates, and notes.
-- **Manager**: Access to estimates (full CRUD) and services (read-only view only).
+The backend is built with **Express.js** and **TypeScript**, providing a **RESTful API** design. It includes custom middleware for logging and JSON parsing. API endpoints are resource-based and utilize **Zod schema validation** for request bodies. A `DatabaseStorage` implementation handles all CRUD operations, separating data access logic from routes. Authentication and role-based access control are implemented using **username/password authentication** with bcrypt hashing and a three-tier permission system:
+- **Full Administrator**: Complete access including user management (create, edit, delete users, change roles) plus all admin features
+- **Admin**: Full access to business features (customers, jobs, services, notes) but cannot manage users
+- **Manager**: Access to estimates (full CRUD) and services (read-only view only)
 
-Route protection is enforced via middleware (`isAuthenticated`, `isAdmin`, `isManagerOrAbove`) with frontend route guards showing an AccessDenied page for unauthorized access. Secure session management is handled via `connect-pg-simple`.
+Route protection is enforced via middleware (`isAuthenticated`, `isFullAdmin`, `isAdmin`, `isManagerOrAbove`) with frontend route guards showing an AccessDenied page for unauthorized access. Secure session management is handled via `connect-pg-simple`, with automatic session invalidation when user roles are changed or users are deleted to prevent privilege escalation from stale sessions.
 
 ### Database Architecture
 
