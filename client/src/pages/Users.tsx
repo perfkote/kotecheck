@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { canAccessUsers } from "@/lib/authUtils";
-import type { User } from "@shared/schema";
+import type { User, InsertUser } from "@shared/schema";
 import {
   Table,
   TableBody,
@@ -24,12 +24,21 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getRoleName } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users as UsersIcon } from "lucide-react";
+import { Shield, Users as UsersIcon, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { UserForm } from "@/components/UserForm";
 
 export default function Users() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Redirect non-admins away from this page
   useEffect(() => {
@@ -41,6 +50,30 @@ export default function Users() {
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
     enabled: canAccessUsers(user),
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: InsertUser) => {
+      return await apiRequest("/api/users", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsDialogOpen(false);
+      toast({
+        title: "User Created",
+        description: "New user has been created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateRoleMutation = useMutation({
@@ -71,6 +104,10 @@ export default function Users() {
     },
   });
 
+  const handleCreateUser = async (data: InsertUser) => {
+    await createUserMutation.mutateAsync(data);
+  };
+
   if (!canAccessUsers(user)) {
     return (
       <div className="text-center py-12">
@@ -89,11 +126,20 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">User Management</h1>
-        <p className="text-muted-foreground">
-          Manage user roles and permissions
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">User Management</h1>
+          <p className="text-muted-foreground">
+            Manage user roles and permissions
+          </p>
+        </div>
+        <Button
+          onClick={() => setIsDialogOpen(true)}
+          data-testid="button-new-user"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New User
+        </Button>
       </div>
 
       {/* Mobile card view */}
@@ -154,8 +200,6 @@ export default function Users() {
                       <SelectContent>
                         <SelectItem value="admin">Administrator</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="employee">Employee</SelectItem>
-                        <SelectItem value="read-only">Read-Only</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -210,8 +254,6 @@ export default function Users() {
                         <SelectContent>
                           <SelectItem value="admin">Administrator</SelectItem>
                           <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="employee">Employee</SelectItem>
-                          <SelectItem value="read-only">Read-Only</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -229,6 +271,18 @@ export default function Users() {
           </TableBody>
         </Table>
       </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-full sm:max-w-md p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+          </DialogHeader>
+          <UserForm
+            onSubmit={handleCreateUser}
+            onCancel={() => setIsDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
