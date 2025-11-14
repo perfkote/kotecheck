@@ -9,6 +9,7 @@ import {
   jobServices,
   notes,
   users,
+  sessions,
   type Customer, 
   type InsertCustomer, 
   type Job,
@@ -94,6 +95,7 @@ export interface IStorage {
   createUser(user: NewUserInsert): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  invalidateUserSessions(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -586,6 +588,14 @@ export class DatabaseStorage implements IStorage {
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async invalidateUserSessions(userId: string): Promise<void> {
+    // Delete all sessions for the given user by querying the session data
+    // The sess column contains passport.user.id in the session object
+    await db.execute(
+      sql`DELETE FROM ${sessions} WHERE sess->'passport'->'user'->>'id' = ${userId}`
+    );
   }
 }
 

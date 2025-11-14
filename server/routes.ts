@@ -62,6 +62,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      
+      // Invalidate all sessions for this user to force re-authentication
+      await storage.invalidateUserSessions(req.params.id);
+      
       // Remove password hash from response
       const { passwordHash, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -112,9 +116,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete user endpoint (admin only)
+  // Delete user endpoint (full admin only)
   app.delete("/api/users/:id", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
+      // Invalidate all sessions for this user before deleting
+      await storage.invalidateUserSessions(req.params.id);
+      
       const success = await storage.deleteUser(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "User not found" });
