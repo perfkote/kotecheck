@@ -238,7 +238,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 }).extend({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "manager"]).default("admin"),
+  role: z.enum(["full_admin", "admin", "manager"]).default("admin"),
 }).omit({
   passwordHash: true,
 });
@@ -257,7 +257,7 @@ export const loginSchema = z.object({
 export const sessionUserSchema = z.object({
   id: z.string(),
   username: z.string(),
-  role: z.enum(["admin", "manager"]),
+  role: z.enum(["full_admin", "admin", "manager"]),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

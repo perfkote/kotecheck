@@ -139,14 +139,28 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
   next();
 };
 
-// Admin-only middleware
+// Full Admin-only middleware (for user management)
+export const isFullAdmin: RequestHandler = async (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const user = req.user as any;
+  if (user.role !== "full_admin") {
+    return res.status(403).json({ message: "Forbidden: Full Administrator access required" });
+  }
+
+  next();
+};
+
+// Admin-only middleware (for customers, jobs, services, notes)
 export const isAdmin: RequestHandler = async (req, res, next) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const user = req.user as any;
-  if (user.role !== "admin") {
+  if (!["full_admin", "admin"].includes(user.role)) {
     return res.status(403).json({ message: "Forbidden: Admin access required" });
   }
 
@@ -160,7 +174,7 @@ export const isManagerOrAbove: RequestHandler = async (req, res, next) => {
   }
 
   const user = req.user as any;
-  if (!["admin", "manager"].includes(user.role)) {
+  if (!["full_admin", "admin", "manager"].includes(user.role)) {
     return res.status(403).json({ message: "Forbidden: Manager or Admin access required" });
   }
 
