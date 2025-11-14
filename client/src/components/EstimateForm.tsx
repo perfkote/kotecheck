@@ -46,6 +46,7 @@ interface EstimateFormProps {
 
 export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [manuallyEditedTotal, setManuallyEditedTotal] = useState(false);
 
   const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
@@ -76,12 +77,19 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
     return sum + (service ? parseFloat(service.price) : 0);
   }, 0);
 
+  // Reset manual edit flag when all services are removed
+  useEffect(() => {
+    if (selectedServices.length === 0) {
+      setManuallyEditedTotal(false);
+    }
+  }, [selectedServices.length]);
+
   // Update total field when service total changes (unless manually edited)
   useEffect(() => {
-    if (selectedServices.length > 0 && !form.getValues("total")) {
+    if (selectedServices.length > 0 && !manuallyEditedTotal) {
       form.setValue("total", String(serviceTotal));
     }
-  }, [serviceTotal, selectedServices.length, form]);
+  }, [serviceTotal, selectedServices.length, manuallyEditedTotal, form]);
 
   const addService = (serviceId: string) => {
     if (!selectedServices.includes(serviceId)) {
@@ -224,6 +232,7 @@ export function EstimateForm({ onSubmit, onCancel }: EstimateFormProps) {
                   onChange={(e) => {
                     const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
                     field.onChange(value);
+                    setManuallyEditedTotal(true);
                   }}
                   data-testid="input-total"
                 />

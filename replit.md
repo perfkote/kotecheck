@@ -4,7 +4,20 @@ Coat Check is a comprehensive coating job management application designed for co
 
 ## Recent Changes (November 14, 2025)
 
-### Job Editing Fix (Latest - November 14, 2025)
+### Mobile Optimization Enhancement (Latest - November 14, 2025)
+- **Comprehensive Mobile UX Improvements**: Enhanced mobile experience across all dialogs and forms
+  - **Responsive Dialogs**: All dialogs now use full-width on mobile with progressive sizing (`max-w-full sm:max-w-2xl lg:max-w-3xl`)
+  - **Adaptive Padding**: Dialog padding scales from mobile to desktop (`p-4 sm:p-6`)
+  - **Service Selection Rows**: Multi-service rows stack vertically on mobile, horizontal on desktop
+    - Mobile: Service name and price stack in column layout
+    - Desktop: Service name and price display inline
+    - Improved touch targets with larger remove buttons (44px)
+  - **Form Spacing**: Standardized responsive spacing across all forms (`space-y-5 sm:space-y-6`)
+  - **Touch-Friendly**: All interactive elements meet 44px minimum touch target size
+  - **Pages Updated**: Estimates, Jobs, Dashboard, Customers, Services dialogs all optimized
+  - **Forms Updated**: EstimateForm and JobForm with mobile-first service selection layout
+
+### Job Editing Fix (November 14, 2025)
 - **Fixed Job Editing with Services**: Jobs can now be edited with their existing services properly loaded
   - **Backend Enhancement**: GET /api/jobs now returns `JobWithServices` type including services array and serviceIds
   - **Bulk Loading**: Implemented `enrichJobsWithServices` helper using `inArray` for efficient N+1-free service loading
