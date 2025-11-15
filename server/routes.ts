@@ -11,6 +11,7 @@ import {
   insertEstimateSchema,
   insertEstimateServiceSchema,
   insertNoteSchema,
+  insertInventorySchema,
   insertUserSchema
 } from "@shared/schema";
 
@@ -757,6 +758,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  // Inventory routes (admin only)
+  app.get("/api/inventory", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      let items;
+      if (category) {
+        items = await storage.getInventoryItemsByCategory(category);
+      } else {
+        items = await storage.getAllInventoryItems();
+      }
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory items" });
+    }
+  });
+
+  app.get("/api/inventory/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const item = await storage.getInventoryItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory item" });
+    }
+  });
+
+  app.post("/api/inventory", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validated = insertInventorySchema.parse(req.body);
+      const item = await storage.createInventoryItem(validated);
+      res.status(201).json(item);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid inventory data" });
+    }
+  });
+
+  app.patch("/api/inventory/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validated = insertInventorySchema.partial().parse(req.body);
+      const item = await storage.updateInventoryItem(req.params.id, validated);
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid inventory data" });
+    }
+  });
+
+  app.delete("/api/inventory/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteInventoryItem(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete inventory item" });
     }
   });
 
