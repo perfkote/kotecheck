@@ -31,6 +31,23 @@ The design follows principles similar to Linear and Material Design, using consi
 
 ## Recent Changes
 
+### November 15, 2025 - Job-Inventory Integration
+- Implemented job-inventory assignment system allowing multiple inventory items with quantities to be assigned to jobs
+- Database: Created `job_inventory` junction table linking jobs to inventory items with denormalized data (inventoryId, inventoryName, quantity, unit)
+- Backend deduction logic: Automatically deducts inventory quantities when job status transitions to "finished"
+  - Validates sufficient inventory before deduction with aggregated quantity checks
+  - Prevents negative inventory by checking total required quantities across duplicate items
+  - Uses database transactions to ensure atomicity and rollback on errors
+  - Provides clear error messages for insufficient inventory or missing items
+- Backend routes: Updated POST /api/jobs and PATCH /api/jobs/:id to handle inventoryItems array
+- Frontend JobForm: Added inventory selector with quantity inputs (similar to services pattern)
+  - Multi-select dropdown for inventory items
+  - Individual quantity inputs for each selected item
+  - Displays item name, description, and unit
+- Frontend Jobs page: Displays assigned inventory items in job details dialog
+- Type safety: Updated JobWithServices type to include inventoryItems array
+- Design choice: Inventory remains dormant (not deducted) until job marked as "finished" to avoid premature deductions
+
 ### November 15, 2025 - Inventory Management Feature
 - Added comprehensive inventory tracking system with four categories:
   - Office Supplies: General office items tracked by pieces/boxes
