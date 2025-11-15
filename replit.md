@@ -1,6 +1,6 @@
 ## Overview
 
-Coat Check is a coating job management application designed to streamline operations and enhance productivity for coating businesses. It provides a clean, productivity-focused interface for tracking customers, jobs, estimates, and notes. The system supports customer relationship management, detailed job tracking with various coating types (powder/ceramic/misc), efficient estimate creation with multi-service selection, and internal note-taking.
+Coat Check is a coating job management application designed to streamline operations and enhance productivity for coating businesses. It provides a clean, productivity-focused interface for tracking customers, jobs, estimates, notes, and inventory. The system supports customer relationship management, detailed job tracking with various coating types (powder/ceramic/misc), efficient estimate creation with multi-service selection, internal note-taking, and comprehensive inventory tracking for office supplies, business consumables, powder, and ceramic materials.
 
 ## User Preferences
 
@@ -23,11 +23,25 @@ Route protection is enforced via middleware (`isAuthenticated`, `isFullAdmin`, `
 
 ### Database Architecture
 
-The application uses **PostgreSQL** with **Drizzle ORM** for type-safe database operations. The schema includes tables for `customers`, `jobs`, `services`, `estimates`, `estimate_services`, `notes`, `users`, and `sessions`. Relationships include jobs linked to customers, many-to-many between estimates and services via `estimate_services`, and notes linked to jobs or customers. **Shared Zod schemas** generated from Drizzle ensure consistent data validation across the stack.
+The application uses **PostgreSQL** with **Drizzle ORM** for type-safe database operations. The schema includes tables for `customers`, `jobs`, `services`, `estimates`, `estimate_services`, `notes`, `inventory`, `users`, and `sessions`. Relationships include jobs linked to customers, many-to-many between estimates and services via `estimate_services`, and notes linked to jobs or customers. The `inventory` table tracks items across four categories (office_supplies, business_consumables, powder, ceramic) with flexible units (pieces, pounds, gallons, etc.), descriptions, and pricing. **Shared Zod schemas** generated from Drizzle ensure consistent data validation across the stack.
 
 ### UI/UX Decisions
 
 The design follows principles similar to Linear and Material Design, using consistent spacing and typography with the Inter font family. The application supports both light and dark modes with theme-aware colors. Mobile optimization is a key focus, providing responsive layouts for dashboards and job listings, transitioning to card-based views on smaller screens. Key features include a dual temperature gauge, monthly revenue line graph, and a customer reviews widget.
+
+## Recent Changes
+
+### November 15, 2025 - Inventory Management Feature
+- Added comprehensive inventory tracking system with four categories:
+  - Office Supplies: General office items tracked by pieces/boxes
+  - Business Consumables: Business supplies with flexible unit tracking
+  - Powder: Coating powder tracked by weight (pounds/ounces)
+  - Ceramic: Ceramic materials tracked by volume (gallons/liters)
+- Database: Created `inventory` table with category, name, description, quantity, unit, and price fields
+- Backend: Implemented full CRUD operations with admin-only access control
+- Frontend: Built responsive Inventory page with category-grouped card layout
+- Navigation: Added Inventory link to sidebar (admin/full_admin access only)
+- Permissions: Enforced admin-only access throughout the stack
 
 ## External Dependencies
 
