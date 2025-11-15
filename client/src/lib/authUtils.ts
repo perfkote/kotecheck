@@ -112,6 +112,15 @@ export function canDeleteNotes(user: SessionUser | undefined | null): boolean {
   return isAdmin(user);
 }
 
+// Inventory: Admin or Full Admin only
+export function canAccessInventory(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
+export function canAccessAdmin(user: SessionUser | undefined | null): boolean {
+  return isAdmin(user);
+}
+
 // Users: Full Admin only
 export function canAccessUsers(user: SessionUser | undefined | null): boolean {
   return isFullAdmin(user);
