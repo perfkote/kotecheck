@@ -53,7 +53,7 @@ The design follows principles similar to Linear and Material Design, using consi
   - Office Supplies: General office items tracked by pieces/boxes
   - Business Consumables: Business supplies with flexible unit tracking
   - Powder: Coating powder tracked by weight (pounds/ounces)
-  - Ceramic: Ceramic materials tracked by volume (gallons/liters)
+  - Ceramic: Ceramic materials tracked by volume (ounces)
 - Database: Created `inventory` table with category, name, description, quantity, unit, and price fields
 - Backend: Implemented full CRUD operations with admin-only access control
 - Frontend: Built responsive Inventory page with category-grouped card layout
