@@ -419,6 +419,7 @@ export default function Jobs() {
                 phoneNumber: editingJob.phoneNumber,
                 receivedDate: new Date(editingJob.receivedDate),
                 serviceIds: editingJob.serviceIds || [],
+                inventoryItems: editingJob.inventoryItems || [],
                 coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc" | undefined,
                 items: editingJob.items || "",
                 detailedNotes: editingJob.detailedNotes || "",
@@ -505,6 +506,26 @@ export default function Jobs() {
                   <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-notes">
                     {viewingJob.detailedNotes}
                   </p>
+                </div>
+              )}
+
+              {viewingJob.inventoryItems && viewingJob.inventoryItems.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Inventory Items</p>
+                  <div className="space-y-2" data-testid="detail-inventory-list">
+                    {viewingJob.inventoryItems.map((item, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
+                        data-testid={`inventory-item-${index}`}
+                      >
+                        <span className="font-medium">{item.inventoryName}</span>
+                        <span className="text-muted-foreground">
+                          {item.quantity} {item.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
