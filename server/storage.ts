@@ -234,12 +234,21 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Enrich each job with its services and inventory
-    return jobsList.map(job => ({
-      ...job,
-      services: servicesByJobId.get(job.id) || [],
-      serviceIds: (servicesByJobId.get(job.id) || []).map(s => s.serviceId),
-      inventory: inventoryByJobId.get(job.id) || [],
-    }));
+    return jobsList.map(job => {
+      const jobInv = inventoryByJobId.get(job.id) || [];
+      return {
+        ...job,
+        services: servicesByJobId.get(job.id) || [],
+        serviceIds: (servicesByJobId.get(job.id) || []).map(s => s.serviceId),
+        inventory: jobInv,
+        inventoryItems: jobInv.map(inv => ({
+          inventoryId: inv.inventoryId,
+          inventoryName: inv.inventoryName,
+          quantity: inv.quantity,
+          unit: inv.unit,
+        })),
+      };
+    });
   }
 
   async getAllJobs(): Promise<JobWithServices[]> {
@@ -385,6 +394,36 @@ export class DatabaseStorage implements IStorage {
       // IMPORTANT: Deduct inventory when status changes to "finished"
       if (updates.status === "finished" && currentJob.status !== "finished") {
         const jobInvItems = await tx.select().from(jobInventory).where(eq(jobInventory.jobId, id));
+        
+        // Aggregate required quantities by inventoryId (in case same item appears multiple times)
+        const requiredByInventoryId = new Map<string, { name: string; totalRequired: number; unit: string }>();
+        for (const item of jobInvItems) {
+          const existing = requiredByInventoryId.get(item.inventoryId);
+          const qty = parseFloat(item.quantity);
+          if (existing) {
+            existing.totalRequired += qty;
+          } else {
+            requiredByInventoryId.set(item.inventoryId, {
+              name: item.inventoryName,
+              totalRequired: qty,
+              unit: item.unit,
+            });
+          }
+        }
+        
+        // Validate that all inventory items have sufficient quantities
+        for (const [invId, required] of requiredByInventoryId.entries()) {
+          const [invItem] = await tx.select().from(inventory).where(eq(inventory.id, invId));
+          if (!invItem) {
+            throw new Error(`Inventory item ${required.name} not found`);
+          }
+          const available = parseFloat(invItem.quantity);
+          if (available < required.totalRequired) {
+            throw new Error(`Insufficient inventory: ${required.name} (available: ${available} ${required.unit}, required: ${required.totalRequired} ${required.unit})`);
+          }
+        }
+        
+        // If all validations pass, perform the deductions
         for (const item of jobInvItems) {
           await tx
             .update(inventory)

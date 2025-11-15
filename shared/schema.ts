@@ -273,6 +273,7 @@ export type JobWithServices = Job & {
   services: JobService[];
   serviceIds: string[];
   inventory: JobInventory[];
+  inventoryItems: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>;
 };
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
