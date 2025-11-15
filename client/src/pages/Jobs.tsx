@@ -232,11 +232,11 @@ export default function Jobs() {
               key={job.id}
               className="p-4 hover-elevate cursor-pointer"
               data-testid={`card-job-${job.id}`}
-              onClick={() => setViewingJob(job)}
+              onClick={() => setEditingJob(job)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  setViewingJob(job);
+                  setEditingJob(job);
                 }
               }}
               role="button"
@@ -319,7 +319,7 @@ export default function Jobs() {
                     key={job.id} 
                     className="border-b last:border-b-0 hover-elevate transition-colors cursor-pointer" 
                     data-testid={`row-job-${job.id}`}
-                    onClick={() => setViewingJob(job)}
+                    onClick={() => setEditingJob(job)}
                   >
                     <td className="py-2.5 px-4">
                       <span className={`font-medium ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
