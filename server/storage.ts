@@ -8,6 +8,7 @@ import {
   estimateServices,
   jobServices,
   notes,
+  inventory,
   users,
   sessions,
   type Customer, 
@@ -25,6 +26,8 @@ import {
   type InsertJobService,
   type Note, 
   type InsertNote,
+  type InventoryItem,
+  type InsertInventory,
   type User,
   type NewUserInsert
 } from "@shared/schema";
@@ -87,6 +90,13 @@ export interface IStorage {
   getNotesByCustomerId(customerId: string): Promise<Note[]>;
   createNote(note: InsertNote): Promise<Note>;
   deleteNote(id: string): Promise<boolean>;
+
+  getInventoryItem(id: string): Promise<InventoryItem | undefined>;
+  getAllInventoryItems(): Promise<InventoryItem[]>;
+  getInventoryItemsByCategory(category: string): Promise<InventoryItem[]>;
+  createInventoryItem(item: InsertInventory): Promise<InventoryItem>;
+  updateInventoryItem(id: string, item: Partial<InsertInventory>): Promise<InventoryItem | undefined>;
+  deleteInventoryItem(id: string): Promise<boolean>;
 
   // User operations - Simple username/password authentication
   getUser(id: string): Promise<User | undefined>;
@@ -596,6 +606,53 @@ export class DatabaseStorage implements IStorage {
     await db.execute(
       sql`DELETE FROM ${sessions} WHERE sess->'passport'->'user'->>'id' = ${userId}`
     );
+  }
+
+  async getInventoryItem(id: string): Promise<InventoryItem | undefined> {
+    const [item] = await db.select().from(inventory).where(eq(inventory.id, id));
+    return item || undefined;
+  }
+
+  async getAllInventoryItems(): Promise<InventoryItem[]> {
+    return await db.select().from(inventory).orderBy(desc(inventory.createdAt));
+  }
+
+  async getInventoryItemsByCategory(category: string): Promise<InventoryItem[]> {
+    return await db.select().from(inventory).where(eq(inventory.category, category)).orderBy(desc(inventory.createdAt));
+  }
+
+  async createInventoryItem(insertItem: InsertInventory): Promise<InventoryItem> {
+    const [item] = await db
+      .insert(inventory)
+      .values({
+        ...insertItem,
+        quantity: insertItem.quantity.toString(),
+        price: insertItem.price.toString(),
+      })
+      .returning();
+    return item;
+  }
+
+  async updateInventoryItem(id: string, updates: Partial<InsertInventory>): Promise<InventoryItem | undefined> {
+    const updateData: any = { ...updates };
+    if (updates.quantity !== undefined) {
+      updateData.quantity = updates.quantity.toString();
+    }
+    if (updates.price !== undefined) {
+      updateData.price = updates.price.toString();
+    }
+    
+    const [item] = await db
+      .update(inventory)
+      .set(updateData)
+      .where(eq(inventory.id, id))
+      .returning();
+    return item || undefined;
+  }
+
+  async deleteInventoryItem(id: string): Promise<boolean> {
+    const result = await db.delete(inventory).where(eq(inventory.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
