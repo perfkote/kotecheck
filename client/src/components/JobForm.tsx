@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createJobSchemaWithValidation } from "@shared/schema";
-import type { Service } from "@shared/schema";
+import type { Service, InventoryItem } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -53,9 +53,14 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedInventory, setSelectedInventory] = useState<Array<{ inventoryId: string; quantity: number }>>([]);
 
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],
+  });
+
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
+    queryKey: ["/api/inventory"],
   });
 
   const form = useForm<FormData>({
@@ -81,10 +86,22 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
     }
   }, [defaultValues?.serviceIds]);
 
+  // Initialize selected inventory from default values
+  useEffect(() => {
+    if (defaultValues?.inventoryItems) {
+      setSelectedInventory(defaultValues.inventoryItems);
+    }
+  }, [defaultValues?.inventoryItems]);
+
   // Update form serviceIds when selectedServices changes
   useEffect(() => {
     form.setValue("serviceIds", selectedServices);
   }, [selectedServices, form]);
+
+  // Update form inventoryItems when selectedInventory changes
+  useEffect(() => {
+    form.setValue("inventoryItems", selectedInventory);
+  }, [selectedInventory, form]);
 
   // Calculate service total
   const serviceTotal = selectedServices.reduce((sum, serviceId) => {
@@ -121,8 +138,27 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
     setSelectedServices(selectedServices.filter(id => id !== serviceId));
   };
 
+  const addInventory = (inventoryId: string) => {
+    if (!selectedInventory.find(i => i.inventoryId === inventoryId)) {
+      setSelectedInventory([...selectedInventory, { inventoryId, quantity: 1 }]);
+    }
+  };
+
+  const removeInventory = (inventoryId: string) => {
+    setSelectedInventory(selectedInventory.filter(i => i.inventoryId !== inventoryId));
+  };
+
+  const updateInventoryQuantity = (inventoryId: string, quantity: number) => {
+    setSelectedInventory(selectedInventory.map(i =>
+      i.inventoryId === inventoryId ? { ...i, quantity } : i
+    ));
+  };
+
   // Get available services (not already selected)
   const availableServices = services.filter(s => !selectedServices.includes(s.id));
+
+  // Get available inventory (not already selected)
+  const availableInventory = inventoryItems.filter(i => !selectedInventory.find(si => si.inventoryId === i.id));
 
   return (
     <Form {...form}>
@@ -319,6 +355,79 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [] }: J
                       {availableServices.map((service) => (
                         <SelectItem key={service.id} value={service.id} data-testid={`option-service-${service.id}`}>
                           {service.name} - ${parseFloat(service.price).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="inventoryItems"
+          render={() => (
+            <FormItem>
+              <FormLabel>Inventory (Optional)</FormLabel>
+              <div className="space-y-3">
+                {selectedInventory.length > 0 && (
+                  <div className="space-y-1" data-testid="selected-inventory-list">
+                    {selectedInventory.map((item) => {
+                      const inventoryItem = inventoryItems.find(i => i.id === item.inventoryId);
+                      if (!inventoryItem) return null;
+                      return (
+                        <div 
+                          key={item.inventoryId} 
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-3 px-3 sm:px-4 rounded-md border bg-card hover-elevate"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                            <span className="font-medium text-sm sm:text-base">{inventoryItem.name}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {inventoryItem.description}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={item.quantity}
+                                onChange={(e) => updateInventoryQuantity(item.inventoryId, parseFloat(e.target.value) || 0)}
+                                className="w-24 h-9"
+                                data-testid={`input-inventory-quantity-${item.inventoryId}`}
+                              />
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                {inventoryItem.unit}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeInventory(item.inventoryId)}
+                            data-testid={`button-remove-inventory-${item.inventoryId}`}
+                            className="h-9 w-9 flex-shrink-0 self-end sm:self-center"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {availableInventory.length > 0 && (
+                  <Select onValueChange={addInventory} value="">
+                    <SelectTrigger data-testid="select-add-inventory">
+                      <SelectValue placeholder="Add inventory item..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableInventory.map((item) => (
+                        <SelectItem key={item.id} value={item.id} data-testid={`option-inventory-${item.id}`}>
+                          {item.name} ({item.category.replace(/_/g, ' ')})
                         </SelectItem>
                       ))}
                     </SelectContent>
