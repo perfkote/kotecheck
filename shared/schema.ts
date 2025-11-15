@@ -111,6 +111,16 @@ export const inventory = pgTable("inventory", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const jobInventory = pgTable("job_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  inventoryId: varchar("inventory_id").notNull().references(() => inventory.id),
+  inventoryName: text("inventory_name").notNull(),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
+  unit: text("unit").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
   createdAt: true,
@@ -133,6 +143,10 @@ export const createJobSchema = insertJobSchema.omit({ customerId: true, price: t
   customerEmail: z.string().email().optional().or(z.literal("")),
   serviceIds: z.array(z.string()).min(1, "At least one service is required"),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
+  inventoryItems: z.array(z.object({
+    inventoryId: z.string(),
+    quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
+  })).optional(),
 });
 
 export const insertServiceSchema = createInsertSchema(services).omit({
@@ -177,10 +191,19 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
+export const insertJobInventorySchema = createInsertSchema(jobInventory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // API schema for updating jobs with service mutations
 export const updateJobSchema = insertJobSchema.partial().extend({
   serviceIds: z.array(z.string()).optional(),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
+  inventoryItems: z.array(z.object({
+    inventoryId: z.string(),
+    quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
+  })).optional(),
 });
 
 // Add validation to createJobSchema for customer selection
@@ -242,10 +265,14 @@ export type EstimateService = typeof estimateServices.$inferSelect;
 export type InsertJobService = z.infer<typeof insertJobServiceSchema>;
 export type JobService = typeof jobServices.$inferSelect;
 
-// Enriched job type that includes associated services
+export type InsertJobInventory = z.infer<typeof insertJobInventorySchema>;
+export type JobInventory = typeof jobInventory.$inferSelect;
+
+// Enriched job type that includes associated services and inventory
 export type JobWithServices = Job & {
   services: JobService[];
   serviceIds: string[];
+  inventory: JobInventory[];
 };
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
