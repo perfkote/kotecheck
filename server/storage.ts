@@ -9,6 +9,7 @@ import {
   jobServices,
   notes,
   inventory,
+  jobInventory,
   users,
   sessions,
   type Customer, 
@@ -24,6 +25,8 @@ import {
   type InsertEstimateService,
   type JobService,
   type InsertJobService,
+  type JobInventory,
+  type InsertJobInventory,
   type Note, 
   type InsertNote,
   type InventoryItem,
@@ -57,9 +60,14 @@ export interface IStorage {
   getAllJobs(): Promise<JobWithServices[]>;
   getJobsByCustomerId(customerId: string): Promise<JobWithServices[]>;
   createJob(job: InsertJob): Promise<Job>;
-  createJobWithServices(payload: { job: InsertJob; services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; newCustomer?: InsertCustomer }): Promise<Job>;
+  createJobWithServices(payload: { 
+    job: InsertJob; 
+    services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; 
+    inventory?: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; 
+    newCustomer?: InsertCustomer 
+  }): Promise<Job>;
   updateJob(id: string, job: Partial<InsertJob>): Promise<Job | undefined>;
-  updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }): Promise<Job | undefined>;
+  updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }, inventoryChanges?: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] }): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
 
   getService(id: string): Promise<Service | undefined>;
@@ -83,6 +91,11 @@ export interface IStorage {
   getJobServices(jobId: string): Promise<JobService[]>;
   addJobService(jobService: InsertJobService): Promise<JobService>;
   removeJobService(id: string): Promise<boolean>;
+
+  getJobInventory(jobId: string): Promise<JobInventory[]>;
+  addJobInventory(jobInventory: InsertJobInventory): Promise<JobInventory>;
+  removeJobInventory(id: string): Promise<boolean>;
+  deductInventoryForJob(jobId: string): Promise<void>;
 
   getNote(id: string): Promise<Note | undefined>;
   getAllNotes(): Promise<Note[]>;
@@ -184,15 +197,23 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
-  // Helper to efficiently enrich jobs with their services (avoids N+1)
+  // Helper to efficiently enrich jobs with their services and inventory (avoids N+1)
   private async enrichJobsWithServices(jobsList: Job[]): Promise<JobWithServices[]> {
     if (jobsList.length === 0) return [];
     
     const jobIds = jobsList.map(j => j.id);
+    
+    // Fetch all job services
     const allJobServices = await db
       .select()
       .from(jobServices)
       .where(inArray(jobServices.jobId, jobIds));
+    
+    // Fetch all job inventory
+    const allJobInventory = await db
+      .select()
+      .from(jobInventory)
+      .where(inArray(jobInventory.jobId, jobIds));
     
     // Group services by jobId
     const servicesByJobId = new Map<string, JobService[]>();
@@ -203,11 +224,21 @@ export class DatabaseStorage implements IStorage {
       servicesByJobId.get(svc.jobId)!.push(svc);
     }
     
-    // Enrich each job with its services
+    // Group inventory by jobId
+    const inventoryByJobId = new Map<string, JobInventory[]>();
+    for (const inv of allJobInventory) {
+      if (!inventoryByJobId.has(inv.jobId)) {
+        inventoryByJobId.set(inv.jobId, []);
+      }
+      inventoryByJobId.get(inv.jobId)!.push(inv);
+    }
+    
+    // Enrich each job with its services and inventory
     return jobsList.map(job => ({
       ...job,
       services: servicesByJobId.get(job.id) || [],
       serviceIds: (servicesByJobId.get(job.id) || []).map(s => s.serviceId),
+      inventory: inventoryByJobId.get(job.id) || [],
     }));
   }
 
@@ -251,8 +282,13 @@ export class DatabaseStorage implements IStorage {
     return job;
   }
 
-  async createJobWithServices(payload: { job: InsertJob; services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; newCustomer?: InsertCustomer }): Promise<Job> {
-    // Transaction: optionally create customer, create job, then create job_services
+  async createJobWithServices(payload: { 
+    job: InsertJob; 
+    services: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; 
+    inventory?: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; 
+    newCustomer?: InsertCustomer 
+  }): Promise<Job> {
+    // Transaction: optionally create customer, create job, then create job_services and job_inventory
     return await db.transaction(async (tx) => {
       let customerId = payload.job.customerId;
 
@@ -299,12 +335,29 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
+      // Create job_inventory entries
+      if (payload.inventory && payload.inventory.length > 0) {
+        await tx.insert(jobInventory).values(
+          payload.inventory.map(inv => ({
+            jobId: job.id,
+            inventoryId: inv.inventoryId,
+            inventoryName: inv.inventoryName,
+            quantity: inv.quantity.toString(),
+            unit: inv.unit,
+          }))
+        );
+      }
+
       return job;
     });
   }
 
-  async updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }): Promise<Job | undefined> {
+  async updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }, inventoryChanges?: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] }): Promise<Job | undefined> {
     return await db.transaction(async (tx) => {
+      // Get current job to check status transition
+      const [currentJob] = await tx.select().from(jobs).where(eq(jobs.id, id));
+      if (!currentJob) return undefined;
+
       // Update job
       const { price, ...rest } = updates;
       const dbUpdates: any = {
@@ -314,13 +367,10 @@ export class DatabaseStorage implements IStorage {
 
       // Only update completedAt when status actually changes
       if (updates.status) {
-        const [currentJob] = await tx.select().from(jobs).where(eq(jobs.id, id));
-        if (currentJob) {
-          if (updates.status === "paid" && currentJob.status !== "paid") {
-            dbUpdates.completedAt = new Date();
-          } else if (updates.status !== "paid" && currentJob.status === "paid") {
-            dbUpdates.completedAt = null;
-          }
+        if (updates.status === "paid" && currentJob.status !== "paid") {
+          dbUpdates.completedAt = new Date();
+        } else if (updates.status !== "paid" && currentJob.status === "paid") {
+          dbUpdates.completedAt = null;
         }
       }
 
@@ -331,6 +381,19 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       if (!job) return undefined;
+
+      // IMPORTANT: Deduct inventory when status changes to "finished"
+      if (updates.status === "finished" && currentJob.status !== "finished") {
+        const jobInvItems = await tx.select().from(jobInventory).where(eq(jobInventory.jobId, id));
+        for (const item of jobInvItems) {
+          await tx
+            .update(inventory)
+            .set({
+              quantity: sql`${inventory.quantity} - ${item.quantity}`,
+            })
+            .where(eq(inventory.id, item.inventoryId));
+        }
+      }
 
       // Remove specified services
       if (services.toRemove.length > 0) {
@@ -346,6 +409,26 @@ export class DatabaseStorage implements IStorage {
             ...svc,
             jobId: job.id,
             servicePrice: svc.servicePrice.toString(),
+          }))
+        );
+      }
+
+      // Remove specified inventory items
+      if (inventoryChanges && inventoryChanges.toRemove.length > 0) {
+        for (const invId of inventoryChanges.toRemove) {
+          await tx.delete(jobInventory).where(eq(jobInventory.id, invId));
+        }
+      }
+
+      // Add new inventory items
+      if (inventoryChanges && inventoryChanges.toAdd.length > 0) {
+        await tx.insert(jobInventory).values(
+          inventoryChanges.toAdd.map(inv => ({
+            jobId: job.id,
+            inventoryId: inv.inventoryId,
+            inventoryName: inv.inventoryName,
+            quantity: inv.quantity.toString(),
+            unit: inv.unit,
           }))
         );
       }
@@ -527,6 +610,43 @@ export class DatabaseStorage implements IStorage {
   async removeJobService(id: string): Promise<boolean> {
     const result = await db.delete(jobServices).where(eq(jobServices.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getJobInventory(jobId: string): Promise<JobInventory[]> {
+    return await db.select().from(jobInventory).where(eq(jobInventory.jobId, jobId));
+  }
+
+  async addJobInventory(insertJobInventory: InsertJobInventory): Promise<JobInventory> {
+    const [jobInv] = await db
+      .insert(jobInventory)
+      .values({
+        ...insertJobInventory,
+        quantity: insertJobInventory.quantity.toString(),
+      })
+      .returning();
+    return jobInv;
+  }
+
+  async removeJobInventory(id: string): Promise<boolean> {
+    const result = await db.delete(jobInventory).where(eq(jobInventory.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async deductInventoryForJob(jobId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Get all inventory items assigned to this job
+      const jobInvItems = await tx.select().from(jobInventory).where(eq(jobInventory.jobId, jobId));
+
+      // Deduct quantity from each inventory item
+      for (const item of jobInvItems) {
+        await tx
+          .update(inventory)
+          .set({
+            quantity: sql`${inventory.quantity} - ${item.quantity}`,
+          })
+          .where(eq(inventory.id, item.inventoryId));
+      }
+    });
   }
 
   async getNote(id: string): Promise<Note | undefined> {
