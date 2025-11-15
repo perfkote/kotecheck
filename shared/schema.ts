@@ -100,6 +100,17 @@ export const notes = pgTable("notes", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const inventory = pgTable("inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: text("category").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("0"),
+  unit: text("unit").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
   createdAt: true,
@@ -154,6 +165,16 @@ export const insertJobServiceSchema = createInsertSchema(jobServices).omit({
 export const insertNoteSchema = createInsertSchema(notes).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertInventorySchema = createInsertSchema(inventory).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  category: z.enum(["office_supplies", "business_consumables", "powder", "ceramic"]),
+  unit: z.enum(["pieces", "pounds", "gallons", "liters", "ounces", "boxes", "each"]),
+  quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Quantity must be 0 or greater")),
+  price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
 // API schema for updating jobs with service mutations
@@ -229,6 +250,9 @@ export type JobWithServices = Job & {
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;
+
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
+export type InventoryItem = typeof inventory.$inferSelect;
 
 // User types for simple username/password authentication
 // API layer schema (for validating incoming requests with password)
