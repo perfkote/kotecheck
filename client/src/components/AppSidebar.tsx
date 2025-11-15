@@ -1,4 +1,4 @@
-import { Users, Briefcase, FileText, StickyNote, LayoutDashboard, Settings, Shield } from "lucide-react";
+import { Users, Briefcase, FileText, StickyNote, LayoutDashboard, Settings, Shield, Package } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ import {
   canAccessJobs, 
   canAccessServices, 
   canAccessNotes,
+  canAccessInventory,
   canAccessUsers 
 } from "@/lib/authUtils";
 import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
@@ -94,6 +95,16 @@ export function AppSidebar() {
                     <Link href="/notes" data-testid="link-notes">
                       <StickyNote />
                       <span>Notes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {canAccessInventory(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/inventory"}>
+                    <Link href="/inventory" data-testid="link-inventory">
+                      <Package />
+                      <span>Inventory</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

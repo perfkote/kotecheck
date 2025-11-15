@@ -17,6 +17,7 @@ import {
   canAccessServices, 
   canAccessEstimates, 
   canAccessNotes, 
+  canAccessInventory,
   canAccessUsers 
 } from "@/lib/authUtils";
 import Login from "@/pages/Login";
@@ -26,6 +27,7 @@ import Jobs from "@/pages/Jobs";
 import Services from "@/pages/Services";
 import Estimates from "@/pages/Estimates";
 import Notes from "@/pages/Notes";
+import Inventory from "@/pages/Inventory";
 import Users from "@/pages/Users";
 import Profile from "@/pages/Profile";
 import AccessDenied from "@/pages/AccessDenied";
@@ -65,6 +67,9 @@ function Router() {
       <Route path="/estimates" component={Estimates} />
       <Route path="/notes">
         {() => <ProtectedRoute component={Notes} canAccess={canAccessNotes} />}
+      </Route>
+      <Route path="/inventory">
+        {() => <ProtectedRoute component={Inventory} canAccess={canAccessInventory} />}
       </Route>
       <Route path="/users">
         {() => <ProtectedRoute component={Users} canAccess={canAccessUsers} />}
