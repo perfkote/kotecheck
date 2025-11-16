@@ -1,0 +1,102 @@
+// ----------------------------------------------------
+// MOBILE AUTH + MOBILE ENDPOINTS
+// ----------------------------------------------------
+import bcrypt from "bcrypt";
+import { mobileAuth, generateMobileToken } from "./auth";
+import { db } from "./db";
+import { jobs } from "./storage"; // adjust if your jobs table is named differently
+import { eq, desc } from "drizzle-orm";
+
+
+// ----------------------------------------
+// MOBILE LOGIN
+// ----------------------------------------
+router.post("/mobile/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await db.query.users.findFirst({
+      where: (t, { eq }) => eq(t.username, username)
+    });
+
+    if (!user)
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid)
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+
+    const token = generateMobileToken({ id: user.id, role: user.role });
+
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      }
+    });
+    
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
+// ----------------------------------------
+// MOBILE JOB LIST
+// ----------------------------------------
+router.get("/mobile/jobs", mobileAuth, async (req, res) => {
+  const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt));
+  return res.json({ success: true, jobs: allJobs });
+});
+
+
+// ----------------------------------------
+// MOBILE JOB DETAILS
+// ----------------------------------------
+router.get("/mobile/jobs/:id", mobileAuth, async (req, res) => {
+  const jobId = req.params.id;
+
+  const job = await db.query.jobs.findFirst({
+    where: (j, { eq }) => eq(j.id, jobId)
+  });
+
+  if (!job)
+    return res.status(404).json({ success: false, message: "Job not found" });
+
+  return res.json({ success: true, job });
+});
+
+
+// ----------------------------------------
+// MOBILE JOB CREATE
+// ----------------------------------------
+router.post("/mobile/jobs", mobileAuth, async (req, res) => {
+  const { title, description, customerId } = req.body;
+
+  const newJob = await db.insert(jobs).values({
+    title,
+    description,
+    customerId,
+    status: "new",
+    createdAt: new Date()
+  }).returning();
+
+  return res.json({ success: true, job: newJob[0] });
+});
+
+
+// ----------------------------------------
+// MOBILE JOB STATUS UPDATE
+// ----------------------------------------
+router.patch("/mobile/jobs/:id/status", mobileAuth, async (req, res) => {
+  const jobId = req.params.id;
+  const { status } = req.body;
+
+  await db.update(jobs).set({ status }).where(eq(jobs.id, jobId));
+
+  return res.json({ success: true });
+});

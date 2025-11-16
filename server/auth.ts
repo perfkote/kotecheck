@@ -183,7 +183,7 @@ export const isManagerOrAbove: RequestHandler = async (req, res, next) => {
 };
 
 // Generate JWT for mobile login
-export function generateMobileToken(user: { id: number; role: string; }) {
+export function generateMobileToken(user: { id: string; role: string }) {
   return jwt.sign(
     { id: user.id, role: user.role },
     process.env.JWT_SECRET!,
@@ -192,7 +192,7 @@ export function generateMobileToken(user: { id: number; role: string; }) {
 }
 
 // Middleware: validate Bearer token
-export const mobileAuth: RequestHandler = (req, res, next) => {
+export function mobileAuth(req, res, next) {
   try {
     const header = req.headers.authorization;
     if (!header) return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -200,9 +200,9 @@ export const mobileAuth: RequestHandler = (req, res, next) => {
     const token = header.replace("Bearer ", "");
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
 
-    (req as any).mobileUser = decoded;
+    req.mobileUser = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
-};
+}

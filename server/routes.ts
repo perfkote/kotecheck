@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return res.status(401).json({ success: false, message: "Invalid credentials" });
 
-      const token = generateMobileToken({ id: parseInt(user.id), role: user.role });
+      const token = generateMobileToken({ id: user.id, role: user.role });
 
       return res.json({
         success: true,
