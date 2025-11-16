@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mobile job details
   app.get("/api/mobile/jobs/:id", mobileAuth, async (req, res) => {
     try {
-      const job = await storage.getJob(req.params.id);
+      const job = await storage.getJobWithServices(req.params.id);
       
       if (!job) {
         return res.status(404).json({ success: false, message: "Job not found" });

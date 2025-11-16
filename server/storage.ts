@@ -57,6 +57,7 @@ export interface IStorage {
   deleteCustomer(id: string): Promise<boolean>;
 
   getJob(id: string): Promise<Job | undefined>;
+  getJobWithServices(id: string): Promise<JobWithServices | undefined>;
   getAllJobs(): Promise<JobWithServices[]>;
   getJobsByCustomerId(customerId: string): Promise<JobWithServices[]>;
   createJob(job: InsertJob): Promise<Job>;
@@ -197,6 +198,14 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
+  async getJobWithServices(id: string): Promise<JobWithServices | undefined> {
+    const job = await this.getJob(id);
+    if (!job) return undefined;
+    
+    const enriched = await this.enrichJobsWithServices([job]);
+    return enriched[0];
+  }
+
   // Helper to efficiently enrich jobs with their services and inventory (avoids N+1)
   private async enrichJobsWithServices(jobsList: Job[]): Promise<JobWithServices[]> {
     if (jobsList.length === 0) return [];
@@ -244,7 +253,7 @@ export class DatabaseStorage implements IStorage {
         inventoryItems: jobInv.map(inv => ({
           inventoryId: inv.inventoryId,
           inventoryName: inv.inventoryName,
-          quantity: inv.quantity,
+          quantity: Number(inv.quantity),
           unit: inv.unit,
         })),
       };
@@ -412,7 +421,7 @@ export class DatabaseStorage implements IStorage {
         }
         
         // Validate that all inventory items have sufficient quantities
-        for (const [invId, required] of requiredByInventoryId.entries()) {
+        for (const [invId, required] of Array.from(requiredByInventoryId.entries())) {
           const [invItem] = await tx.select().from(inventory).where(eq(inventory.id, invId));
           if (!invItem) {
             throw new Error(`Inventory item ${required.name} not found`);
