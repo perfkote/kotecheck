@@ -31,6 +31,18 @@ The design follows principles similar to Linear and Material Design, using consi
 
 ## Recent Changes
 
+### November 16, 2025 - Mobile Authentication & API
+- Implemented JWT-based mobile authentication for mobile app integration
+- Backend: Added JWT token generation and validation middleware (`generateMobileToken`, `mobileAuth`)
+- Mobile API endpoints added to `server/routes.ts`:
+  - POST `/api/mobile/login` - Mobile login with JWT token response
+  - GET `/api/mobile/jobs` - List all jobs (requires JWT authentication)
+  - GET `/api/mobile/jobs/:id` - Get specific job details (requires JWT authentication)
+  - POST `/api/mobile/jobs` - Create new job (requires JWT authentication)
+  - PATCH `/api/mobile/jobs/:id/status` - Update job status (requires JWT authentication)
+- Security: JWT tokens expire after 7 days, stored securely in environment variables
+- Package: Installed `jsonwebtoken` and `@types/jsonwebtoken` for JWT support
+
 ### November 15, 2025 - Job-Inventory Integration
 - Implemented job-inventory assignment system allowing multiple inventory items with quantities to be assigned to jobs
 - Database: Created `job_inventory` junction table linking jobs to inventory items with denormalized data (inventoryId, inventoryName, quantity, unit)

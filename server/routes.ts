@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { isAuthenticated, isManagerOrAbove, isAdmin, isFullAdmin } from "./auth";
+import { db } from "./db";
+import { isAuthenticated, isManagerOrAbove, isAdmin, isFullAdmin, mobileAuth, generateMobileToken } from "./auth";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { 
@@ -53,6 +54,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================
+  // MOBILE AUTH + MOBILE ENDPOINTS
+  // ============================================================
+  
+  // Mobile login
+  app.post("/api/mobile/login", async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+      const user = await db.query.users.findFirst({
+        where: (t, { eq }) => eq(t.username, username)
+      });
+
+      if (!user) return res.status(401).json({ success: false, message: "Invalid credentials" });
+
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) return res.status(401).json({ success: false, message: "Invalid credentials" });
+
+      const token = generateMobileToken({ id: parseInt(user.id), role: user.role });
+
+      return res.json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role
+        }
+      });
+
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
+  // Mobile job list
+  app.get("/api/mobile/jobs", mobileAuth, async (req, res) => {
+    try {
+      const allJobs = await storage.getAllJobs();
+      return res.json({ success: true, jobs: allJobs });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
+  // Mobile job details
+  app.get("/api/mobile/jobs/:id", mobileAuth, async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      
+      if (!job) {
+        return res.status(404).json({ success: false, message: "Job not found" });
+      }
+      
+      return res.json({ success: true, job });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
+  // Mobile job create
+  app.post("/api/mobile/jobs", mobileAuth, async (req, res) => {
+    try {
+      const validationResult = insertJobSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid job data",
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const newJob = await storage.createJob(validationResult.data);
+      return res.json({ success: true, job: newJob });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
+  // Mobile job status update
+  app.patch("/api/mobile/jobs/:id/status", mobileAuth, async (req, res) => {
+    try {
+      const { status } = req.body;
+
+      if (!["new", "in_progress", "finished", "cancelled"].includes(status)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid status value" 
+        });
+      }
+
+      const updatedJob = await storage.updateJob(req.params.id, { status });
+      
+      if (!updatedJob) {
+        return res.status(404).json({ success: false, message: "Job not found" });
+      }
+
+      return res.json({ success: true, job: updatedJob });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+
+  // ============================================================
+  
   app.patch("/api/users/:id/role", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
       const { role } = req.body;
