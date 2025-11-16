@@ -218,139 +218,109 @@ export default function Jobs() {
         </Select>
       </div>
 
-      {/* Mobile card view */}
-      <div className="md:hidden space-y-3">
+      {/* Mobile list view */}
+      <div className="md:hidden">
         {filteredJobs.length === 0 ? (
-          <Card className="p-12 text-center">
+          <div className="py-12 text-center">
             <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
             <p className="text-muted-foreground">No jobs found</p>
             <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
-          </Card>
+          </div>
         ) : (
-          filteredJobs.map((job) => (
-            <Card 
-              key={job.id}
-              className="p-4 hover-elevate cursor-pointer"
-              data-testid={`card-job-${job.id}`}
-              onClick={() => setEditingJob(job)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setEditingJob(job);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex-1">
-                  <div className={`font-medium text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
-                    {job.customerName}
+          <div className="border rounded-lg overflow-hidden divide-y">
+            {filteredJobs.map((job) => (
+              <div
+                key={job.id}
+                className="p-4 hover-elevate active-elevate-2 cursor-pointer bg-card"
+                data-testid={`list-job-${job.id}`}
+                onClick={() => setEditingJob(job)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setEditingJob(job);
+                  }
+                }}
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-medium text-base truncate ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                      {job.customerName}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{job.phoneNumber}</div>
                   </div>
-                  <div className="text-sm text-muted-foreground">{job.phoneNumber}</div>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <StatusBadge status={job.status} type="job" />
+                    <div className="font-semibold text-base">${Number(job.price).toFixed(2)}</div>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <StatusBadge status={job.status} type="job" />
-                  <div className="font-semibold text-lg">${Number(job.price).toFixed(2)}</div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="capitalize text-xs">
+                    {job.coatingType}
+                  </Badge>
+                  <span>•</span>
+                  <span>{new Date(job.receivedDate).toLocaleDateString()}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                <Badge variant="outline" className="capitalize text-xs">
-                  {job.coatingType}
-                </Badge>
-                <span>•</span>
-                <span>{new Date(job.receivedDate).toLocaleDateString()}</span>
-                {job.items && (
-                  <>
-                    <span>•</span>
-                    <span className="truncate">{job.items}</span>
-                  </>
-                )}
-              </div>
-            </Card>
-          ))
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Desktop table view */}
+      {/* Desktop list view */}
       <div className="hidden md:block border rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr className="border-b">
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Customer
-                </th>
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Phone
-                </th>
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Coating Type
-                </th>
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Items
-                </th>
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Price
-                </th>
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Status
-                </th>
-                <th className="text-left py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Received Date
-                </th>
-                <th className="text-right py-2 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-card">
-              {filteredJobs.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center">
-                    <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">No jobs found</p>
-                    <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredJobs.map((job) => (
-                  <tr 
-                    key={job.id} 
-                    className="border-b last:border-b-0 hover-elevate transition-colors cursor-pointer" 
-                    data-testid={`row-job-${job.id}`}
-                    onClick={() => setEditingJob(job)}
-                  >
-                    <td className="py-2.5 px-4">
-                      <span className={`font-medium ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+        {filteredJobs.length === 0 ? (
+          <div className="py-12 text-center bg-card">
+            <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No jobs found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {filteredJobs.map((job) => (
+              <div
+                key={job.id}
+                className="p-4 hover-elevate active-elevate-2 cursor-pointer bg-card"
+                data-testid={`row-job-${job.id}`}
+                onClick={() => setEditingJob(job)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setEditingJob(job);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-4 mb-1">
+                      <span className={`font-medium text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
                         {job.customerName}
                       </span>
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <span className="text-muted-foreground text-sm">{job.phoneNumber}</span>
-                    </td>
-                    <td className="py-2.5 px-4">
+                      <span className="text-sm text-muted-foreground">{job.phoneNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       <Badge variant="outline" className="capitalize">
                         {job.coatingType}
                       </Badge>
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <span className="text-muted-foreground text-sm">
-                        {job.items || <span className="text-muted-foreground/50">—</span>}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <span className="font-semibold">${Number(job.price).toFixed(2)}</span>
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <StatusBadge status={job.status} type="job" />
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <span className="text-muted-foreground text-sm">
-                        {new Date(job.receivedDate).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <span>•</span>
+                      <span>{new Date(job.receivedDate).toLocaleDateString()}</span>
+                      {job.items && (
+                        <>
+                          <span>•</span>
+                          <span className="truncate">{job.items}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="font-semibold text-base whitespace-nowrap">
+                      ${Number(job.price).toFixed(2)}
+                    </div>
+                    <StatusBadge status={job.status} type="job" />
+                    <div onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" data-testid={`button-menu-${job.id}`}>
@@ -382,13 +352,13 @@ export default function Jobs() {
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
