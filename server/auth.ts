@@ -192,7 +192,7 @@ export function generateMobileToken(user: { id: string; role: string }) {
 }
 
 // Middleware: validate Bearer token
-export function mobileAuth(req, res, next) {
+export function mobileAuth(req: any, res: any, next: any) {
   try {
     const header = req.headers.authorization;
     if (!header) return res.status(401).json({ success: false, message: "Unauthorized" });
