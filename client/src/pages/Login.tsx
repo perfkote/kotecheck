@@ -27,32 +27,32 @@ export default function Login() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex justify-center">
-          <img 
-            src={logoImage} 
-            alt="Kote Check Logo" 
-            className="w-[720px] h-[720px] object-contain"
-            data-testid="img-logo"
-          />
-        </div>
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Coat Check</CardTitle>
-            <CardDescription>Sign in to your account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {(error || loginError) && (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    {error || loginError?.message || "Invalid username or password"}
-                  </AlertDescription>
-                </Alert>
-              )}
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Coat Check</CardTitle>
+          <CardDescription>Sign in to your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex justify-center mb-6">
+              <img 
+                src={logoImage} 
+                alt="Kote Check Logo" 
+                className="w-[480px] h-[480px] object-contain"
+                data-testid="img-logo"
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+            {(error || loginError) && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {error || loginError?.message || "Invalid username or password"}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   type="text"
@@ -97,7 +97,6 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
