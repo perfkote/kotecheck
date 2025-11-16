@@ -63,9 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { username, password } = req.body;
 
     try {
-      const user = await db.query.users.findFirst({
-        where: (t, { eq }) => eq(t.username, username)
-      });
+      const user = await storage.getUserByUsername(username);
 
       if (!user) return res.status(401).json({ success: false, message: "Invalid credentials" });
 
