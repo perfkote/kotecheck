@@ -32,7 +32,7 @@ export default function Login() {
           <img 
             src={logoImage} 
             alt="Kote Check Logo" 
-            className="w-48 h-48 object-contain"
+            className="w-[720px] h-[720px] object-contain"
             data-testid="img-logo"
           />
         </div>
