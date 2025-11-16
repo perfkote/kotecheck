@@ -180,3 +180,30 @@ export const isManagerOrAbove: RequestHandler = async (req, res, next) => {
 
   next();
 };
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+
+// Generate JWT for mobile login
+export function generateMobileToken(user: { id: number; role: string; }) {
+  return jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET!,
+    { expiresIn: "7d" }
+  );
+}
+
+// Middleware: validate Bearer token
+export function mobileAuth(req, res, next) {
+  try {
+    const header = req.headers.authorization;
+    if (!header) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const token = header.replace("Bearer ", "");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+
+    req.mobileUser = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+}
