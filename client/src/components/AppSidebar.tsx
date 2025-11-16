@@ -21,7 +21,7 @@ import {
   canAccessInventory,
   canAccessUsers 
 } from "@/lib/authUtils";
-import logoImage from "@assets/Wordpress Transparent_1762832579683.png";
+import logoImage from "@assets/D5869495-F57C-4813-B71F-28380A406027_1763252519060.png";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -34,7 +34,7 @@ export function AppSidebar() {
           <div className="px-4 py-6">
             <img 
               src={logoImage} 
-              alt="Coat Check" 
+              alt="Kote Check" 
               className="w-full h-auto"
               data-testid="img-logo"
             />

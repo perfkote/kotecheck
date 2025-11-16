@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import logoImage from "@assets/generated_images/Coat_Check_logo_design_2524b36d.png";
+import logoImage from "@assets/D5869495-F57C-4813-B71F-28380A406027_1763252519060.png";
 
 export default function Login() {
   const { loginAsync, isLoggingIn, loginError } = useAuth();
@@ -31,8 +31,8 @@ export default function Login() {
         <div className="flex justify-center">
           <img 
             src={logoImage} 
-            alt="Coat Check Logo" 
-            className="w-32 h-32 object-contain"
+            alt="Kote Check Logo" 
+            className="w-48 h-48 object-contain"
             data-testid="img-logo"
           />
         </div>
