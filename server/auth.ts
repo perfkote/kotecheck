@@ -16,9 +16,9 @@ export function getSession() {
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
     ttl: sessionTtl,
-    tableName: "sessions",
+    tableName: "express_sessions",
   });
-  
+
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -47,15 +47,19 @@ export async function setupAuth(app: Express) {
         try {
           // Find user by username
           const user = await storage.getUserByUsername(username);
-          
+
           if (!user) {
-            return done(null, false, { message: "Invalid username or password" });
+            return done(null, false, {
+              message: "Invalid username or password",
+            });
           }
 
           // Verify password
           const isValid = await bcrypt.compare(password, user.passwordHash);
           if (!isValid) {
-            return done(null, false, { message: "Invalid username or password" });
+            return done(null, false, {
+              message: "Invalid username or password",
+            });
           }
 
           // Return user session data (id, username, role)
@@ -67,8 +71,8 @@ export async function setupAuth(app: Express) {
         } catch (error) {
           return done(error);
         }
-      }
-    )
+      },
+    ),
   );
 
   // Serialize id, username, and role to session
@@ -88,26 +92,28 @@ export async function setupAuth(app: Express) {
         return res.status(500).json({ message: "Authentication error" });
       }
       if (!user) {
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+        return res
+          .status(401)
+          .json({ message: info?.message || "Invalid credentials" });
       }
-      
+
       // Regenerate session to prevent session fixation
       req.session.regenerate((regenerateErr) => {
         if (regenerateErr) {
           return res.status(500).json({ message: "Session error" });
         }
-        
+
         req.logIn(user, (loginErr) => {
           if (loginErr) {
             return res.status(500).json({ message: "Login failed" });
           }
-          return res.json({ 
-            success: true, 
+          return res.json({
+            success: true,
             user: {
               id: user.id,
               username: user.username,
               role: user.role,
-            }
+            },
           });
         });
       });
@@ -120,7 +126,7 @@ export async function setupAuth(app: Express) {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      
+
       // Regenerate session after logout
       req.session.regenerate((regenerateErr) => {
         if (regenerateErr) {
@@ -148,7 +154,9 @@ export const isFullAdmin: RequestHandler = async (req, res, next) => {
 
   const user = req.user as any;
   if (user.role !== "full_admin") {
-    return res.status(403).json({ message: "Forbidden: Full Administrator access required" });
+    return res
+      .status(403)
+      .json({ message: "Forbidden: Full Administrator access required" });
   }
 
   next();
@@ -162,7 +170,9 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
 
   const user = req.user as any;
   if (!["full_admin", "admin"].includes(user.role)) {
-    return res.status(403).json({ message: "Forbidden: Admin access required" });
+    return res
+      .status(403)
+      .json({ message: "Forbidden: Admin access required" });
   }
 
   next();
@@ -176,7 +186,9 @@ export const isManagerOrAbove: RequestHandler = async (req, res, next) => {
 
   const user = req.user as any;
   if (!["full_admin", "admin", "manager"].includes(user.role)) {
-    return res.status(403).json({ message: "Forbidden: Manager or Admin access required" });
+    return res
+      .status(403)
+      .json({ message: "Forbidden: Manager or Admin access required" });
   }
 
   next();
@@ -184,18 +196,17 @@ export const isManagerOrAbove: RequestHandler = async (req, res, next) => {
 
 // Generate JWT for mobile login
 export function generateMobileToken(user: { id: string; role: string }) {
-  return jwt.sign(
-    { id: user.id, role: user.role },
-    process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
-  );
+  return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET!, {
+    expiresIn: "7d",
+  });
 }
 
 // Middleware: validate Bearer token
 export function mobileAuth(req: any, res: any, next: any) {
   try {
     const header = req.headers.authorization;
-    if (!header) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!header)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const token = header.replace("Bearer ", "");
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
@@ -203,6 +214,8 @@ export function mobileAuth(req: any, res: any, next: any) {
     req.mobileUser = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    return res
+      .status(401)
+      .json({ success: false, message: "Invalid or expired token" });
   }
 }
