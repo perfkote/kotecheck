@@ -54,7 +54,7 @@ function getJobAgeDays(receivedDate: string): number {
 
 // Helper function to get age indicator
 function getAgeIndicator(days: number) {
-  if (days <= 3) {
+  if (days <= 10) {
     return {
       color: "border-green-500",
       bgColor: "bg-green-500/10",
@@ -62,7 +62,7 @@ function getAgeIndicator(days: number) {
       icon: null,
       textColor: "text-green-700"
     };
-  } else if (days <= 7) {
+  } else if (days <= 14) {
     return {
       color: "border-yellow-500",
       bgColor: "bg-yellow-500/10",
@@ -70,7 +70,7 @@ function getAgeIndicator(days: number) {
       icon: Clock,
       textColor: "text-yellow-700"
     };
-  } else if (days <= 14) {
+  } else if (days <= 17) {
     return {
       color: "border-orange-500",
       bgColor: "bg-orange-500/10",
