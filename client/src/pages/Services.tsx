@@ -8,7 +8,7 @@ import { canCreateServices, canAccessServices } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, Pencil, Settings as SettingsIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, Settings as SettingsIcon, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ export default function Services() {
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   // Redirect employees away from this page
@@ -182,151 +183,166 @@ export default function Services() {
     }
   };
 
+  // Filter and categorize services
+  const filteredServices = services.filter(service =>
+    service.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Split by category and sort alphabetically within each
+  const powderServices = filteredServices
+    .filter(s => s.category === 'powder')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  
+  const ceramicServices = filteredServices
+    .filter(s => s.category === 'ceramic')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  
+  const prepServices = filteredServices
+    .filter(s => s.category === 'prep')
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const ServiceCard = ({ service }: { service: Service }) => (
+    <Card 
+      key={service.id}
+      className={canCreateServices(user) ? "p-4 hover-elevate cursor-pointer" : "p-4"}
+      data-testid={`card-service-${service.id}`}
+      onClick={canCreateServices(user) ? () => handleEdit(service) : undefined}
+      onKeyDown={canCreateServices(user) ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleEdit(service);
+        }
+      } : undefined}
+      role={canCreateServices(user) ? "button" : undefined}
+      tabIndex={canCreateServices(user) ? 0 : undefined}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-base sm:text-base">{service.name}</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="font-bold text-lg sm:text-xl">${parseFloat(service.price).toFixed(2)}</div>
+          {canCreateServices(user) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(service.id);
+              }}
+              data-testid={`button-delete-${service.id}`}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* MOBILE-OPTIMIZED HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <div>
-          <h1 className="text-3xl font-semibold">Service Management</h1>
-          <p className="text-muted-foreground mt-1">Manage pricing for powder coating, ceramic coating, and prep services</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Services</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage pricing for powder, ceramic, and prep services</p>
         </div>
         {canCreateServices(user) && (
-          <Button onClick={handleNew} data-testid="button-new-service">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button 
+            onClick={handleNew} 
+            data-testid="button-new-service"
+            className="w-full sm:w-auto h-12 sm:h-10 text-base"
+          >
+            <Plus className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
             Add Service
           </Button>
         )}
       </div>
 
-      {/* Mobile card view */}
-      <div className="md:hidden space-y-3">
-        {services.length === 0 ? (
-          <Card className="p-12 text-center">
-            <SettingsIcon className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No services yet</p>
-            <p className="text-sm text-muted-foreground">Add your first service to get started</p>
-          </Card>
-        ) : (
-          services.map((service) => (
-            <Card 
-              key={service.id}
-              className={canCreateServices(user) ? "p-4 hover-elevate cursor-pointer" : "p-4"}
-              data-testid={`card-service-${service.id}`}
-              onClick={canCreateServices(user) ? () => handleEdit(service) : undefined}
-              onKeyDown={canCreateServices(user) ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleEdit(service);
-                }
-              } : undefined}
-              role={canCreateServices(user) ? "button" : undefined}
-              tabIndex={canCreateServices(user) ? 0 : undefined}
-            >
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="flex-1">
-                  <div className="font-semibold text-base">{service.name}</div>
-                  <Badge className={`${getCategoryColor(service.category)} mt-2`}>
-                    {service.category}
-                  </Badge>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div className="font-bold text-xl">${parseFloat(service.price).toFixed(2)}</div>
-                  <div className="text-xs text-muted-foreground">Price</div>
-                </div>
-              </div>
-              {canCreateServices(user) && (
-                <div className="flex items-center justify-end gap-2 pt-3 border-t">
-                  <Button
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(service);
-                    }}
-                    data-testid={`button-edit-mobile-${service.id}`}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(service.id);
-                    }}
-                    data-testid={`button-delete-mobile-${service.id}`}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ))
-        )}
+      {/* SEARCH BAR */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-4 sm:h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search services..."
+          className="pl-10 h-12 sm:h-10 text-base"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          data-testid="input-search-services"
+        />
       </div>
 
-      {/* Desktop table view */}
-      <Card className="hidden md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left p-4 font-medium">Service Name</th>
-                <th className="text-left p-4 font-medium">Category</th>
-                <th className="text-right p-4 font-medium">Price</th>
-                <th className="text-right p-4 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {services.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                    No services yet. Add your first service to get started.
-                  </td>
-                </tr>
-              ) : (
-                services.map((service) => (
-                  <tr key={service.id} className="border-t hover-elevate" data-testid={`row-service-${service.id}`}>
-                    <td className="p-4">{service.name}</td>
-                    <td className="p-4">
-                      <Badge className={getCategoryColor(service.category)}>
-                        {service.category}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-right font-medium">${parseFloat(service.price).toFixed(2)}</td>
-                    <td className="p-4 text-right">
-                      {canCreateServices(user) && (
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleEdit(service)}
-                            data-testid={`button-edit-${service.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleDelete(service.id)}
-                            data-testid={`button-delete-${service.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {services.length === 0 ? (
+        <Card className="p-6 sm:p-12 text-center">
+          <SettingsIcon className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+          <p className="text-sm sm:text-base text-muted-foreground">No services yet</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Add your first service to get started</p>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* POWDER COATING SECTION */}
+          {powderServices.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-lg sm:text-xl font-semibold">Powder Coating</h2>
+                <Badge className={getCategoryColor('powder')}>
+                  {powderServices.length} {powderServices.length === 1 ? 'service' : 'services'}
+                </Badge>
+              </div>
+              <div className="grid gap-3">
+                {powderServices.map(service => <ServiceCard key={service.id} service={service} />)}
+              </div>
+            </div>
+          )}
 
+          {/* CERAMIC COATING SECTION */}
+          {ceramicServices.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-lg sm:text-xl font-semibold">Ceramic Coating</h2>
+                <Badge className={getCategoryColor('ceramic')}>
+                  {ceramicServices.length} {ceramicServices.length === 1 ? 'service' : 'services'}
+                </Badge>
+              </div>
+              <div className="grid gap-3">
+                {ceramicServices.map(service => <ServiceCard key={service.id} service={service} />)}
+              </div>
+            </div>
+          )}
+
+          {/* PREP SERVICES SECTION */}
+          {prepServices.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-lg sm:text-xl font-semibold">Prep Services</h2>
+                <Badge className={getCategoryColor('prep')}>
+                  {prepServices.length} {prepServices.length === 1 ? 'service' : 'services'}
+                </Badge>
+              </div>
+              <div className="grid gap-3">
+                {prepServices.map(service => <ServiceCard key={service.id} service={service} />)}
+              </div>
+            </div>
+          )}
+
+          {/* NO RESULTS */}
+          {filteredServices.length === 0 && (
+            <Card className="p-6 sm:p-12 text-center">
+              <Search className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm sm:text-base text-muted-foreground">No services match your search</p>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* DIALOG */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-full sm:max-w-md lg:max-w-2xl p-4 sm:p-6">
+        <DialogContent className="max-w-full sm:max-w-md h-[95vh] sm:h-auto max-h-[95vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>{editingService ? "Edit Service" : "Add Service"}</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">
+              {editingService ? "Edit Service" : "Add Service"}
+            </DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -337,36 +353,34 @@ export default function Services() {
                   <FormItem>
                     <FormLabel>Service Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Basic Powder Coat" {...field} data-testid="input-service-name" />
+                      <Input {...field} placeholder="e.g., Powder Coat Wheels" className="h-12 sm:h-10 text-base" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="category"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-category">
+                        <SelectTrigger className="h-12 sm:h-10 text-base">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="powder">Powder</SelectItem>
-                        <SelectItem value="ceramic">Ceramic</SelectItem>
-                        <SelectItem value="prep">Prep</SelectItem>
+                        <SelectItem value="powder">Powder Coating</SelectItem>
+                        <SelectItem value="ceramic">Ceramic Coating</SelectItem>
+                        <SelectItem value="prep">Prep Services</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="price"
@@ -377,25 +391,28 @@ export default function Services() {
                       <MoneyInput
                         value={field.value}
                         onChange={field.onChange}
-                        data-testid="input-service-price"
+                        className="h-12 sm:h-10 text-base"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              <div className="flex justify-end gap-4 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  data-testid="button-cancel"
+                  className="flex-1 h-12 sm:h-10 text-base"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" data-testid="button-submit">
-                  {editingService ? "Update Service" : "Create Service"}
+                <Button 
+                  type="submit" 
+                  className="flex-1 h-12 sm:h-10 text-base"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {editingService ? "Update" : "Create"}
                 </Button>
               </div>
             </form>
