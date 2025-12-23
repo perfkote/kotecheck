@@ -5,6 +5,7 @@ import { createJobSchemaWithValidation, updateJobSchemaWithValidation } from "@s
 import type { Service, InventoryItem } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -166,10 +167,25 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(
-        onSubmit,
-        (errors) => {
-          console.error("Form validation errors:", errors);
+      form onSubmit={form.handleSubmit(
+  onSubmit,
+  (errors) => {
+    console.error("Form validation errors:", errors);
+    
+    // Show which field failed and why
+    const errorEntries = Object.entries(errors);
+    if (errorEntries.length > 0) {
+      const [fieldName, error] = errorEntries[0];
+      const message = (error as any)?.message || 'Invalid value';
+      
+      toast({
+        title: "Cannot Save Job",
+        description: `${fieldName}: ${message}`,
+        variant: "destructive",
+      });
+    }
+  }
+)} className="space-y-5 sm:space-y-6">
         }
       )} className="space-y-5 sm:space-y-6">
         <FormField
