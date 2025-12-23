@@ -425,113 +425,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch("/api/jobs/:id", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-      const { updateJobSchema } = await import("@shared/schema");
-      const validated = updateJobSchema.parse(req.body);
-      
-      // Check if serviceIds or inventoryItems are being explicitly updated
-      const hasServiceUpdate = Array.isArray(req.body.serviceIds);
-      const hasInventoryUpdate = Array.isArray(req.body.inventoryItems);
-      
-      if (hasServiceUpdate || hasInventoryUpdate) {
-        // Prepare service updates
-        let serviceUpdates = { toAdd: [] as any[], toRemove: [] as string[] };
-        if (hasServiceUpdate) {
-          const currentServices = await storage.getJobServices(req.params.id);
-          const currentServiceIds = new Set(currentServices.map(s => s.serviceId));
-          const newServiceIds = new Set(validated.serviceIds || []);
-          
-          serviceUpdates.toRemove = currentServices
-            .filter(s => !newServiceIds.has(s.serviceId))
-            .map(s => s.id);
-          
-          const toAddIds = (validated.serviceIds || []).filter(id => !currentServiceIds.has(id));
-          const toAddRecords = await Promise.all(
-            toAddIds.map(id => storage.getService(id))
-          );
-          
-          const missingIndex = toAddRecords.findIndex(s => !s);
-          if (missingIndex !== -1) {
-            return res.status(404).json({ error: `Service not found: ${toAddIds[missingIndex]}` });
-          }
-          
-          serviceUpdates.toAdd = toAddRecords.map(service => ({
-            serviceId: service!.id,
-            serviceName: service!.name,
-            servicePrice: service!.price.toString(),
-            quantity: 1,
-          }));
+  try {
+    const { updateJobSchema } = await import("@shared/schema");
+    
+    // LOG what we're receiving
+    console.log(`[UPDATE JOB ${req.params.id}] Received data:`, JSON.stringify(req.body, null, 2));
+    
+    const validated = updateJobSchema.parse(req.body);
+    console.log(`[UPDATE JOB ${req.params.id}] Validated data:`, JSON.stringify(validated, null, 2));
+    
+    // Check if serviceIds or inventoryItems are being explicitly updated
+    const hasServiceUpdate = Array.isArray(req.body.serviceIds);
+    const hasInventoryUpdate = Array.isArray(req.body.inventoryItems);
+    
+    if (hasServiceUpdate || hasInventoryUpdate) {
+      // Prepare service updates
+      let serviceUpdates = { toAdd: [] as any[], toRemove: [] as string[] };
+      if (hasServiceUpdate) {
+        const currentServices = await storage.getJobServices(req.params.id);
+        const currentServiceIds = new Set(currentServices.map(s => s.serviceId));
+        const newServiceIds = new Set(validated.serviceIds || []);
+        
+        serviceUpdates.toRemove = currentServices
+          .filter(s => !newServiceIds.has(s.serviceId))
+          .map(s => s.id);
+        
+        const toAddIds = (validated.serviceIds || []).filter(id => !currentServiceIds.has(id));
+        const toAddRecords = await Promise.all(
+          toAddIds.map(id => storage.getService(id))
+        );
+        
+        const missingIndex = toAddRecords.findIndex(s => !s);
+        if (missingIndex !== -1) {
+          console.error(`[UPDATE JOB ${req.params.id}] Service not found: ${toAddIds[missingIndex]}`);
+          return res.status(404).json({ error: `Service not found: ${toAddIds[missingIndex]}` });
         }
         
-        // Prepare inventory updates
-        let inventoryUpdates: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] } | undefined = undefined;
-        if (hasInventoryUpdate) {
-          const currentInventory = await storage.getJobInventory(req.params.id);
-          const currentInventoryIds = new Set(currentInventory.map(i => i.inventoryId));
-          const newInventoryIds = new Set((validated.inventoryItems || []).map(i => i.inventoryId));
-          
-          const toRemove = currentInventory
-            .filter(i => !newInventoryIds.has(i.inventoryId))
-            .map(i => i.id);
-          
-          const toAddItems = (validated.inventoryItems || []).filter(item => !currentInventoryIds.has(item.inventoryId));
-          const toAddRecords = await Promise.all(
-            toAddItems.map(item => storage.getInventoryItem(item.inventoryId))
-          );
-          
-          const missingInvIndex = toAddRecords.findIndex(inv => !inv);
-          if (missingInvIndex !== -1) {
-            return res.status(404).json({ error: `Inventory item not found: ${toAddItems[missingInvIndex].inventoryId}` });
-          }
-          
-          const toAdd = toAddItems.map((item, idx) => ({
-            inventoryId: toAddRecords[idx]!.id,
-            inventoryName: toAddRecords[idx]!.name,
-            quantity: item.quantity,
-            unit: toAddRecords[idx]!.unit,
-          }));
-          
-          inventoryUpdates = { toAdd, toRemove };
-        }
-        
-        // Calculate price from services if not explicitly provided
-        let finalPrice: number | undefined;
-        if (validated.price !== undefined) {
-          finalPrice = validated.price;
-        } else if (hasServiceUpdate && (validated.serviceIds || []).length > 0) {
-          const allServices = await Promise.all(
-            (validated.serviceIds || []).map(id => storage.getService(id))
-          );
-          finalPrice = allServices.reduce((sum, svc) => sum + (svc ? Number(svc.price) : 0), 0);
-        } else if (hasServiceUpdate && (validated.serviceIds || []).length === 0) {
-          finalPrice = 0;
-        }
-        
-        // Extract job updates (excluding serviceIds, inventoryItems, and price)
-        const { serviceIds, inventoryItems, price, ...otherUpdates } = validated;
-        const jobUpdates = finalPrice !== undefined ? { ...otherUpdates, price: finalPrice } : otherUpdates;
-        const job = await storage.updateJobWithServices(req.params.id, jobUpdates, serviceUpdates, inventoryUpdates);
-        
-        if (!job) {
-          return res.status(404).json({ error: "Job not found" });
-        }
-        res.json(job);
-      } else {
-        // Neither serviceIds nor inventoryItems provided - preserve existing, just update job fields
-        const { serviceIds, inventoryItems, ...jobUpdates } = validated;
-        const job = await storage.updateJob(req.params.id, jobUpdates);
-        if (!job) {
-          return res.status(404).json({ error: "Job not found" });
-        }
-        res.json(job);
+        serviceUpdates.toAdd = toAddRecords.map(service => ({
+          serviceId: service!.id,
+          serviceName: service!.name,
+          servicePrice: service!.price.toString(),
+          quantity: 1,
+        }));
       }
-    } catch (error) {
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid job data" });
+      
+      // Prepare inventory updates
+      let inventoryUpdates: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] } | undefined = undefined;
+      if (hasInventoryUpdate) {
+        const currentInventory = await storage.getJobInventory(req.params.id);
+        const currentInventoryIds = new Set(currentInventory.map(i => i.inventoryId));
+        const newInventoryIds = new Set((validated.inventoryItems || []).map(i => i.inventoryId));
+        
+        const toRemove = currentInventory
+          .filter(i => !newInventoryIds.has(i.inventoryId))
+          .map(i => i.id);
+        
+        const toAddItems = (validated.inventoryItems || []).filter(item => !currentInventoryIds.has(item.inventoryId));
+        const toAddRecords = await Promise.all(
+          toAddItems.map(item => storage.getInventoryItem(item.inventoryId))
+        );
+        
+        const missingInvIndex = toAddRecords.findIndex(inv => !inv);
+        if (missingInvIndex !== -1) {
+          console.error(`[UPDATE JOB ${req.params.id}] Inventory not found: ${toAddItems[missingInvIndex].inventoryId}`);
+          return res.status(404).json({ error: `Inventory item not found: ${toAddItems[missingInvIndex].inventoryId}` });
+        }
+        
+        const toAdd = toAddItems.map((item, idx) => ({
+          inventoryId: toAddRecords[idx]!.id,
+          inventoryName: toAddRecords[idx]!.name,
+          quantity: item.quantity,
+          unit: toAddRecords[idx]!.unit,
+        }));
+        
+        inventoryUpdates = { toAdd, toRemove };
       }
-      res.status(500).json({ error: "Failed to update job" });
+      
+      // Calculate price from services if not explicitly provided
+      let finalPrice: number | undefined;
+      if (validated.price !== undefined) {
+        finalPrice = validated.price;
+      } else if (hasServiceUpdate && (validated.serviceIds || []).length > 0) {
+        const allServices = await Promise.all(
+          (validated.serviceIds || []).map(id => storage.getService(id))
+        );
+        finalPrice = allServices.reduce((sum, svc) => sum + (svc ? Number(svc.price) : 0), 0);
+      } else if (hasServiceUpdate && (validated.serviceIds || []).length === 0) {
+        finalPrice = 0;
+      }
+      
+      // Extract job updates (excluding serviceIds, inventoryItems, and price)
+      const { serviceIds, inventoryItems, price, ...otherUpdates } = validated;
+      const jobUpdates = finalPrice !== undefined ? { ...otherUpdates, price: finalPrice } : otherUpdates;
+      
+      console.log(`[UPDATE JOB ${req.params.id}] Calling updateJobWithServices with:`, JSON.stringify(jobUpdates, null, 2));
+      
+      const job = await storage.updateJobWithServices(req.params.id, jobUpdates, serviceUpdates, inventoryUpdates);
+      
+      if (!job) {
+        console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
+      res.json(job);
+    } else {
+      // Neither serviceIds nor inventoryItems provided - preserve existing, just update job fields
+      const { serviceIds, inventoryItems, ...jobUpdates } = validated;
+      
+      console.log(`[UPDATE JOB ${req.params.id}] Simple update (no services/inventory):`, JSON.stringify(jobUpdates, null, 2));
+      
+      const job = await storage.updateJob(req.params.id, jobUpdates);
+      if (!job) {
+        console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
+      res.json(job);
     }
-  });
+  } catch (error) {
+    console.error(`[UPDATE JOB ${req.params.id}] ERROR:`, error);
+    
+    if (error instanceof Error && error.name === "ZodError") {
+      // Return detailed validation errors
+      const zodError = error as any;
+      console.error(`[UPDATE JOB ${req.params.id}] Validation errors:`, JSON.stringify(zodError.errors, null, 2));
+      return res.status(400).json({ 
+        error: "Invalid job data", 
+        details: zodError.errors 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: "Failed to update job",
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
 
   app.delete("/api/jobs/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
