@@ -27,7 +27,7 @@ import { JobForm } from "@/components/JobForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, MoreVertical, Briefcase } from "lucide-react";
+import { Plus, Search, MoreVertical, Briefcase, ChevronDown, ChevronUp, Clock, AlertCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,52 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+// Helper function to get job age in days
+function getJobAgeDays(receivedDate: string): number {
+  const received = new Date(receivedDate);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - received.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+// Helper function to get age indicator
+function getAgeIndicator(days: number) {
+  if (days <= 3) {
+    return {
+      color: "border-green-500",
+      bgColor: "bg-green-500/10",
+      label: "New",
+      icon: null,
+      textColor: "text-green-700"
+    };
+  } else if (days <= 7) {
+    return {
+      color: "border-yellow-500",
+      bgColor: "bg-yellow-500/10",
+      label: `${days}d`,
+      icon: Clock,
+      textColor: "text-yellow-700"
+    };
+  } else if (days <= 14) {
+    return {
+      color: "border-orange-500",
+      bgColor: "bg-orange-500/10",
+      label: `${days}d`,
+      icon: Clock,
+      textColor: "text-orange-700"
+    };
+  } else {
+    return {
+      color: "border-red-500",
+      bgColor: "bg-red-500/10",
+      label: `${days}d!`,
+      icon: AlertCircle,
+      textColor: "text-red-700"
+    };
+  }
+}
+
 export default function Jobs() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
@@ -52,6 +98,7 @@ export default function Jobs() {
   const [deletingJob, setDeletingJob] = useState<JobWithServices | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showCompleted, setShowCompleted] = useState(false);
   const { toast } = useToast();
 
   // Redirect employees away from this page
@@ -88,7 +135,6 @@ export default function Jobs() {
         title: "Success",
         description: "Job created successfully",
       });
-      // Close dialog after toast to ensure proper sequencing
       setTimeout(() => setIsDialogOpen(false), 100);
     },
     onError: () => {
@@ -143,14 +189,19 @@ export default function Jobs() {
 
   const jobsWithCustomerNames = jobs.map(job => {
     const customer = customers.find(c => c.id === job.customerId);
+    const ageDays = getJobAgeDays(job.receivedDate);
     return {
       ...job,
       customerName: customer?.name || "Unknown Customer",
       customerDeleted: job.customerId === null,
+      ageDays,
+      ageIndicator: getAgeIndicator(ageDays),
     };
   });
 
-  const filteredJobs = jobsWithCustomerNames
+  // Split jobs into active and completed
+  const activeJobs = jobsWithCustomerNames
+    .filter(job => job.status !== 'paid' && job.status !== 'finished')
     .filter(job => {
       const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -158,16 +209,19 @@ export default function Jobs() {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // Check if jobs are closed (finished or paid statuses are terminal)
-      const aIsClosed = a.status === 'paid' || a.status === 'finished';
-      const bIsClosed = b.status === 'paid' || b.status === 'finished';
-      
-      // Sort non-closed jobs first
-      if (aIsClosed !== bIsClosed) {
-        return aIsClosed ? 1 : -1;
-      }
-      
-      // Within same closed/non-closed group, sort by newest date first
+      // Sort by age (oldest first for urgency)
+      return b.ageDays - a.ageDays;
+    });
+
+  const completedJobs = jobsWithCustomerNames
+    .filter(job => job.status === 'paid' || job.status === 'finished')
+    .filter(job => {
+      const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      // Sort completed by newest first
       const aDate = new Date(a.receivedDate).getTime();
       const bDate = new Date(b.receivedDate).getTime();
       return bDate - aDate;
@@ -218,112 +272,191 @@ export default function Jobs() {
         </Select>
       </div>
 
-      {/* Mobile list view */}
-      <div className="md:hidden">
-        {filteredJobs.length === 0 ? (
-          <div className="py-12 text-center">
-            <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No jobs found</p>
-            <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
-          </div>
+      {/* Age Legend */}
+      <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
+        <span className="font-medium">Age Indicators:</span>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-green-500"></div>
+          <span>0-3 days</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-yellow-500"></div>
+          <span>4-7 days</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-orange-500"></div>
+          <span>8-14 days</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+          <span>15+ days</span>
+        </div>
+      </div>
+
+      {/* Active Jobs */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">
+          Active Jobs ({activeJobs.length})
+        </h2>
+        {activeJobs.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Briefcase className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              {searchQuery || statusFilter !== "all" ? "No active jobs match your filters" : "No active jobs"}
+            </p>
+          </Card>
         ) : (
-          <div className="border rounded-lg overflow-hidden divide-y">
-            {filteredJobs.map((job) => (
-              <div
-                key={job.id}
-                className="p-4 hover-elevate active-elevate-2 cursor-pointer bg-card"
-                data-testid={`list-job-${job.id}`}
-                onClick={() => setEditingJob(job)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setEditingJob(job);
-                  }
-                }}
+          <div className="grid gap-3">
+            {activeJobs.map((job) => (
+              <Card 
+                key={job.id} 
+                className={`p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
+                data-testid="job-card"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className={`font-medium text-base break-words ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
-                      {job.customerName}
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
+                        {job.trackingId}
+                      </h3>
+                      <StatusBadge status={job.status} type="job" />
+                      
+                      {/* Age Badge */}
+                      <Badge 
+                        variant="outline" 
+                        className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold`}
+                      >
+                        {job.ageIndicator.icon && (
+                          <job.ageIndicator.icon className="w-3 h-3 mr-1" />
+                        )}
+                        {job.ageIndicator.label}
+                      </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground break-words">{job.phoneNumber}</div>
+                    
+                    <div className="space-y-1 text-sm">
+                      <p 
+                        className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
+                        data-testid="job-customer-name"
+                      >
+                        <span className="font-medium">Customer:</span> {job.customerName}
+                      </p>
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Received:</span>{" "}
+                        {new Date(job.receivedDate).toLocaleDateString()}
+                      </p>
+                      {job.coatingType && (
+                        <Badge variant="outline" className="capitalize">
+                          {job.coatingType}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {job.items && (
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                        {job.items}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    <StatusBadge status={job.status} type="job" />
-                    <div className="font-semibold text-base">${Number(job.price).toFixed(2)}</div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-semibold text-lg" data-testid="job-price">
+                        ${Number(job.price).toFixed(2)}
+                      </p>
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" data-testid="button-job-menu">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          data-testid="menu-view"
+                          onClick={() => setViewingJob(job)}
+                        >
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          data-testid="menu-edit"
+                          onClick={() => setEditingJob(job)}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
+                        {canDeleteJobs(user) && (
+                          <DropdownMenuItem 
+                            className="text-destructive" 
+                            data-testid="menu-delete"
+                            onClick={() => setDeletingJob(job)}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="capitalize text-xs">
-                    {job.coatingType}
-                  </Badge>
-                  <span>•</span>
-                  <span>{new Date(job.receivedDate).toLocaleDateString()}</span>
-                </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
       </div>
 
-      {/* Desktop list view */}
-      <div className="hidden md:block border rounded-lg overflow-hidden">
-        {filteredJobs.length === 0 ? (
-          <div className="py-12 text-center bg-card">
-            <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No jobs found</p>
-            <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {filteredJobs.map((job) => (
-              <div
-                key={job.id}
-                className="p-4 hover-elevate active-elevate-2 cursor-pointer bg-card"
-                data-testid={`row-job-${job.id}`}
-                onClick={() => setEditingJob(job)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setEditingJob(job);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-4 mb-1 flex-wrap">
-                      <span className={`font-medium text-base break-words ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
-                        {job.customerName}
-                      </span>
-                      <span className="text-sm text-muted-foreground break-words">{job.phoneNumber}</span>
+      {/* Completed Jobs - Collapsible */}
+      {completedJobs.length > 0 && (
+        <div>
+          <Button
+            variant="ghost"
+            className="w-full justify-between mb-4 text-lg font-semibold"
+            onClick={() => setShowCompleted(!showCompleted)}
+          >
+            <span>Completed Jobs ({completedJobs.length})</span>
+            {showCompleted ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </Button>
+          
+          {showCompleted && (
+            <div className="grid gap-3 opacity-75">
+              {completedJobs.map((job) => (
+                <Card 
+                  key={job.id} 
+                  className="p-4 hover:shadow-md transition-shadow"
+                  data-testid="job-card-completed"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
+                          {job.trackingId}
+                        </h3>
+                        <StatusBadge status={job.status} type="job" />
+                      </div>
+                      
+                      <div className="space-y-1 text-sm">
+                        <p 
+                          className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
+                          data-testid="job-customer-name"
+                        >
+                          <span className="font-medium">Customer:</span> {job.customerName}
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Received:</span>{" "}
+                          {new Date(job.receivedDate).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                      <Badge variant="outline" className="capitalize">
-                        {job.coatingType}
-                      </Badge>
-                      <span>•</span>
-                      <span>{new Date(job.receivedDate).toLocaleDateString()}</span>
-                      {job.items && (
-                        <>
-                          <span>•</span>
-                          <span className="break-words">{job.items}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="font-semibold text-base whitespace-nowrap">
-                      ${Number(job.price).toFixed(2)}
-                    </div>
-                    <StatusBadge status={job.status} type="job" />
-                    <div onClick={(e) => e.stopPropagation()}>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold text-lg" data-testid="job-price">
+                          ${Number(job.price).toFixed(2)}
+                        </p>
+                      </div>
+                      
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`button-menu-${job.id}`}>
+                          <Button variant="ghost" size="icon" data-testid="button-job-menu">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -340,7 +473,6 @@ export default function Jobs() {
                           >
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
                           {canDeleteJobs(user) && (
                             <DropdownMenuItem 
                               className="text-destructive" 
@@ -354,13 +486,14 @@ export default function Jobs() {
                       </DropdownMenu>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* Dialogs remain the same */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6">
           <DialogHeader>
@@ -371,6 +504,7 @@ export default function Jobs() {
               customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
               onSubmit={(data) => createMutation.mutate(data)}
               onCancel={() => setIsDialogOpen(false)}
+              isSubmitting={createMutation.isPending}
             />
           )}
         </DialogContent>
@@ -398,6 +532,7 @@ export default function Jobs() {
               }}
               onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
               onCancel={() => setEditingJob(null)}
+              isSubmitting={updateMutation.isPending}
             />
           )}
         </DialogContent>
@@ -533,3 +668,4 @@ export default function Jobs() {
     </div>
   );
 }
+
