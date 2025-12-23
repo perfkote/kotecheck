@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createJobSchemaWithValidation } from "@shared/schema";
+import { createJobSchemaWithValidation, updateJobSchemaWithValidation } from "@shared/schema";
 import type { Service, InventoryItem } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -65,20 +65,23 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
   });
 
   const form = useForm<FormData>({
-    resolver: zodResolver(createJobSchemaWithValidation),
-    defaultValues: defaultValues || {
-      customerId: "",
-      customerName: "",
-      phoneNumber: "",
-      receivedDate: new Date(),
-      serviceIds: [],
-      coatingType: undefined,
-      items: "",
-      detailedNotes: "",
-      price: undefined,
-      status: "received",
-    },
-  });
+  // Use different schema based on whether we're creating or editing
+  resolver: zodResolver(
+    defaultValues ? updateJobSchemaWithValidation : createJobSchemaWithValidation
+  ),
+  defaultValues: defaultValues || {
+    customerId: "",
+    customerName: "",
+    phoneNumber: "",
+    receivedDate: new Date(),
+    serviceIds: [],
+    coatingType: undefined,
+    items: "",
+    detailedNotes: "",
+    price: undefined,
+    status: "received",
+  },
+});
 
   // Initialize selected services from default values
   useEffect(() => {
