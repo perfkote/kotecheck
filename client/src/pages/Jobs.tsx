@@ -307,99 +307,118 @@ export default function Jobs() {
           </Card>
         ) : (
           <div className="grid gap-3">
-            {activeJobs.map((job) => (
-              <Card 
-                key={job.id} 
-                className={`p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
-                data-testid="job-card"
+           {activeJobs.map((job) => (
+  <Card 
+    key={job.id} 
+    className={`p-4 sm:p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
+    data-testid="job-card"
+  >
+    <div className="space-y-3">
+      {/* REDESIGNED HEADER - Customer Name Largest */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          {/* CUSTOMER NAME - LARGEST & BOLDEST */}
+          <h3 
+            className="font-bold text-xl sm:text-2xl mb-2" 
+            data-testid="job-customer-name"
+          >
+            {job.customerName}
+          </h3>
+          
+          {/* STATUS & AGE BADGES */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <StatusBadge status={job.status} type="job" />
+            <Badge 
+              variant="outline" 
+              className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold text-sm`}
+            >
+              {job.ageIndicator.icon && (
+                <job.ageIndicator.icon className="w-3 h-3 mr-1" />
+              )}
+              {job.ageIndicator.label}
+            </Badge>
+            {job.coatingType && (
+              <Badge variant="outline" className="capitalize text-sm">
+                {job.coatingType}
+              </Badge>
+            )}
+          </div>
+        </div>
+        
+        {/* PRICE & MENU */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="text-right">
+            <p className="font-bold text-2xl sm:text-2xl" data-testid="job-price">
+              ${Number(job.price).toFixed(2)}
+            </p>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-10 w-10 sm:h-9 sm:w-9"
+                data-testid="button-job-menu"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
-                        {job.trackingId}
-                      </h3>
-                      <StatusBadge status={job.status} type="job" />
-                      
-                      {/* Age Badge */}
-                      <Badge 
-                        variant="outline" 
-                        className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold`}
-                      >
-                        {job.ageIndicator.icon && (
-                          <job.ageIndicator.icon className="w-3 h-3 mr-1" />
-                        )}
-                        {job.ageIndicator.label}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1 text-sm">
-                      <p 
-                        className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
-                        data-testid="job-customer-name"
-                      >
-                        <span className="font-medium">Customer:</span> {job.customerName}
-                      </p>
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Received:</span>{" "}
-                        {new Date(job.receivedDate).toLocaleDateString()}
-                      </p>
-                      {job.coatingType && (
-                        <Badge variant="outline" className="capitalize">
-                          {job.coatingType}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {job.items && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {job.items}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold text-lg" data-testid="job-price">
-                        ${Number(job.price).toFixed(2)}
-                      </p>
-                    </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" data-testid="button-job-menu">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          data-testid="menu-view"
-                          onClick={() => setViewingJob(job)}
-                        >
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          data-testid="menu-edit"
-                          onClick={() => setEditingJob(job)}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
-                        {canDeleteJobs(user) && (
-                          <DropdownMenuItem 
-                            className="text-destructive" 
-                            data-testid="menu-delete"
-                            onClick={() => setDeletingJob(job)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                <MoreVertical className="w-5 h-5 sm:w-4 sm:h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem 
+                data-testid="menu-view"
+                onClick={() => setViewingJob(job)}
+                className="text-base sm:text-sm py-3 sm:py-2"
+              >
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                data-testid="menu-edit"
+                onClick={() => setEditingJob(job)}
+                className="text-base sm:text-sm py-3 sm:py-2"
+              >
+                Edit
+              </DropdownMenuItem>
+              {canDeleteJobs(user) && (
+                <DropdownMenuItem 
+                  className="text-destructive text-base sm:text-sm py-3 sm:py-2" 
+                  data-testid="menu-delete"
+                  onClick={() => setDeletingJob(job)}
+                >
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      {/* ITEMS DESCRIPTION - PROMINENT */}
+      {job.items && (
+        <div className="bg-muted/30 p-3 rounded-md">
+          <p className="text-sm sm:text-base font-medium text-foreground">
+            {job.items}
+          </p>
+        </div>
+      )}
+      
+      {/* RECEIVED DATE - SUBTLE */}
+      <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground">
+        <span>Received: {new Date(job.receivedDate).toLocaleDateString()}</span>
+        {job.phoneNumber && (
+          <>
+            <span>•</span>
+            <span>{job.phoneNumber}</span>
+          </>
+        )}
+      </div>
+    </div>
+  </Card>
+))}
+
+// NOTE: Tracking ID (job.trackingId) is removed from card view
+// It will ONLY show in the View Details dialog
+
           </div>
         )}
       </div>
