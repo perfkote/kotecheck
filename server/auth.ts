@@ -12,12 +12,20 @@ import { storage } from "./storage";
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+
+  console.log("Setting up session store...");
+
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "express_sessions",
+    errorLog: (err) => {
+      console.error("Session store error:", err);
+    },
   });
+
+  console.log("Session store created");
 
   return session({
     secret: process.env.SESSION_SECRET!,
