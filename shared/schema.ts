@@ -205,7 +205,52 @@ export const updateJobSchema = insertJobSchema.partial().extend({
     quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
   })).optional(),
 });
+// ADD THIS TO shared/schema.ts after the updateJobSchema definition (around line 207)
+// This allows editing jobs that have no services
 
+export const updateJobSchemaWithValidation = insertJobSchema
+  .partial()
+  .omit({ customerId: true })
+  .extend({
+    customerId: z.string().optional(),
+    customerName: z.string().optional(),
+    customerEmail: z.string().email().optional().or(z.literal("")),
+    serviceIds: z.array(z.string()).optional(), // NO .min(1) requirement for updates
+    price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
+    inventoryItems: z.array(z.object({
+      inventoryId: z.string(),
+      quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
+    })).optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Trim string fields
+    if (data.customerName) {
+      data.customerName = data.customerName.trim();
+    }
+    if (data.customerEmail) {
+      data.customerEmail = data.customerEmail.trim();
+    }
+    
+    // Enforce XOR: either customerId OR customerName, not both
+    const hasCustomerId = Boolean(data.customerId);
+    const hasCustomerName = Boolean(data.customerName);
+    
+    if (hasCustomerId && hasCustomerName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either an existing customer or a new customer name, not both",
+        path: ["customerId"],
+      });
+    }
+    
+    if (!hasCustomerId && !hasCustomerName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Must select an existing customer or provide a new customer name",
+        path: ["customerId"],
+      });
+    }
+  });
 // Add validation to createJobSchema for customer selection
 export const createJobSchemaWithValidation = createJobSchema.superRefine((data, ctx) => {
   // Trim string fields
