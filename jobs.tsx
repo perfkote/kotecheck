@@ -252,6 +252,21 @@ export default function Jobs() {
             <Plus className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
             Create Job
           </Button>
+      <Button 
+      variant="outline" 
+      onClick={() => {
+        queryClient.clear();
+        localStorage.clear();
+        window.location.reload();
+      }}
+    >
+      🔄 Force Refresh
+    </Button>
+    {canCreateJobs(user) && (
+      <Button onClick={() => setIsDialogOpen(true)}>
+        <Plus className="w-4 h-4 mr-2" />
+        Create Job
+      </Button>
         )}
       </div>
 
