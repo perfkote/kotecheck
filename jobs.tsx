@@ -151,11 +151,15 @@ export default function Jobs() {
       apiRequest("PATCH", `/api/jobs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       toast({
         title: "Success",
         description: "Job updated successfully",
       });
-      setTimeout(() => setEditingJob(null), 100);
+      setTimeout(() => {
+        setEditingJob(null);
+        setViewingJob(null);
+      }, 100);
     },
     onError: () => {
       toast({
@@ -167,8 +171,7 @@ export default function Jobs() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiRequest("DELETE", `/api/jobs/${id}`),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/jobs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({
@@ -183,19 +186,20 @@ export default function Jobs() {
         description: "Failed to delete job",
         variant: "destructive",
       });
-      setDeletingJob(null);
     },
   });
 
   const jobsWithCustomerNames = jobs.map(job => {
     const customer = customers.find(c => c.id === job.customerId);
     const ageDays = getJobAgeDays(job.receivedDate);
+    const ageIndicator = getAgeIndicator(ageDays);
+    
     return {
       ...job,
-      customerName: customer?.name || "Unknown Customer",
-      customerDeleted: job.customerId === null,
+      customerName: customer?.name || `[Deleted Customer]`,
+      customerDeleted: !customer,
       ageDays,
-      ageIndicator: getAgeIndicator(ageDays),
+      ageIndicator
     };
   });
 
@@ -228,37 +232,43 @@ export default function Jobs() {
     });
 
   if (jobsLoading) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-4 sm:p-8 text-base">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* MOBILE-OPTIMIZED HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <div>
-          <h1 className="text-3xl font-semibold">Jobs</h1>
-          <p className="text-muted-foreground mt-1">Track and manage all your jobs</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold">Jobs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Track and manage all your jobs</p>
         </div>
         {canCreateJobs(user) && (
-          <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-job">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button 
+            onClick={() => setIsDialogOpen(true)} 
+            data-testid="button-create-job"
+            className="w-full sm:w-auto h-12 sm:h-10 text-base"
+          >
+            <Plus className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
             Create Job
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* MOBILE-OPTIMIZED FILTERS */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-4 sm:h-4 text-muted-foreground" />
           <Input
             placeholder="Search jobs..."
-            className="pl-10"
+            className="pl-10 h-12 sm:h-10 text-base"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             data-testid="input-search-jobs"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48" data-testid="select-filter-status">
+          <SelectTrigger className="w-full sm:w-48 h-12 sm:h-10 text-base" data-testid="select-filter-status">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -272,36 +282,36 @@ export default function Jobs() {
         </Select>
       </div>
 
-      {/* Age Legend */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
-        <span className="font-medium">Age Indicators:</span>
+      {/* MOBILE-OPTIMIZED AGE LEGEND */}
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4 text-sm sm:text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
+        <span className="font-medium col-span-2 sm:col-span-1">Age:</span>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-green-500"></div>
-          <span>0-3 days</span>
+          <div className="w-4 h-4 sm:w-3 sm:h-3 rounded-sm bg-green-500"></div>
+          <span>0-3d</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-yellow-500"></div>
-          <span>4-7 days</span>
+          <div className="w-4 h-4 sm:w-3 sm:h-3 rounded-sm bg-yellow-500"></div>
+          <span>4-7d</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-orange-500"></div>
-          <span>8-14 days</span>
+          <div className="w-4 h-4 sm:w-3 sm:h-3 rounded-sm bg-orange-500"></div>
+          <span>8-14d</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-red-500"></div>
-          <span>15+ days</span>
+          <div className="w-4 h-4 sm:w-3 sm:h-3 rounded-sm bg-red-500"></div>
+          <span>15+d</span>
         </div>
       </div>
 
-      {/* Active Jobs */}
+      {/* MOBILE-OPTIMIZED ACTIVE JOBS */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">
+        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">
           Active Jobs ({activeJobs.length})
         </h2>
         {activeJobs.length === 0 ? (
-          <Card className="p-8 text-center">
+          <Card className="p-6 sm:p-8 text-center">
             <Briefcase className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               {searchQuery || statusFilter !== "all" ? "No active jobs match your filters" : "No active jobs"}
             </p>
           </Card>
@@ -310,93 +320,109 @@ export default function Jobs() {
             {activeJobs.map((job) => (
               <Card 
                 key={job.id} 
-                className={`p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
+                className={`p-4 sm:p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
                 data-testid="job-card"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
+                <div className="space-y-3">
+                  {/* Header Row - Mobile Stacked */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-mono font-semibold text-lg sm:text-lg" data-testid="job-tracking-id">
                         {job.trackingId}
                       </h3>
-                      <StatusBadge status={job.status} type="job" />
-                      
-                      {/* Age Badge */}
-                      <Badge 
-                        variant="outline" 
-                        className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold`}
-                      >
-                        {job.ageIndicator.icon && (
-                          <job.ageIndicator.icon className="w-3 h-3 mr-1" />
-                        )}
-                        {job.ageIndicator.label}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1 text-sm">
-                      <p 
-                        className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
-                        data-testid="job-customer-name"
-                      >
-                        <span className="font-medium">Customer:</span> {job.customerName}
-                      </p>
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Received:</span>{" "}
-                        {new Date(job.receivedDate).toLocaleDateString()}
-                      </p>
-                      {job.coatingType && (
-                        <Badge variant="outline" className="capitalize">
-                          {job.coatingType}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <StatusBadge status={job.status} type="job" />
+                        <Badge 
+                          variant="outline" 
+                          className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold text-sm`}
+                        >
+                          {job.ageIndicator.icon && (
+                            <job.ageIndicator.icon className="w-3 h-3 mr-1" />
+                          )}
+                          {job.ageIndicator.label}
                         </Badge>
-                      )}
+                      </div>
                     </div>
                     
-                    {job.items && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {job.items}
-                      </p>
+                    {/* Price and Menu - Aligned Right */}
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold text-lg sm:text-lg" data-testid="job-price">
+                          ${Number(job.price).toFixed(2)}
+                        </p>
+                      </div>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-10 w-10 sm:h-9 sm:w-9"
+                            data-testid="button-job-menu"
+                          >
+                            <MoreVertical className="w-5 h-5 sm:w-4 sm:h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            data-testid="menu-view"
+                            onClick={() => setViewingJob(job)}
+                            className="text-base sm:text-sm py-3 sm:py-2"
+                          >
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            data-testid="menu-edit"
+                            onClick={() => setEditingJob(job)}
+                            className="text-base sm:text-sm py-3 sm:py-2"
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            data-testid="menu-add-note"
+                            className="text-base sm:text-sm py-3 sm:py-2"
+                          >
+                            Add Note
+                          </DropdownMenuItem>
+                          {canDeleteJobs(user) && (
+                            <DropdownMenuItem 
+                              className="text-destructive text-base sm:text-sm py-3 sm:py-2" 
+                              data-testid="menu-delete"
+                              onClick={() => setDeletingJob(job)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  
+                  {/* Job Details - Mobile Friendly */}
+                  <div className="space-y-2 text-sm sm:text-sm">
+                    <p 
+                      className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
+                      data-testid="job-customer-name"
+                    >
+                      <span className="font-medium">Customer:</span> {job.customerName}
+                    </p>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium">Received:</span>{" "}
+                      {new Date(job.receivedDate).toLocaleDateString()}
+                    </p>
+                    {job.coatingType && (
+                      <Badge variant="outline" className="capitalize text-sm">
+                        {job.coatingType}
+                      </Badge>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold text-lg" data-testid="job-price">
-                        ${Number(job.price).toFixed(2)}
-                      </p>
-                    </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" data-testid="button-job-menu">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          data-testid="menu-view"
-                          onClick={() => setViewingJob(job)}
-                        >
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          data-testid="menu-edit"
-                          onClick={() => setEditingJob(job)}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
-                        {canDeleteJobs(user) && (
-                          <DropdownMenuItem 
-                            className="text-destructive" 
-                            data-testid="menu-delete"
-                            onClick={() => setDeletingJob(job)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  {/* Items Description */}
+                  {job.items && (
+                    <p className="text-sm sm:text-sm text-muted-foreground line-clamp-2">
+                      {job.items}
+                    </p>
+                  )}
                 </div>
               </Card>
             ))}
@@ -404,12 +430,12 @@ export default function Jobs() {
         )}
       </div>
 
-      {/* Completed Jobs - Collapsible */}
+      {/* MOBILE-OPTIMIZED COMPLETED JOBS - Collapsible */}
       {completedJobs.length > 0 && (
         <div>
           <Button
             variant="ghost"
-            className="w-full justify-between mb-4 text-lg font-semibold"
+            className="w-full justify-between mb-3 sm:mb-4 text-base sm:text-lg font-semibold h-12 sm:h-auto"
             onClick={() => setShowCompleted(!showCompleted)}
           >
             <span>Completed Jobs ({completedJobs.length})</span>
@@ -421,69 +447,76 @@ export default function Jobs() {
               {completedJobs.map((job) => (
                 <Card 
                   key={job.id} 
-                  className="p-4 hover:shadow-md transition-shadow"
+                  className="p-4 sm:p-4 hover:shadow-md transition-shadow"
                   data-testid="job-card-completed"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-mono font-semibold text-lg sm:text-lg mb-2" data-testid="job-tracking-id">
                           {job.trackingId}
                         </h3>
                         <StatusBadge status={job.status} type="job" />
                       </div>
                       
-                      <div className="space-y-1 text-sm">
-                        <p 
-                          className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
-                          data-testid="job-customer-name"
-                        >
-                          <span className="font-medium">Customer:</span> {job.customerName}
-                        </p>
-                        <p className="text-muted-foreground">
-                          <span className="font-medium">Received:</span>{" "}
-                          {new Date(job.receivedDate).toLocaleDateString()}
-                        </p>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="text-right">
+                          <p className="font-semibold text-lg sm:text-lg" data-testid="job-price">
+                            ${Number(job.price).toFixed(2)}
+                          </p>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-10 w-10 sm:h-9 sm:w-9"
+                              data-testid="button-job-menu"
+                            >
+                              <MoreVertical className="w-5 h-5 sm:w-4 sm:h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem 
+                              data-testid="menu-view"
+                              onClick={() => setViewingJob(job)}
+                              className="text-base sm:text-sm py-3 sm:py-2"
+                            >
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              data-testid="menu-edit"
+                              onClick={() => setEditingJob(job)}
+                              className="text-base sm:text-sm py-3 sm:py-2"
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            {canDeleteJobs(user) && (
+                              <DropdownMenuItem 
+                                className="text-destructive text-base sm:text-sm py-3 sm:py-2" 
+                                data-testid="menu-delete"
+                                onClick={() => setDeletingJob(job)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-semibold text-lg" data-testid="job-price">
-                          ${Number(job.price).toFixed(2)}
-                        </p>
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid="button-job-menu">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            data-testid="menu-view"
-                            onClick={() => setViewingJob(job)}
-                          >
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            data-testid="menu-edit"
-                            onClick={() => setEditingJob(job)}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          {canDeleteJobs(user) && (
-                            <DropdownMenuItem 
-                              className="text-destructive" 
-                              data-testid="menu-delete"
-                              onClick={() => setDeletingJob(job)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="space-y-2 text-sm sm:text-sm">
+                      <p 
+                        className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
+                        data-testid="job-customer-name"
+                      >
+                        <span className="font-medium">Customer:</span> {job.customerName}
+                      </p>
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">Received:</span>{" "}
+                        {new Date(job.receivedDate).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 </Card>
@@ -493,45 +526,46 @@ export default function Jobs() {
         </div>
       )}
 
-      {/* Dialogs remain the same */}
+      {/* MOBILE-OPTIMIZED DIALOGS */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl h-[95vh] sm:h-auto max-h-[95vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Create New Job</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Create New Job</DialogTitle>
           </DialogHeader>
-          {isDialogOpen && (
-            <JobForm
-              customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
-              onSubmit={(data) => createMutation.mutate(data)}
-              onCancel={() => setIsDialogOpen(false)}
-              isSubmitting={createMutation.isPending}
-            />
-          )}
+          <JobForm
+            onSubmit={(data) => createMutation.mutate(data)}
+            onCancel={() => setIsDialogOpen(false)}
+            customers={customers}
+            isSubmitting={createMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6" data-testid="dialog-edit-job">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl h-[95vh] sm:h-auto max-h-[95vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Edit Job</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Edit Job</DialogTitle>
           </DialogHeader>
           {editingJob && (
             <JobForm
-              customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
+              onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
+              onCancel={() => setEditingJob(null)}
               defaultValues={{
-                customerId: editingJob.customerId || undefined,
-                phoneNumber: editingJob.phoneNumber,
+                customerId: editingJob.customerId,
+                phoneNumber: editingJob.phoneNumber || "",
                 receivedDate: new Date(editingJob.receivedDate),
-                serviceIds: editingJob.serviceIds || [],
-                inventoryItems: editingJob.inventoryItems || [],
-                coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc" | undefined,
+                coatingType: editingJob.coatingType || undefined,
                 items: editingJob.items || "",
                 detailedNotes: editingJob.detailedNotes || "",
                 price: Number(editingJob.price),
                 status: editingJob.status,
+                serviceIds: editingJob.services?.map(s => s.serviceId) || [],
+                inventoryItems: editingJob.inventoryItems?.map(i => ({
+                  inventoryId: i.inventoryId,
+                  quantity: i.quantity
+                })) || [],
               }}
-              onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
-              onCancel={() => setEditingJob(null)}
+              customers={customers}
               isSubmitting={updateMutation.isPending}
             />
           )}
@@ -539,126 +573,58 @@ export default function Jobs() {
       </Dialog>
 
       <Dialog open={!!viewingJob} onOpenChange={(open) => !open && setViewingJob(null)}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6" data-testid="dialog-job-details">
+        <DialogContent className="max-w-full sm:max-w-2xl h-[95vh] sm:h-auto max-h-[95vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Job Details</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Job Details</DialogTitle>
           </DialogHeader>
           {viewingJob && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Tracking ID</p>
-                  <p className="font-mono font-semibold" data-testid="detail-tracking-id">{viewingJob.trackingId}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <StatusBadge status={viewingJob.status} type="job" />
-                </div>
+            <div className="space-y-4 text-base">
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">Tracking ID</h3>
+                <p className="font-mono text-lg">{viewingJob.trackingId}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Customer</p>
-                  <p 
-                    className={`font-medium ${viewingJob.customerId === null ? 'text-muted-foreground line-through' : ''}`}
-                    data-testid="detail-customer"
-                  >
-                    {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown Customer"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
-                  <p data-testid="detail-phone">{viewingJob.phoneNumber}</p>
-                </div>
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">Status</h3>
+                <StatusBadge status={viewingJob.status} type="job" />
               </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Coating Type</p>
-                  <Badge variant="outline" className="capitalize">
-                    {viewingJob.coatingType}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Price</p>
-                  <p className="font-semibold text-lg" data-testid="detail-price">
-                    ${Number(viewingJob.price).toFixed(2)}
-                  </p>
-                </div>
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">Customer</h3>
+                <p>{customers.find(c => c.id === viewingJob.customerId)?.name || "[Deleted]"}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Received Date</p>
-                  <p data-testid="detail-received-date">
-                    {new Date(viewingJob.receivedDate).toLocaleDateString()}
-                  </p>
-                </div>
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">Price</h3>
+                <p className="text-lg font-semibold">${Number(viewingJob.price).toFixed(2)}</p>
               </div>
-
               {viewingJob.items && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Items</p>
-                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-items">
-                    {viewingJob.items}
-                  </p>
+                  <h3 className="font-semibold mb-2 text-lg">Items</h3>
+                  <p className="whitespace-pre-wrap">{viewingJob.items}</p>
                 </div>
               )}
-
               {viewingJob.detailedNotes && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Detailed Notes</p>
-                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-notes">
-                    {viewingJob.detailedNotes}
-                  </p>
+                  <h3 className="font-semibold mb-2 text-lg">Notes</h3>
+                  <p className="whitespace-pre-wrap">{viewingJob.detailedNotes}</p>
                 </div>
               )}
-
-              {viewingJob.inventoryItems && viewingJob.inventoryItems.length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Inventory Items</p>
-                  <div className="space-y-2" data-testid="detail-inventory-list">
-                    {viewingJob.inventoryItems.map((item, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
-                        data-testid={`inventory-item-${index}`}
-                      >
-                        <span className="font-medium">{item.inventoryName}</span>
-                        <span className="text-muted-foreground">
-                          {item.quantity} {item.unit}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={() => setViewingJob(null)} data-testid="button-close-details">
-                  Close
-                </Button>
-              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={!!deletingJob} onOpenChange={(open) => !open && setDeletingJob(null)}>
-        <AlertDialogContent data-testid="dialog-delete-confirmation">
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete job <span className="font-mono font-semibold">{deletingJob?.trackingId}</span>.
-              This action cannot be undone.
+            <AlertDialogTitle className="text-lg sm:text-xl">Delete Job?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base sm:text-sm">
+              This will permanently delete job {deletingJob?.trackingId}. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="h-12 sm:h-10 text-base sm:text-sm m-0">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              data-testid="button-confirm-delete"
               onClick={() => deletingJob && deleteMutation.mutate(deletingJob.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="h-12 sm:h-10 text-base sm:text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 m-0"
             >
               Delete
             </AlertDialogAction>
