@@ -171,23 +171,45 @@ export default function Jobs() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/jobs/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({
-        title: "Success",
-        description: "Job deleted successfully",
+  mutationFn: (id: string) =>
+    apiRequest("DELETE", `/api/jobs/${id}`),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    toast({
+      title: "Success",
+      description: "Job deleted successfully",
+    });
+    setDeletingJob(null);
+  },
+  onError: (error: any) => {
+    // Check if it's a 404 (ghost job)
+    if (error?.message?.includes('404')) {
+      console.log('Ghost job detected, removing from cache:', deletingJob?.id);
+      
+      // Remove the ghost job from React Query cache
+      queryClient.setQueryData(["/api/jobs"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.filter((job: any) => job.id !== deletingJob?.id);
       });
+      
       setDeletingJob(null);
-    },
-    onError: () => {
+      
+      toast({
+        title: "Ghost Job Removed",
+        description: "Job didn't exist in database, removed from display",
+      });
+    } else {
+      // Real error
       toast({
         title: "Error",
         description: "Failed to delete job",
         variant: "destructive",
       });
-    },
-  });
+      setDeletingJob(null);
+    }
+  },
+});
+
 
   const jobsWithCustomerNames = jobs.map(job => {
     const customer = customers.find(c => c.id === job.customerId);
