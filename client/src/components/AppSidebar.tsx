@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { 
   Users, 
   Briefcase, 
@@ -30,22 +31,47 @@ import {
   canAccessInventory,
   canAccessUsers 
 } from "@/lib/authUtils";
-import logoImage from "@assets/D5869495-F57C-4813-B71F-28380A406027_1763252519060.png";
+
+// Import both logo versions
+import logoDark from "@assets/Kote_dark.png";
+import logoLight from "@assets/Kote_light.png";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  
+  // Track theme state for logo switching
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return document.documentElement.classList.contains("dark");
+    }
+    return false;
+  });
+
+  // Listen for theme changes
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class") {
+          setIsDark(document.documentElement.classList.contains("dark"));
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <Sidebar>
       <SidebarContent>
-        {/* Logo */}
+        {/* Logo - switches based on theme */}
         <SidebarGroup>
           <div className="px-4 py-5">
             <img 
-              src={logoImage} 
+              src={isDark ? logoDark : logoLight} 
               alt="Kote Check" 
-              className="w-full h-auto max-w-[140px] mx-auto"
+              className="w-full h-auto max-w-[160px] mx-auto"
               data-testid="img-logo"
             />
           </div>
