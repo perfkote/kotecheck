@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -317,11 +316,13 @@ export function JobForm({
                 }`}
                 onClick={() => toggleService(service.id)}
               >
-                <Checkbox 
-                  checked={isSelected}
-                  onCheckedChange={() => toggleService(service.id)}
-                  className="pointer-events-none"
-                />
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                  isSelected 
+                    ? 'bg-primary border-primary' 
+                    : 'border-muted-foreground/30'
+                }`}>
+                  {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                </div>
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-sm">{service.name}</span>
                 </div>
