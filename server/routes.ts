@@ -15,6 +15,7 @@ import {
   insertInventorySchema,
   insertUserSchema
 } from "@shared/schema";
+import { notifyJobReceived, notifyJobFinished } from "./sms";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Rate limiter for password reset - 5 attempts per 15 minutes per IP
@@ -415,6 +416,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newCustomer,
       });
       
+      // Send SMS notification for new job
+      if (job.phoneNumber) {
+        const customerName = validated.customerName || 
+          (job.customerId ? (await storage.getCustomer(job.customerId))?.name : null) || 
+          'Customer';
+        notifyJobReceived(customerName, job.phoneNumber).catch(err => {
+          console.error('[SMS] Failed to send job received notification:', err);
+        });
+      }
+      
       res.status(201).json(job);
     } catch (error) {
       if (error instanceof Error && error.name === "ZodError") {
@@ -527,6 +538,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Job not found" });
       }
       
+      // Send SMS notification if status changed to "finished"
+      if (validated.status === 'finished' && job.phoneNumber) {
+        const customer = job.customerId ? await storage.getCustomer(job.customerId) : null;
+        const customerName = customer?.name || 'Customer';
+        notifyJobFinished(customerName, job.phoneNumber).catch(err => {
+          console.error('[SMS] Failed to send job finished notification:', err);
+        });
+      }
+      
       console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
       res.json(job);
     } else {
@@ -539,6 +559,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!job) {
         console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
         return res.status(404).json({ error: "Job not found" });
+      }
+      
+      // Send SMS notification if status changed to "finished"
+      if (validated.status === 'finished' && job.phoneNumber) {
+        const customer = job.customerId ? await storage.getCustomer(job.customerId) : null;
+        const customerName = customer?.name || 'Customer';
+        notifyJobFinished(customerName, job.phoneNumber).catch(err => {
+          console.error('[SMS] Failed to send job finished notification:', err);
+        });
       }
       
       console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
