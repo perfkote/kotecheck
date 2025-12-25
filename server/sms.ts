@@ -17,10 +17,10 @@ const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
 export const SMS_TEMPLATES = {
   jobReceived: (customerName: string) => 
-    `Hey ${customerName.split(' ')[0]}, we got your items! We'll text you when they're ready. - Performance Kote`,
+    `Hi ${customerName.split(' ')[0]}, your items have been received at Performance Kote. We'll notify you when they're ready for pickup.`,
   
   jobFinished: (customerName: string) =>
-    `Hey ${customerName.split(' ')[0]}, your stuff's ready for pickup! - Performance Kote`,
+    `Hi ${customerName.split(' ')[0]}, your items are complete and ready for pickup at Performance Kote. Thank you for your business!`,
 };
 
 // ============================================
