@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -27,7 +28,7 @@ import { JobForm } from "@/components/JobForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, MoreVertical, Briefcase, ChevronDown, ChevronUp, Clock, AlertCircle } from "lucide-react";
+import { Plus, Search, MoreVertical, Briefcase, ChevronDown, ChevronUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,51 +44,41 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-// Helper function to get job age in days
-function getJobAgeDays(receivedDate: string): number {
-  const received = new Date(receivedDate);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - received.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-}
+// Color coding for job age - visual urgency indicators
+const getJobAgeColors = (ageDays: number) => {
+  if (ageDays <= 3) return {
+    bg: 'bg-green-500/5',
+    border: 'border-l-green-500/30',
+    badge: 'bg-green-500/15 text-green-800 border-green-500/30'
+  };
+  if (ageDays <= 7) return {
+    bg: 'bg-yellow-500/5',
+    border: 'border-l-yellow-500/30',
+    badge: 'bg-yellow-500/15 text-yellow-800 border-yellow-500/30'
+  };
+  if (ageDays <= 14) return {
+    bg: 'bg-orange-500/5',
+    border: 'border-l-orange-500/30',
+    badge: 'bg-orange-500/15 text-orange-800 border-orange-500/30'
+  };
+  return {
+    bg: 'bg-red-500/5',
+    border: 'border-l-red-500/30',
+    badge: 'bg-red-500/15 text-red-800 border-red-500/30'
+  };
+};
 
-// Helper function to get age indicator
-function getAgeIndicator(days: number) {
-  if (days <= 10) {
-    return {
-      color: "border-green-500",
-      bgColor: "bg-green-500/10",
-      label: "New",
-      icon: null,
-      textColor: "text-green-700"
-    };
-  } else if (days <= 14) {
-    return {
-      color: "border-yellow-500",
-      bgColor: "bg-yellow-500/10",
-      label: `${days}d`,
-      icon: Clock,
-      textColor: "text-yellow-700"
-    };
-  } else if (days <= 17) {
-    return {
-      color: "border-orange-500",
-      bgColor: "bg-orange-500/10",
-      label: `${days}d`,
-      icon: Clock,
-      textColor: "text-orange-700"
-    };
-  } else {
-    return {
-      color: "border-red-500",
-      bgColor: "bg-red-500/10",
-      label: `${days}d!`,
-      icon: AlertCircle,
-      textColor: "text-red-700"
-    };
-  }
-}
+// Ghost jobs - IDs that exist in cache but not in database
+const GHOST_JOB_IDS = [
+  '94d885a1-fa50-41e0-9752-1da1fa09695b',
+  '5c4e40b4-9bc2-4cf6-8418-bcb0260c0082',
+  '99f0f3a1-658c-4f39-ad95-f97b51c901c5',
+  '87855028-1f0d-4e83-846f-63d66333aab8',
+  'a26ff481-ce4b-4bb3-aca4-eb0eb399b15e',
+  'd9b68e72-e1a7-455b-aaa1-785ca80a6f7f',
+  '8e1c1cf3-cae8-4629-8f38-6e7b589376bd',
+  '24f14775-5964-4e3f-9bdd-6454e5ea6041'
+];
 
 export default function Jobs() {
   const [location, setLocation] = useLocation();
@@ -177,27 +168,48 @@ export default function Jobs() {
       });
       setDeletingJob(null);
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete job",
-        variant: "destructive",
-      });
-      setDeletingJob(null);
+    onError: (error: any) => {
+      // Check if it's a 404 (ghost job)
+      if (error?.message?.includes('404')) {
+        console.log('Ghost job detected, removing from cache:', deletingJob?.id);
+        
+        // Remove the ghost job from React Query cache
+        queryClient.setQueryData(["/api/jobs"], (oldData: any) => {
+          if (!oldData) return oldData;
+          return oldData.filter((job: any) => job.id !== deletingJob?.id);
+        });
+        
+        setDeletingJob(null);
+        
+        toast({
+          title: "Ghost Job Removed",
+          description: "Job didn't exist in database, removed from display",
+        });
+      } else {
+        // Real error
+        toast({
+          title: "Error",
+          description: "Failed to delete job",
+          variant: "destructive",
+        });
+        setDeletingJob(null);
+      }
     },
   });
 
-  const jobsWithCustomerNames = jobs.map(job => {
-    const customer = customers.find(c => c.id === job.customerId);
-    const ageDays = getJobAgeDays(job.receivedDate);
-    return {
-      ...job,
-      customerName: customer?.name || "Unknown Customer",
-      customerDeleted: job.customerId === null,
-      ageDays,
-      ageIndicator: getAgeIndicator(ageDays),
-    };
-  });
+  const jobsWithCustomerNames = jobs
+    .filter(job => !GHOST_JOB_IDS.includes(job.id))  // Filter out ghosts
+    .map(job => {
+      const customer = customers.find(c => c.id === job.customerId);
+      const ageDays = Math.ceil((Date.now() - new Date(job.receivedDate).getTime()) / (1000 * 60 * 60 * 24));
+      
+      return {
+        ...job,
+        customerName: customer?.name || "Unknown Customer",
+        customerDeleted: job.customerId === null,
+        ageDays,
+      };
+    });
 
   // Split jobs into active and completed
   const activeJobs = jobsWithCustomerNames
@@ -273,23 +285,23 @@ export default function Jobs() {
       </div>
 
       {/* Age Legend */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
-        <span className="font-medium">Age Indicators:</span>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md flex-wrap">
+        <span className="font-medium">Age:</span>
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-green-500"></div>
-          <span>0-3 days</span>
+          <span>0-3d</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-yellow-500"></div>
-          <span>4-7 days</span>
+          <span>4-7d</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-orange-500"></div>
-          <span>8-14 days</span>
+          <span>8-14d</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-red-500"></div>
-          <span>15+ days</span>
+          <span>15+d</span>
         </div>
       </div>
 
@@ -306,120 +318,108 @@ export default function Jobs() {
             </p>
           </Card>
         ) : (
-          <div className="grid gap-3">
-           {activeJobs.map((job) => (
-  <Card 
-    key={job.id} 
-    className={`p-4 sm:p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
-    data-testid="job-card"
-  >
-    <div className="space-y-3">
-      {/* REDESIGNED HEADER - Customer Name Largest */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          {/* CUSTOMER NAME - LARGEST & BOLDEST */}
-          <h3 
-            className="font-bold text-xl sm:text-2xl mb-2" 
-            data-testid="job-customer-name"
-          >
-            {job.customerName}
-          </h3>
-          
-          {/* STATUS & AGE BADGES */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={job.status} type="job" />
-            <Badge 
-              variant="outline" 
-              className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold text-sm`}
-            >
-              {job.ageIndicator.icon && (
-                <job.ageIndicator.icon className="w-3 h-3 mr-1" />
-              )}
-              {job.ageIndicator.label}
-            </Badge>
-            {job.coatingType && (
-              <Badge variant="outline" className="capitalize text-sm">
-                {job.coatingType}
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        {/* PRICE & MENU */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="text-right">
-            <p className="font-bold text-2xl sm:text-2xl" data-testid="job-price">
-              ${Number(job.price).toFixed(2)}
-            </p>
-          </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-10 w-10 sm:h-9 sm:w-9"
-                data-testid="button-job-menu"
-              >
-                <MoreVertical className="w-5 h-5 sm:w-4 sm:h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem 
-                data-testid="menu-view"
-                onClick={() => setViewingJob(job)}
-                className="text-base sm:text-sm py-3 sm:py-2"
-              >
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                data-testid="menu-edit"
-                onClick={() => setEditingJob(job)}
-                className="text-base sm:text-sm py-3 sm:py-2"
-              >
-                Edit
-              </DropdownMenuItem>
-              {canDeleteJobs(user) && (
-                <DropdownMenuItem 
-                  className="text-destructive text-base sm:text-sm py-3 sm:py-2" 
-                  data-testid="menu-delete"
-                  onClick={() => setDeletingJob(job)}
-                >
-                  Delete
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      {/* ITEMS DESCRIPTION - PROMINENT */}
-      {job.items && (
-        <div className="bg-muted/30 p-3 rounded-md">
-          <p className="text-sm sm:text-base font-medium text-foreground">
-            {job.items}
-          </p>
-        </div>
-      )}
-      
-      {/* RECEIVED DATE - SUBTLE */}
-      <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground">
-        <span>Received: {new Date(job.receivedDate).toLocaleDateString()}</span>
-        {job.phoneNumber && (
           <>
-            <span>•</span>
-            <span>{job.phoneNumber}</span>
+            {/* Mobile View */}
+            <div className="md:hidden border rounded-lg overflow-hidden divide-y">
+              {activeJobs.map((job) => {
+                const colors = getJobAgeColors(job.ageDays);
+                
+                return (
+                  <div
+                    key={job.id}
+                    className={`p-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-l-2 ${colors.bg} ${colors.border}`}
+                    data-testid={`list-job-${job.id}`}
+                    onClick={() => setEditingJob(job)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setEditingJob(job);
+                      }
+                    }}
+                  >
+                    {/* Top row: Customer name + Price */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className={`font-semibold text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                        {job.customerName}
+                      </div>
+                      <div className="font-bold text-base flex-shrink-0">
+                        ${Number(job.price).toFixed(2)}
+                      </div>
+                    </div>
+                    
+                    {/* Bottom row: Items + Status + Age */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs text-muted-foreground truncate flex-1">
+                        {job.items || 'No description'}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <StatusBadge status={job.status} type="job" />
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 font-medium border ${colors.badge}`}>
+                          {job.ageDays}d
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden md:block border rounded-lg overflow-hidden divide-y">
+              {activeJobs.map((job) => {
+                const colors = getJobAgeColors(job.ageDays);
+                
+                return (
+                  <div
+                    key={job.id}
+                    className={`p-2.5 hover:bg-accent/50 cursor-pointer transition-colors border-l-2 ${colors.bg} ${colors.border}`}
+                    data-testid={`row-job-${job.id}`}
+                    onClick={() => setEditingJob(job)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setEditingJob(job);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Customer + Items */}
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-semibold text-sm mb-0.5 ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                          {job.customerName}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {job.items || 'No description'}
+                        </div>
+                      </div>
+                      
+                      {/* Phone */}
+                      <div className="text-xs text-muted-foreground flex-shrink-0 hidden lg:block">
+                        {job.phoneNumber}
+                      </div>
+                      
+                      {/* Status + Age */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <StatusBadge status={job.status} type="job" />
+                        <Badge variant="outline" className={`text-xs px-2 py-0.5 font-medium border ${colors.badge}`}>
+                          {job.ageDays}d
+                        </Badge>
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="font-bold text-base flex-shrink-0">
+                        ${Number(job.price).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </>
-        )}
-      </div>
-    </div>
-  </Card>
-))}
-
-// NOTE: Tracking ID (job.trackingId) is removed from card view
-// It will ONLY show in the View Details dialog
-
-          </div>
         )}
       </div>
 
@@ -436,76 +436,81 @@ export default function Jobs() {
           </Button>
           
           {showCompleted && (
-            <div className="grid gap-3 opacity-75">
+            <div className="border rounded-lg overflow-hidden divide-y opacity-75">
               {completedJobs.map((job) => (
-                <Card 
-                  key={job.id} 
-                  className="p-4 hover:shadow-md transition-shadow"
+                <div
+                  key={job.id}
+                  className="p-2.5 hover:bg-accent/50 cursor-pointer transition-colors"
                   data-testid="job-card-completed"
+                  onClick={() => setEditingJob(job)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setEditingJob(job);
+                    }
+                  }}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
-                          {job.trackingId}
-                        </h3>
-                        <StatusBadge status={job.status} type="job" />
+                      <div className={`font-semibold text-sm mb-0.5 ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                        {job.customerName}
                       </div>
-                      
-                      <div className="space-y-1 text-sm">
-                        <p 
-                          className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
-                          data-testid="job-customer-name"
-                        >
-                          <span className="font-medium">Customer:</span> {job.customerName}
-                        </p>
-                        <p className="text-muted-foreground">
-                          <span className="font-medium">Received:</span>{" "}
-                          {new Date(job.receivedDate).toLocaleDateString()}
-                        </p>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {job.items || 'No description'}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-semibold text-lg" data-testid="job-price">
-                          ${Number(job.price).toFixed(2)}
-                        </p>
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid="button-job-menu">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            data-testid="menu-view"
-                            onClick={() => setViewingJob(job)}
-                          >
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            data-testid="menu-edit"
-                            onClick={() => setEditingJob(job)}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          {canDeleteJobs(user) && (
-                            <DropdownMenuItem 
-                              className="text-destructive" 
-                              data-testid="menu-delete"
-                              onClick={() => setDeletingJob(job)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <StatusBadge status={job.status} type="job" />
                     </div>
+                    
+                    <div className="font-bold text-base flex-shrink-0">
+                      ${Number(job.price).toFixed(2)}
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" data-testid="button-job-menu">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          data-testid="menu-view"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingJob(job);
+                          }}
+                        >
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          data-testid="menu-edit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingJob(job);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        {canDeleteJobs(user) && (
+                          <DropdownMenuItem 
+                            className="text-destructive" 
+                            data-testid="menu-delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingJob(job);
+                            }}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}
@@ -687,4 +692,3 @@ export default function Jobs() {
     </div>
   );
 }
-
