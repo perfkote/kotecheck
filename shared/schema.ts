@@ -132,7 +132,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   createdAt: true,
 }).extend({
   receivedDate: z.coerce.date().optional(),
-  coatingType: z.enum(["powder", "ceramic", "misc"]).optional(),
+  coatingType: z.enum(["powder", "ceramic", "misc"]).nullable().optional(),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
