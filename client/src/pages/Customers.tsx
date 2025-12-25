@@ -222,17 +222,17 @@ export default function Customers() {
     
     await updateMutation.mutateAsync({
       id: selectedCustomer.id,
-      data: { notes: editedNotes }
+      data: { projectList: editedNotes }
     });
     
     // Update local state
-    setSelectedCustomer({ ...selectedCustomer, notes: editedNotes });
+    setSelectedCustomer({ ...selectedCustomer, projectList: editedNotes });
     setIsEditingNotes(false);
   };
 
   const handleOpenCustomer = (customer: CustomerWithMetrics) => {
     setSelectedCustomer(customer);
-    setEditedNotes(customer.notes || "");
+    setEditedNotes(customer.projectList || "");
     setIsEditingNotes(false);
   };
 
@@ -411,7 +411,7 @@ export default function Customers() {
                       <Badge variant="outline" className="text-[10px]">
                         {customer.totalJobsCount} jobs
                       </Badge>
-                      {customer.notes && (
+                      {customer.projectList && (
                         <Badge variant="outline" className="text-[10px]">
                           <FileText className="w-3 h-3 mr-1" />
                           Notes
@@ -443,7 +443,7 @@ export default function Customers() {
                         <Badge variant="outline" className={`text-xs ${tier.color}`}>
                           {tier.label}
                         </Badge>
-                        {customer.notes && (
+                        {customer.projectList && (
                           <Badge variant="outline" className="text-xs">
                             <FileText className="w-3 h-3 mr-1" />
                             Notes
@@ -589,7 +589,7 @@ export default function Customers() {
                           variant="outline" 
                           size="sm"
                           onClick={() => {
-                            setEditedNotes(selectedCustomer.notes || "");
+                            setEditedNotes(selectedCustomer.projectList || "");
                             setIsEditingNotes(false);
                           }}
                         >
@@ -621,8 +621,8 @@ export default function Customers() {
                     />
                   ) : (
                     <Card className="p-4">
-                      {selectedCustomer.notes ? (
-                        <p className="whitespace-pre-wrap text-sm">{selectedCustomer.notes}</p>
+                      {selectedCustomer.projectList ? (
+                        <p className="whitespace-pre-wrap text-sm">{selectedCustomer.projectList}</p>
                       ) : (
                         <p className="text-muted-foreground text-sm italic">
                           No notes yet. Click Edit to add project notes, preferences, or reminders.
