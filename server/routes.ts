@@ -15,7 +15,7 @@ import {
   insertInventorySchema,
   insertUserSchema
 } from "@shared/schema";
-import { notifyJobReceived, notifyJobFinished } from "./sms";
+//import { notifyJobReceived, notifyJobFinished } from "./sms";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Rate limiter for password reset - 5 attempts per 15 minutes per IP
