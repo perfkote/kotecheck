@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -8,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { canCreateJobs, canDeleteJobs, canAccessJobs } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -27,68 +27,63 @@ import {
 import { JobForm } from "@/components/JobForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Plus, Search, MoreVertical, Briefcase, ChevronDown, ChevronUp, Clock, AlertCircle } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { 
+  Plus, 
+  Search, 
+  Briefcase, 
+  ChevronDown, 
+  ChevronUp,
+  Clock,
+  CheckCircle2,
+  Flame,
+  Phone,
+  Calendar,
+  Sparkles,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Helper function to get job age in days
-function getJobAgeDays(receivedDate: string): number {
-  const received = new Date(receivedDate);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - received.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-}
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-// Helper function to get age indicator
-function getAgeIndicator(days: number) {
-  if (days <= 3) {
-    return {
-      color: "border-green-500",
-      bgColor: "bg-green-500/10",
-      label: "New",
-      icon: null,
-      textColor: "text-green-700"
-    };
-  } else if (days <= 7) {
-    return {
-      color: "border-yellow-500",
-      bgColor: "bg-yellow-500/10",
-      label: `${days}d`,
-      icon: Clock,
-      textColor: "text-yellow-700"
-    };
-  } else if (days <= 14) {
-    return {
-      color: "border-orange-500",
-      bgColor: "bg-orange-500/10",
-      label: `${days}d`,
-      icon: Clock,
-      textColor: "text-orange-700"
-    };
-  } else {
-    return {
-      color: "border-red-500",
-      bgColor: "bg-red-500/10",
-      label: `${days}d!`,
-      icon: AlertCircle,
-      textColor: "text-red-700"
-    };
-  }
-}
+const getJobAgeColors = (ageDays: number) => {
+  if (ageDays <= 3) return {
+    bg: 'bg-green-500/5',
+    border: 'border-l-green-500',
+    badge: 'bg-green-100 text-green-700 border-green-200'
+  };
+  if (ageDays <= 7) return {
+    bg: 'bg-yellow-500/5',
+    border: 'border-l-yellow-500',
+    badge: 'bg-yellow-100 text-yellow-700 border-yellow-200'
+  };
+  if (ageDays <= 14) return {
+    bg: 'bg-orange-500/5',
+    border: 'border-l-orange-500',
+    badge: 'bg-orange-100 text-orange-700 border-orange-200'
+  };
+  return {
+    bg: 'bg-red-500/5',
+    border: 'border-l-red-500',
+    badge: 'bg-red-100 text-red-700 border-red-200'
+  };
+};
+
+// Ghost jobs - IDs that exist in cache but not in database
+const GHOST_JOB_IDS = [
+  '94d885a1-fa50-41e0-9752-1da1fa09695b',
+  '5c4e40b4-9bc2-4cf6-8418-bcb0260c0082',
+  '99f0f3a1-658c-4f39-ad95-f97b51c901c5',
+  '87855028-1f0d-4e83-846f-63d66333aab8',
+  'a26ff481-ce4b-4bb3-aca4-eb0eb399b15e',
+  'd9b68e72-e1a7-455b-aaa1-785ca80a6f7f',
+  '8e1c1cf3-cae8-4629-8f38-6e7b589376bd',
+  '24f14775-5964-4e3f-9bdd-6454e5ea6041'
+];
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export default function Jobs() {
   const [location, setLocation] = useLocation();
@@ -125,6 +120,10 @@ export default function Jobs() {
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
   });
+
+  // ============================================
+  // MUTATIONS
+  // ============================================
 
   const createMutation = useMutation({
     mutationFn: (data: CreateJobInput) =>
@@ -178,325 +177,482 @@ export default function Jobs() {
       });
       setDeletingJob(null);
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete job",
-        variant: "destructive",
-      });
-      setDeletingJob(null);
+    onError: (error: any) => {
+      if (error?.message?.includes('404')) {
+        queryClient.setQueryData(["/api/jobs"], (oldData: any) => {
+          if (!oldData) return oldData;
+          return oldData.filter((job: any) => job.id !== deletingJob?.id);
+        });
+        setDeletingJob(null);
+        toast({
+          title: "Ghost Job Removed",
+          description: "Job didn't exist in database, removed from display",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete job",
+          variant: "destructive",
+        });
+        setDeletingJob(null);
+      }
     },
   });
 
-  const jobsWithCustomerNames = jobs.map(job => {
-    const customer = customers.find(c => c.id === job.customerId);
-    const ageDays = getJobAgeDays(job.receivedDate);
+  // ============================================
+  // COMPUTED DATA
+  // ============================================
+
+  const jobsWithCustomerNames = useMemo(() => {
+    return jobs
+      .filter(job => !GHOST_JOB_IDS.includes(job.id))
+      .map(job => {
+        const customer = customers.find(c => c.id === job.customerId);
+        const ageDays = Math.ceil((Date.now() - new Date(job.receivedDate).getTime()) / (1000 * 60 * 60 * 24));
+        return {
+          ...job,
+          customerName: customer?.name || "Unknown Customer",
+          customerDeleted: job.customerId === null,
+          ageDays,
+        };
+      });
+  }, [jobs, customers]);
+
+  const stats = useMemo(() => {
+    const active = jobsWithCustomerNames.filter(j => j.status !== 'paid' && j.status !== 'finished');
+    const completed = jobsWithCustomerNames.filter(j => j.status === 'paid' || j.status === 'finished');
+    const urgent = active.filter(j => j.ageDays > 7);
+    const received = active.filter(j => j.status === 'received');
+    const inProgress = active.filter(j => j.status === 'prepped' || j.status === 'coated');
+    
+    const activeValue = active.reduce((sum, j) => sum + Number(j.price), 0);
+
     return {
-      ...job,
-      customerName: customer?.name || "Unknown Customer",
-      customerDeleted: job.customerId === null,
-      ageDays,
-      ageIndicator: getAgeIndicator(ageDays),
+      active: active.length,
+      completed: completed.length,
+      urgent: urgent.length,
+      received: received.length,
+      inProgress: inProgress.length,
+      activeValue,
     };
-  });
+  }, [jobsWithCustomerNames]);
 
-  // Split jobs into active and completed
-  const activeJobs = jobsWithCustomerNames
-    .filter(job => job.status !== 'paid' && job.status !== 'finished')
-    .filter(job => {
-      const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || job.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      // Sort by age (oldest first for urgency)
-      return b.ageDays - a.ageDays;
-    });
+  const activeJobs = useMemo(() => {
+    return jobsWithCustomerNames
+      .filter(job => job.status !== 'paid' && job.status !== 'finished')
+      .filter(job => {
+        const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => b.ageDays - a.ageDays);
+  }, [jobsWithCustomerNames, searchQuery, statusFilter]);
 
-  const completedJobs = jobsWithCustomerNames
-    .filter(job => job.status === 'paid' || job.status === 'finished')
-    .filter(job => {
-      const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
-    })
-    .sort((a, b) => {
-      // Sort completed by newest first
-      const aDate = new Date(a.receivedDate).getTime();
-      const bDate = new Date(b.receivedDate).getTime();
-      return bDate - aDate;
-    });
+  const completedJobs = useMemo(() => {
+    return jobsWithCustomerNames
+      .filter(job => job.status === 'paid' || job.status === 'finished')
+      .filter(job => {
+        const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+      })
+      .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime());
+  }, [jobsWithCustomerNames, searchQuery]);
+
+  // ============================================
+  // LOADING STATE
+  // ============================================
 
   if (jobsLoading) {
-    return <div className="p-8">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-pulse text-muted-foreground">Loading jobs...</div>
+      </div>
+    );
   }
 
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Jobs</h1>
-          <p className="text-muted-foreground mt-1">Track and manage all your jobs</p>
+    <div className="space-y-6 pb-8">
+      {/* ============================================ */}
+      {/* HEADER */}
+      {/* ============================================ */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-500/20 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-blue-500/20 to-transparent rounded-full blur-3xl" />
+        
+        <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Jobs</h1>
+              <p className="text-slate-400 mt-1">Track and manage your active work</p>
+            </div>
+            {canCreateJobs(user) && (
+              <Button 
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02]"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Job
+              </Button>
+            )}
+          </div>
         </div>
-        {canCreateJobs(user) && (
-          <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-job">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Job
-          </Button>
-        )}
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
+      {/* ============================================ */}
+      {/* STATS ROW */}
+      {/* ============================================ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Active Jobs</p>
+                <p className="text-2xl font-bold mt-1">{stats.active}</p>
+                {stats.urgent > 0 && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    <Flame className="w-3 h-3" />
+                    {stats.urgent} need attention
+                  </p>
+                )}
+              </div>
+              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-orange-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Pipeline Value</p>
+                <p className="text-2xl font-bold mt-1">${(stats.activeValue / 1000).toFixed(1)}k</p>
+                <p className="text-xs text-muted-foreground mt-1">in active jobs</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setStatusFilter('received')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Received</p>
+                <p className="text-2xl font-bold mt-1">{stats.received}</p>
+                <p className="text-xs text-amber-600 mt-1">awaiting prep</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-amber-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Completed</p>
+                <p className="text-2xl font-bold mt-1">{stats.completed}</p>
+                <p className="text-xs text-green-600 mt-1">total finished</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ============================================ */}
+      {/* SEARCH & FILTERS */}
+      {/* ============================================ */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search jobs..."
+            placeholder="Search by customer or tracking ID..."
             className="pl-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            data-testid="input-search-jobs"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48" data-testid="select-filter-status">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="received">Received</SelectItem>
-            <SelectItem value="prepped">Prepped</SelectItem>
-            <SelectItem value="coated">Coated</SelectItem>
-            <SelectItem value="finished">Finished</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-          </SelectContent>
-        </Select>
+        
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <Button
+            variant={statusFilter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("all")}
+            className="whitespace-nowrap"
+          >
+            All
+          </Button>
+          <Button
+            variant={statusFilter === "received" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("received")}
+            className="whitespace-nowrap"
+          >
+            Received
+          </Button>
+          <Button
+            variant={statusFilter === "prepped" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("prepped")}
+            className="whitespace-nowrap"
+          >
+            Prepped
+          </Button>
+          <Button
+            variant={statusFilter === "coated" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("coated")}
+            className="whitespace-nowrap"
+          >
+            Coated
+          </Button>
+        </div>
       </div>
 
       {/* Age Legend */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
-        <span className="font-medium">Age Indicators:</span>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-green-500"></div>
-          <span>0-3 days</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-yellow-500"></div>
-          <span>4-7 days</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-orange-500"></div>
-          <span>8-14 days</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-red-500"></div>
-          <span>15+ days</span>
-        </div>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="font-medium">Age:</span>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> 0-3d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500" /> 4-7d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500" /> 8-14d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /> 15+d</div>
       </div>
 
-      {/* Active Jobs */}
+      {/* ============================================ */}
+      {/* ACTIVE JOBS */}
+      {/* ============================================ */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <Briefcase className="w-5 h-5 text-orange-500" />
           Active Jobs ({activeJobs.length})
         </h2>
+
         {activeJobs.length === 0 ? (
           <Card className="p-8 text-center">
-            <Briefcase className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <Sparkles className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-muted-foreground">
-              {searchQuery || statusFilter !== "all" ? "No active jobs match your filters" : "No active jobs"}
+              {searchQuery || statusFilter !== "all" ? "No jobs match your filters" : "No active jobs"}
             </p>
           </Card>
         ) : (
-          <div className="grid gap-3">
-            {activeJobs.map((job) => (
-              <Card 
-                key={job.id} 
-                className={`p-4 hover:shadow-md transition-all border-l-4 ${job.ageIndicator.color} ${job.ageIndicator.bgColor}`}
-                data-testid="job-card"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
-                        {job.trackingId}
-                      </h3>
-                      <StatusBadge status={job.status} type="job" />
-                      
-                      {/* Age Badge */}
-                      <Badge 
-                        variant="outline" 
-                        className={`${job.ageIndicator.bgColor} ${job.ageIndicator.textColor} border-0 font-semibold`}
-                      >
-                        {job.ageIndicator.icon && (
-                          <job.ageIndicator.icon className="w-3 h-3 mr-1" />
-                        )}
-                        {job.ageIndicator.label}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1 text-sm">
-                      <p 
-                        className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
-                        data-testid="job-customer-name"
-                      >
-                        <span className="font-medium">Customer:</span> {job.customerName}
-                      </p>
-                      <p className="text-muted-foreground">
-                        <span className="font-medium">Received:</span>{" "}
-                        {new Date(job.receivedDate).toLocaleDateString()}
-                      </p>
-                      {job.coatingType && (
-                        <Badge variant="outline" className="capitalize">
-                          {job.coatingType}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {job.items && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {job.items}
-                      </p>
-                    )}
-                  </div>
+          <>
+            {/* MOBILE VIEW */}
+            <div className="md:hidden space-y-2">
+              {activeJobs.map((job) => {
+                const colors = getJobAgeColors(job.ageDays);
+                const isUrgent = job.ageDays > 7;
+                
+                return (
+                  <Card 
+                    key={job.id}
+                    className={`overflow-hidden border-l-4 ${colors.border} ${isUrgent ? 'ring-1 ring-red-500/20' : ''}`}
+                    onClick={() => setEditingJob(job)}
+                  >
+                    <CardContent className="p-3 cursor-pointer">
+                      {/* Top: Customer + Price */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className={`font-semibold text-sm truncate ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                              {job.customerName}
+                            </h3>
+                            {isUrgent && (
+                              <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] px-1.5 py-0">
+                                URGENT
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{job.items || 'No description'}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-base font-bold">${Number(job.price).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Bottom: Status, Age, Date */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <StatusBadge status={job.status} type="job" />
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${colors.badge}`}>
+                            {job.ageDays}d
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(job.receivedDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* DESKTOP VIEW */}
+            <Card className="hidden md:block overflow-hidden">
+              <div className="divide-y">
+                {activeJobs.map((job) => {
+                  const colors = getJobAgeColors(job.ageDays);
+                  const isUrgent = job.ageDays > 7;
                   
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold text-lg" data-testid="job-price">
-                        ${Number(job.price).toFixed(2)}
-                      </p>
+                  return (
+                    <div 
+                      key={job.id}
+                      className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border} ${colors.bg} ${
+                        isUrgent ? 'bg-red-50/50 dark:bg-red-950/20' : ''
+                      }`}
+                      onClick={() => setEditingJob(job)}
+                    >
+                      {/* Customer Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className={`font-semibold text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                            {job.customerName}
+                          </h3>
+                          {isUrgent && (
+                            <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px]">
+                              URGENT
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="truncate max-w-[200px]">{job.items || 'No description'}</span>
+                          <span className="flex items-center gap-1 flex-shrink-0">
+                            <Phone className="w-3 h-3" />
+                            {job.phoneNumber}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Date */}
+                      <div className="w-24 text-sm text-muted-foreground hidden lg:flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(job.receivedDate).toLocaleDateString()}
+                      </div>
+
+                      {/* Status */}
+                      <div className="w-24">
+                        <StatusBadge status={job.status} type="job" />
+                      </div>
+
+                      {/* Age */}
+                      <div className="w-14">
+                        <Badge variant="outline" className={colors.badge}>
+                          {job.ageDays}d
+                        </Badge>
+                      </div>
+
+                      {/* Price */}
+                      <div className="w-24 text-right">
+                        <p className="text-lg font-bold">${Number(job.price).toFixed(2)}</p>
+                      </div>
                     </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" data-testid="button-job-menu">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          data-testid="menu-view"
-                          onClick={() => setViewingJob(job)}
-                        >
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          data-testid="menu-edit"
-                          onClick={() => setEditingJob(job)}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem data-testid="menu-add-note">Add Note</DropdownMenuItem>
-                        {canDeleteJobs(user) && (
-                          <DropdownMenuItem 
-                            className="text-destructive" 
-                            data-testid="menu-delete"
-                            onClick={() => setDeletingJob(job)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </>
         )}
       </div>
 
-      {/* Completed Jobs - Collapsible */}
+      {/* ============================================ */}
+      {/* COMPLETED JOBS */}
+      {/* ============================================ */}
       {completedJobs.length > 0 && (
         <div>
           <Button
             variant="ghost"
-            className="w-full justify-between mb-4 text-lg font-semibold"
+            className="w-full justify-between mb-3 text-base font-semibold"
             onClick={() => setShowCompleted(!showCompleted)}
           >
-            <span>Completed Jobs ({completedJobs.length})</span>
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+              Completed Jobs ({completedJobs.length})
+            </span>
             {showCompleted ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </Button>
           
           {showCompleted && (
-            <div className="grid gap-3 opacity-75">
-              {completedJobs.map((job) => (
-                <Card 
-                  key={job.id} 
-                  className="p-4 hover:shadow-md transition-shadow"
-                  data-testid="job-card-completed"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="font-mono font-semibold text-lg" data-testid="job-tracking-id">
-                          {job.trackingId}
+            <>
+              {/* MOBILE VIEW */}
+              <div className="md:hidden space-y-2 opacity-75">
+                {completedJobs.slice(0, 20).map((job) => (
+                  <Card 
+                    key={job.id}
+                    className="overflow-hidden border-l-4 border-l-green-500"
+                    onClick={() => setEditingJob(job)}
+                  >
+                    <CardContent className="p-3 cursor-pointer">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`font-semibold text-sm truncate ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                            {job.customerName}
+                          </h3>
+                          <p className="text-xs text-muted-foreground truncate">{job.items || 'No description'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <StatusBadge status={job.status} type="job" />
+                          <span className="font-bold">${Number(job.price).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* DESKTOP VIEW */}
+              <Card className="hidden md:block overflow-hidden opacity-75">
+                <div className="divide-y">
+                  {completedJobs.slice(0, 20).map((job) => (
+                    <div 
+                      key={job.id}
+                      className="p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-green-500"
+                      onClick={() => setEditingJob(job)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-semibold text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                          {job.customerName}
                         </h3>
+                        <p className="text-xs text-muted-foreground truncate">{job.items || 'No description'}</p>
+                      </div>
+                      <div className="w-24 text-sm text-muted-foreground hidden lg:block">
+                        {new Date(job.receivedDate).toLocaleDateString()}
+                      </div>
+                      <div className="w-24">
                         <StatusBadge status={job.status} type="job" />
                       </div>
-                      
-                      <div className="space-y-1 text-sm">
-                        <p 
-                          className={job.customerDeleted ? 'text-muted-foreground line-through' : ''}
-                          data-testid="job-customer-name"
-                        >
-                          <span className="font-medium">Customer:</span> {job.customerName}
-                        </p>
-                        <p className="text-muted-foreground">
-                          <span className="font-medium">Received:</span>{" "}
-                          {new Date(job.receivedDate).toLocaleDateString()}
-                        </p>
+                      <div className="w-24 text-right">
+                        <p className="text-lg font-bold">${Number(job.price).toFixed(2)}</p>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-semibold text-lg" data-testid="job-price">
-                          ${Number(job.price).toFixed(2)}
-                        </p>
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid="button-job-menu">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            data-testid="menu-view"
-                            onClick={() => setViewingJob(job)}
-                          >
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            data-testid="menu-edit"
-                            onClick={() => setEditingJob(job)}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          {canDeleteJobs(user) && (
-                            <DropdownMenuItem 
-                              className="text-destructive" 
-                              data-testid="menu-delete"
-                              onClick={() => setDeletingJob(job)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </Card>
+            </>
           )}
         </div>
       )}
 
-      {/* Dialogs remain the same */}
+      {/* ============================================ */}
+      {/* CREATE DIALOG */}
+      {/* ============================================ */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Create New Job</DialogTitle>
           </DialogHeader>
@@ -511,8 +667,11 @@ export default function Jobs() {
         </DialogContent>
       </Dialog>
 
+      {/* ============================================ */}
+      {/* EDIT DIALOG */}
+      {/* ============================================ */}
       <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6" data-testid="dialog-edit-job">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Edit Job</DialogTitle>
           </DialogHeader>
@@ -534,109 +693,67 @@ export default function Jobs() {
               onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
               onCancel={() => setEditingJob(null)}
               isSubmitting={updateMutation.isPending}
+              onDelete={canDeleteJobs(user) ? () => setDeletingJob(editingJob) : undefined}
             />
           )}
         </DialogContent>
       </Dialog>
 
+      {/* ============================================ */}
+      {/* VIEW DIALOG */}
+      {/* ============================================ */}
       <Dialog open={!!viewingJob} onOpenChange={(open) => !open && setViewingJob(null)}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl p-4 sm:p-6" data-testid="dialog-job-details">
+        <DialogContent className="max-w-full sm:max-w-lg p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Job Details</DialogTitle>
           </DialogHeader>
           {viewingJob && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Tracking ID</p>
-                  <p className="font-mono font-semibold" data-testid="detail-tracking-id">{viewingJob.trackingId}</p>
+                  <p className="text-sm text-muted-foreground">Tracking ID</p>
+                  <p className="font-mono font-semibold">{viewingJob.trackingId}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <p className="text-sm text-muted-foreground">Status</p>
                   <StatusBadge status={viewingJob.status} type="job" />
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-6">
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Customer</p>
-                  <p 
-                    className={`font-medium ${viewingJob.customerId === null ? 'text-muted-foreground line-through' : ''}`}
-                    data-testid="detail-customer"
-                  >
-                    {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown Customer"}
+                  <p className="text-sm text-muted-foreground">Customer</p>
+                  <p className="font-medium">
+                    {customers.find(c => c.id === viewingJob.customerId)?.name || "Unknown"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
-                  <p data-testid="detail-phone">{viewingJob.phoneNumber}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Coating Type</p>
-                  <Badge variant="outline" className="capitalize">
-                    {viewingJob.coatingType}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Price</p>
-                  <p className="font-semibold text-lg" data-testid="detail-price">
-                    ${Number(viewingJob.price).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Received Date</p>
-                  <p data-testid="detail-received-date">
-                    {new Date(viewingJob.receivedDate).toLocaleDateString()}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Price</p>
+                  <p className="font-bold text-lg">${Number(viewingJob.price).toFixed(2)}</p>
                 </div>
               </div>
 
               {viewingJob.items && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Items</p>
-                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-items">
-                    {viewingJob.items}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">Items</p>
+                  <p className="text-sm bg-muted/50 p-3 rounded-md">{viewingJob.items}</p>
                 </div>
               )}
 
-              {viewingJob.detailedNotes && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Detailed Notes</p>
-                  <p className="text-sm bg-muted/50 p-4 rounded-md" data-testid="detail-notes">
-                    {viewingJob.detailedNotes}
-                  </p>
-                </div>
-              )}
-
-              {viewingJob.inventoryItems && viewingJob.inventoryItems.length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Inventory Items</p>
-                  <div className="space-y-2" data-testid="detail-inventory-list">
-                    {viewingJob.inventoryItems.map((item, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
-                        data-testid={`inventory-item-${index}`}
-                      >
-                        <span className="font-medium">{item.inventoryName}</span>
-                        <span className="text-muted-foreground">
-                          {item.quantity} {item.unit}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={() => setViewingJob(null)} data-testid="button-close-details">
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={() => {
+                    setViewingJob(null);
+                    setEditingJob(viewingJob);
+                  }}
+                  className="flex-1"
+                >
+                  Edit Job
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setViewingJob(null)}
+                >
                   Close
                 </Button>
               </div>
@@ -645,20 +762,27 @@ export default function Jobs() {
         </DialogContent>
       </Dialog>
 
+      {/* ============================================ */}
+      {/* DELETE CONFIRMATION */}
+      {/* ============================================ */}
       <AlertDialog open={!!deletingJob} onOpenChange={(open) => !open && setDeletingJob(null)}>
-        <AlertDialogContent data-testid="dialog-delete-confirmation">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Job?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete job <span className="font-mono font-semibold">{deletingJob?.trackingId}</span>.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              data-testid="button-confirm-delete"
-              onClick={() => deletingJob && deleteMutation.mutate(deletingJob.id)}
+              onClick={() => {
+                if (deletingJob) {
+                  deleteMutation.mutate(deletingJob.id);
+                  setEditingJob(null);
+                }
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
