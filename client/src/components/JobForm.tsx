@@ -185,12 +185,14 @@ export function JobForm({
   // Update form serviceIds when selectedServices changes
   useEffect(() => {
     form.setValue("serviceIds", selectedServices);
-  }, [selectedServices, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedServices]);
 
   // Update form inventoryItems when selectedInventory changes
   useEffect(() => {
     form.setValue("inventoryItems", selectedInventory);
-  }, [selectedInventory, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInventory]);
 
   // Group services by category
   const servicesByCategory = useMemo(() => {
@@ -223,7 +225,8 @@ export function JobForm({
     if (selectedServices.length > 0 && !manuallyEditedPrice) {
       form.setValue("price", serviceTotal);
     }
-  }, [serviceTotal, selectedServices.length, manuallyEditedPrice, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceTotal, selectedServices.length, manuallyEditedPrice]);
 
   // Filter customers based on search
   const filteredCustomers = customers.filter((customer) =>
