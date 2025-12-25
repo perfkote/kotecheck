@@ -145,7 +145,8 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
   // Update form serviceIds when selectedServices changes
   useEffect(() => {
     form.setValue("serviceIds", selectedServices);
-  }, [selectedServices, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedServices]);
 
   // Reset manual edit flag when all services are removed
   useEffect(() => {
@@ -159,7 +160,8 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
     if (selectedServices.length > 0 && !manuallyEditedTotal) {
       form.setValue("total", String(serviceTotal));
     }
-  }, [serviceTotal, selectedServices.length, manuallyEditedTotal, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceTotal, selectedServices.length, manuallyEditedTotal]);
 
   const toggleService = (serviceId: string) => {
     if (selectedServices.includes(serviceId)) {
