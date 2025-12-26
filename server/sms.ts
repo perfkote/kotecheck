@@ -1,15 +1,30 @@
-import twilio from 'twilio';
+import type { Twilio } from 'twilio';
 
 // ============================================
-// CONFIGURATION
+// CONFIGURATION (lazy loaded)
 // ============================================
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+let client: Twilio | null = null;
 
-// Initialize Twilio client (only if credentials exist)
-const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
+function getClient(): Twilio | null {
+  if (client) return client;
+  
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  
+  if (!accountSid || !authToken) {
+    return null;
+  }
+  
+  // Dynamic import to avoid build-time issues
+  const twilio = require('twilio');
+  client = twilio(accountSid, authToken);
+  return client;
+}
+
+function getTwilioPhone(): string | undefined {
+  return process.env.TWILIO_PHONE_NUMBER;
+}
 
 // ============================================
 // MESSAGE TEMPLATES
@@ -39,8 +54,11 @@ interface SendSMSResult {
 }
 
 export async function sendSMS({ to, message }: SendSMSParams): Promise<SendSMSResult> {
+  const twilioClient = getClient();
+  const twilioPhone = getTwilioPhone();
+  
   // Check if Twilio is configured
-  if (!client) {
+  if (!twilioClient) {
     console.warn('[SMS] Twilio not configured - missing credentials');
     return { success: false, error: 'Twilio not configured' };
   }
@@ -59,7 +77,7 @@ export async function sendSMS({ to, message }: SendSMSParams): Promise<SendSMSRe
   }
 
   try {
-    const result = await client.messages.create({
+    const result = await twilioClient.messages.create({
       body: message,
       from: twilioPhone,
       to: cleanedPhone,
@@ -121,5 +139,5 @@ function formatPhoneE164(phone: string): string | null {
 // ============================================
 
 export function isSMSEnabled(): boolean {
-  return !!(accountSid && authToken && twilioPhone);
+  return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
 }
