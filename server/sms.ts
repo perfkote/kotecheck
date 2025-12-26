@@ -1,30 +1,8 @@
-import type { Twilio } from 'twilio';
-
 // ============================================
-// CONFIGURATION (lazy loaded)
+// TEXTBELT SMS SERVICE
 // ============================================
 
-let client: Twilio | null = null;
-
-function getClient(): Twilio | null {
-  if (client) return client;
-  
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  
-  if (!accountSid || !authToken) {
-    return null;
-  }
-  
-  // Dynamic import to avoid build-time issues
-  const twilio = require('twilio');
-  client = twilio(accountSid, authToken);
-  return client;
-}
-
-function getTwilioPhone(): string | undefined {
-  return process.env.TWILIO_PHONE_NUMBER;
-}
+const TEXTBELT_API_URL = 'https://textbelt.com/text';
 
 // ============================================
 // MESSAGE TEMPLATES
@@ -49,26 +27,20 @@ interface SendSMSParams {
 
 interface SendSMSResult {
   success: boolean;
-  messageId?: string;
+  textId?: string;
   error?: string;
+  quotaRemaining?: number;
 }
 
 export async function sendSMS({ to, message }: SendSMSParams): Promise<SendSMSResult> {
-  const twilioClient = getClient();
-  const twilioPhone = getTwilioPhone();
+  const apiKey = process.env.TEXTBELT_API_KEY;
   
-  // Check if Twilio is configured
-  if (!twilioClient) {
-    console.warn('[SMS] Twilio not configured - missing credentials');
-    return { success: false, error: 'Twilio not configured' };
+  if (!apiKey) {
+    console.warn('[SMS] Textbelt not configured - missing API key');
+    return { success: false, error: 'Textbelt not configured' };
   }
 
-  if (!twilioPhone) {
-    console.warn('[SMS] Twilio phone number not configured');
-    return { success: false, error: 'Twilio phone number not configured' };
-  }
-
-  // Clean phone number - ensure it's in E.164 format
+  // Clean phone number
   const cleanedPhone = formatPhoneE164(to);
   
   if (!cleanedPhone) {
@@ -77,16 +49,31 @@ export async function sendSMS({ to, message }: SendSMSParams): Promise<SendSMSRe
   }
 
   try {
-    const result = await twilioClient.messages.create({
-      body: message,
-      from: twilioPhone,
-      to: cleanedPhone,
+    const response = await fetch(TEXTBELT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: cleanedPhone,
+        message: message,
+        key: apiKey,
+      }),
     });
 
-    console.log(`[SMS] Sent to ${cleanedPhone}: ${result.sid}`);
-    return { success: true, messageId: result.sid };
+    const result = await response.json();
+
+    if (result.success) {
+      console.log(`[SMS] Sent to ${cleanedPhone}: ${result.textId} (${result.quotaRemaining} texts remaining)`);
+      return { 
+        success: true, 
+        textId: result.textId,
+        quotaRemaining: result.quotaRemaining,
+      };
+    } else {
+      console.error('[SMS] Failed to send:', result.error);
+      return { success: false, error: result.error };
+    }
   } catch (error: any) {
-    console.error('[SMS] Failed to send:', error.message);
+    console.error('[SMS] Request failed:', error.message);
     return { success: false, error: error.message };
   }
 }
@@ -139,5 +126,5 @@ function formatPhoneE164(phone: string): string | null {
 // ============================================
 
 export function isSMSEnabled(): boolean {
-  return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+  return !!process.env.TEXTBELT_API_KEY;
 }
