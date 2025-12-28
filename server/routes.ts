@@ -16,6 +16,7 @@ import {
   insertUserSchema
 } from "@shared/schema";
 import { notifyJobReceived, notifyJobFinished } from "./sms";
+import { handleBlandWebhook } from "./bland";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Rate limiter for password reset - 5 attempts per 15 minutes per IP
@@ -25,6 +26,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     message: { error: "Too many password reset attempts. Please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
+  });
+
+  // ============================================================
+  // BLAND.AI WEBHOOK (public - no auth required)
+  // ============================================================
+  app.post("/api/webhooks/bland", async (req, res) => {
+    try {
+      console.log('[Bland] Webhook received');
+      const result = await handleBlandWebhook(req.body);
+      
+      if (result.success) {
+        res.json({ success: true, estimateId: result.estimateId });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error('[Bland] Webhook error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
   });
 
   // User info endpoint - for checking current user
