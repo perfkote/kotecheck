@@ -182,6 +182,8 @@ export default function Services() {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({ title: "Success", description: "Service deleted successfully" });
       setDeletingService(null);
+      setIsDialogOpen(false);
+      setEditingService(null);
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete service", variant: "destructive" });
@@ -278,6 +280,12 @@ export default function Services() {
     setEditingService(null);
     form.reset({ name: "", category: "powder", price: 0 });
     setIsDialogOpen(true);
+  };
+
+  const handleDeleteFromDialog = () => {
+    if (editingService) {
+      setDeletingService(editingService);
+    }
   };
 
   // ============================================
@@ -580,17 +588,28 @@ export default function Services() {
                 )}
               />
               <div className="flex gap-3 pt-4">
+                {editingService && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDeleteFromDialog}
+                    className="mr-auto"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="flex-1"
+                  className={editingService ? "" : "flex-1"}
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="flex-1"
+                  className={editingService ? "" : "flex-1"}
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
