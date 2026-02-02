@@ -100,38 +100,44 @@ export default function Dashboard() {
     const now = new Date();
     const currentYear = now.getFullYear();
     
-    // Active jobs (not paid/finished)
+    // Filter jobs for current year (for revenue/metrics)
+    const currentYearJobs = jobs.filter(j => {
+      const jobDate = new Date(j.receivedDate);
+      return jobDate.getFullYear() === currentYear;
+    });
+    
+    // Active jobs (not paid/finished) - all time for work tracking
     const activeJobs = jobs.filter(j => j.status !== 'paid' && j.status !== 'finished');
     
-    // Completed jobs (paid or finished)
-    const completedJobs = jobs.filter(j => j.status === 'paid' || j.status === 'finished');
+    // Completed jobs - current year only for avg turnaround
+    const completedJobsCurrentYear = currentYearJobs.filter(j => j.status === 'paid' || j.status === 'finished');
     
-    // Coating type breakdown
-    const ceramicJobs = jobs.filter(j => j.coatingType === 'ceramic');
-    const powderJobs = jobs.filter(j => j.coatingType === 'powder');
-    const miscJobs = jobs.filter(j => j.coatingType === 'misc' || !j.coatingType);
+    // Coating type breakdown - current year only
+    const ceramicJobs = currentYearJobs.filter(j => j.coatingType === 'ceramic');
+    const powderJobs = currentYearJobs.filter(j => j.coatingType === 'powder');
+    const miscJobs = currentYearJobs.filter(j => j.coatingType === 'misc' || !j.coatingType);
     
-    // Revenue calculations
+    // Revenue calculations - current year only
     const ceramicRevenue = ceramicJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const powderRevenue = powderJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const miscRevenue = miscJobs.reduce((sum, j) => sum + Number(j.price), 0);
-    const totalRevenue = jobs.reduce((sum, j) => sum + Number(j.price), 0);
+    const totalRevenue = currentYearJobs.reduce((sum, j) => sum + Number(j.price), 0);
     
-    // Average completion time (for completed jobs with valid dates)
-    const completionTimes = completedJobs
+    // Average completion time - current year completed jobs only
+    const completionTimes = completedJobsCurrentYear
       .filter(j => j.receivedDate)
       .map(j => {
         const received = new Date(j.receivedDate);
         const completed = j.updatedAt ? new Date(j.updatedAt) : now;
         return Math.ceil((completed.getTime() - received.getTime()) / (1000 * 60 * 60 * 24));
       })
-      .filter(days => days > 0 && days < 365); // Filter outliers
+      .filter(days => days > 0 && days < 365);
     
     const avgCompletionDays = completionTimes.length > 0 
       ? Math.round(completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length)
       : 0;
     
-    // Revenue by month (last 12 months)
+    // Revenue by month - last 12 months for chart
     const revenueByMonth: { month: string; revenue: number; jobs: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(currentYear, now.getMonth() - i, 1);
@@ -147,8 +153,21 @@ export default function Dashboard() {
       });
     }
     
-    // Best fiscal month
-    const bestMonth = revenueByMonth.reduce((best, current) => 
+    // Best month - current year only
+    const currentYearByMonth: { month: string; revenue: number; jobs: number }[] = [];
+    for (let i = 0; i <= now.getMonth(); i++) {
+      const monthJobs = currentYearJobs.filter(j => {
+        const jobDate = new Date(j.receivedDate);
+        return jobDate.getMonth() === i;
+      });
+      currentYearByMonth.push({
+        month: MONTH_NAMES[i],
+        revenue: monthJobs.reduce((sum, j) => sum + Number(j.price), 0),
+        jobs: monthJobs.length,
+      });
+    }
+    
+    const bestMonth = currentYearByMonth.reduce((best, current) => 
       current.revenue > best.revenue ? current : best
     , { month: '', revenue: 0, jobs: 0 });
     
@@ -160,7 +179,7 @@ export default function Dashboard() {
 
     return {
       activeJobs,
-      completedJobs,
+      completedJobs: completedJobsCurrentYear,
       ceramicJobs,
       powderJobs,
       miscJobs,
@@ -174,6 +193,7 @@ export default function Dashboard() {
       urgentJobs,
       totalCustomers: customers.length,
       pendingEstimates: estimates.filter(e => e.status === 'pending').length,
+      currentYear,
     };
   }, [jobs, customers, estimates]);
 
@@ -292,7 +312,7 @@ export default function Dashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Turnaround</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{stats.currentYear} Avg Turnaround</p>
                 <p className="text-2xl font-bold mt-1">{stats.avgCompletionDays}<span className="text-sm font-normal text-muted-foreground ml-1">days</span></p>
               </div>
               <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -307,7 +327,7 @@ export default function Dashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Best Month</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{stats.currentYear} Best Month</p>
                 <p className="text-2xl font-bold mt-1">{stats.bestMonth.month || 'N/A'}</p>
                 <p className="text-xs text-green-600 mt-1">
                   ${stats.bestMonth.revenue.toLocaleString()}
@@ -325,10 +345,10 @@ export default function Dashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Revenue</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{stats.currentYear} Revenue</p>
                 <p className="text-2xl font-bold mt-1">${(stats.totalRevenue / 1000).toFixed(1)}k</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {jobs.length} total jobs
+                  {stats.ceramicJobs.length + stats.powderJobs.length + stats.miscJobs.length} jobs
                 </p>
               </div>
               <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
@@ -419,6 +439,7 @@ export default function Dashboard() {
             <CardTitle className="text-lg flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
               Coating Breakdown
+              <span className="text-sm font-normal text-muted-foreground">({stats.currentYear})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -553,7 +574,7 @@ export default function Dashboard() {
           <CardContent className="p-4 text-center">
             <Calendar className="w-6 h-6 mx-auto text-green-500 mb-2" />
             <p className="text-2xl font-bold">{stats.completedJobs.length}</p>
-            <p className="text-xs text-muted-foreground">Completed</p>
+            <p className="text-xs text-muted-foreground">Completed ({stats.currentYear})</p>
           </CardContent>
         </Card>
       </div>
