@@ -39,17 +39,21 @@ import { MoneyInput } from "@/components/MoneyInput";
 import { Textarea } from "@/components/ui/textarea";
 
 const categoryLabels: Record<string, string> = {
-  office_supplies: "Office Supplies",
-  business_consumables: "Business Consumables",
   powder: "Powder",
   ceramic: "Ceramic",
+  blast_equipment: "Blast Equipment",
+  oven_equipment: "Oven Equipment",
+  prep_equipment: "Prep Equipment",
+  miscellaneous: "Miscellaneous",
 };
 
 const categoryColors: Record<string, string> = {
-  office_supplies: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  business_consumables: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   powder: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   ceramic: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  blast_equipment: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  oven_equipment: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  prep_equipment: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  miscellaneous: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
 
 export default function Inventory() {
@@ -73,10 +77,10 @@ export default function Inventory() {
     resolver: zodResolver(insertInventorySchema),
     defaultValues: {
       name: "",
-      category: "office_supplies",
+      category: "powder",
       description: "",
       quantity: 0,
-      unit: "pieces",
+      unit: "pounds",
       price: 0,
     },
   });
@@ -144,7 +148,7 @@ export default function Inventory() {
     setEditingItem(item);
     form.reset({
       name: item.name,
-      category: item.category as "office_supplies" | "business_consumables" | "powder" | "ceramic",
+      category: item.category as "powder" | "ceramic" | "blast_equipment" | "oven_equipment" | "prep_equipment" | "miscellaneous",
       description: item.description || "",
       quantity: parseFloat(item.quantity),
       unit: item.unit as "pieces" | "pounds" | "gallons" | "liters" | "ounces" | "boxes" | "each",
@@ -157,10 +161,10 @@ export default function Inventory() {
     setEditingItem(null);
     form.reset({
       name: "",
-      category: "office_supplies",
+      category: "powder",
       description: "",
       quantity: 0,
-      unit: "pieces",
+      unit: "pounds",
       price: 0,
     });
     setIsDialogOpen(true);
@@ -178,6 +182,16 @@ export default function Inventory() {
     return acc;
   }, {} as Record<string, InventoryItem[]>);
 
+  // Sort categories in logical order
+  const categoryOrder = ['powder', 'ceramic', 'blast_equipment', 'oven_equipment', 'prep_equipment', 'miscellaneous'];
+  const sortedCategories = Object.keys(groupedItems).sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a);
+    const indexB = categoryOrder.indexOf(b);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col gap-4 mb-6">
@@ -194,11 +208,11 @@ export default function Inventory() {
       </div>
 
       <div className="space-y-6">
-        {Object.entries(groupedItems).map(([category, items]) => (
+        {sortedCategories.map((category) => (
           <div key={category}>
             <h2 className="text-xl font-semibold mb-3">{categoryLabels[category] || category}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {items.map((item) => (
+              {groupedItems[category].map((item) => (
                 <Card
                   key={item.id}
                   className="p-4 hover-elevate active-elevate-2 cursor-pointer"
@@ -211,8 +225,8 @@ export default function Inventory() {
                         <h3 className="font-semibold text-lg truncate" data-testid={`text-name-${item.id}`}>
                           {item.name}
                         </h3>
-                        <Badge className={`${categoryColors[item.category]} mt-1`}>
-                          {categoryLabels[item.category]}
+                        <Badge className={`${categoryColors[item.category] || categoryColors.miscellaneous} mt-1`}>
+                          {categoryLabels[item.category] || item.category}
                         </Badge>
                       </div>
                       <div className="flex gap-1">
@@ -313,10 +327,12 @@ export default function Inventory() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="office_supplies">Office Supplies</SelectItem>
-                        <SelectItem value="business_consumables">Business Consumables</SelectItem>
                         <SelectItem value="powder">Powder</SelectItem>
                         <SelectItem value="ceramic">Ceramic</SelectItem>
+                        <SelectItem value="blast_equipment">Blast Equipment</SelectItem>
+                        <SelectItem value="oven_equipment">Oven Equipment</SelectItem>
+                        <SelectItem value="prep_equipment">Prep Equipment</SelectItem>
+                        <SelectItem value="miscellaneous">Miscellaneous</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -379,8 +395,8 @@ export default function Inventory() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pieces">Pieces</SelectItem>
                           <SelectItem value="pounds">Pounds</SelectItem>
+                          <SelectItem value="pieces">Pieces</SelectItem>
                           <SelectItem value="gallons">Gallons</SelectItem>
                           <SelectItem value="liters">Liters</SelectItem>
                           <SelectItem value="ounces">Ounces</SelectItem>
