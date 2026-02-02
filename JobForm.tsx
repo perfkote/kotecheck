@@ -573,7 +573,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
                     <SelectItem value="received">Received</SelectItem>
                     <SelectItem value="prepped">Prepped</SelectItem>
                     <SelectItem value="coated">Coated</SelectItem>
-                    <SelectItem value="onhold">On Hold</SelectItem>
+                    <SelectItem value="paused">paused</SelectItem>
                     <SelectItem value="finished">Finished</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
                   </SelectContent>
