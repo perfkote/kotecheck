@@ -48,14 +48,16 @@ interface JobFormProps {
   onCancel: () => void;
   defaultValues?: Partial<FormData>;
   customers?: Array<{ id: string; name: string; phone?: string | null }>;
-  isSubmitting?: boolean; // NEW: Accept loading state from parent
+  isSubmitting?: boolean;
+  onDelete?: () => void;
 }
 
-export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isSubmitting = false }: JobFormProps) {
+export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isSubmitting = false, onDelete }: JobFormProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedInventory, setSelectedInventory] = useState<Array<{ inventoryId: string; quantity: number }>>([]);
+  const { toast } = useToast();
 
   const { data: services = [] } = useQuery<Service[]>({
     queryKey: ["/api/services"],
@@ -66,23 +68,22 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
   });
 
   const form = useForm<FormData>({
-  // Use different schema based on whether we're creating or editing
-  resolver: zodResolver(
-    defaultValues ? updateJobSchemaWithValidation : createJobSchemaWithValidation
-  ),
-  defaultValues: defaultValues || {
-    customerId: "",
-    customerName: "",
-    phoneNumber: "",
-    receivedDate: new Date(),
-    serviceIds: [],
-    coatingType: undefined,
-    items: "",
-    detailedNotes: "",
-    price: undefined,
-    status: "received",
-  },
-});
+    resolver: zodResolver(
+      defaultValues ? updateJobSchemaWithValidation : createJobSchemaWithValidation
+    ),
+    defaultValues: defaultValues || {
+      customerId: "",
+      customerName: "",
+      phoneNumber: "",
+      receivedDate: new Date(),
+      serviceIds: [],
+      coatingType: undefined,
+      items: "",
+      detailedNotes: "",
+      price: undefined,
+      status: "received",
+    },
+  });
 
   // Initialize selected services from default values
   useEffect(() => {
@@ -167,25 +168,22 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
 
   return (
     <Form {...form}>
-      form onSubmit={form.handleSubmit(
-  onSubmit,
-  (errors) => {
-    console.error("Form validation errors:", errors);
-    
-    // Show which field failed and why
-    const errorEntries = Object.entries(errors);
-    if (errorEntries.length > 0) {
-      const [fieldName, error] = errorEntries[0];
-      const message = (error as any)?.message || 'Invalid value';
-      
-      toast({
-        title: "Cannot Save Job",
-        description: `${fieldName}: ${message}`,
-        variant: "destructive",
-      });
-    }
-  }
-)} className="space-y-5 sm:space-y-6">
+      <form onSubmit={form.handleSubmit(
+        onSubmit,
+        (errors) => {
+          console.error("Form validation errors:", errors);
+          
+          const errorEntries = Object.entries(errors);
+          if (errorEntries.length > 0) {
+            const [fieldName, error] = errorEntries[0];
+            const message = (error as any)?.message || 'Invalid value';
+            
+            toast({
+              title: "Cannot Save Job",
+              description: `${fieldName}: ${message}`,
+              variant: "destructive",
+            });
+          }
         }
       )} className="space-y-5 sm:space-y-6">
         <FormField
@@ -233,7 +231,6 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
                               onSelect={() => {
                                 field.onChange(customer.id);
                                 form.setValue("customerName", "");
-                                // FIX: Auto-populate phone number from customer
                                 if (customer.phone) {
                                   form.setValue("phoneNumber", customer.phone);
                                 }
@@ -530,7 +527,6 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
             control={form.control}
             name="price"
             render={({ field }) => {
-              // Auto-populate with service total if no custom price is set
               const displayValue = field.value ?? (selectedServices.length > 0 ? serviceTotal : undefined);
               
               return (
@@ -577,6 +573,7 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
                     <SelectItem value="received">Received</SelectItem>
                     <SelectItem value="prepped">Prepped</SelectItem>
                     <SelectItem value="coated">Coated</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
                     <SelectItem value="finished">Finished</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
                   </SelectContent>
@@ -587,24 +584,39 @@ export function JobForm({ onSubmit, onCancel, defaultValues, customers = [], isS
           />
         </div>
 
-        <div className="flex justify-end gap-4 pt-4">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel} 
-            data-testid="button-cancel"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            data-testid="button-submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Saving..." : "Save Job"}
-          </Button>
+        <div className="flex justify-between gap-4 pt-4">
+          <div>
+            {onDelete && (
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={onDelete}
+                disabled={isSubmitting}
+                data-testid="button-delete"
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel} 
+              data-testid="button-cancel"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              data-testid="button-submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? "Saving..." : "Save Job"}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>
