@@ -82,6 +82,7 @@ const STATUS_CONFIG = {
   received: { label: 'Received', color: 'text-amber-600', bg: 'bg-amber-100' },
   prepped: { label: 'Prepped', color: 'text-blue-600', bg: 'bg-blue-100' },
   coated: { label: 'Coated', color: 'text-purple-600', bg: 'bg-purple-100' },
+  on_hold: { label: 'On Hold', color: 'text-gray-600', bg: 'bg-gray-100' },
   finished: { label: 'Finished', color: 'text-green-600', bg: 'bg-green-100' },
   paid: { label: 'Paid', color: 'text-emerald-600', bg: 'bg-emerald-100' },
 } as const;
