@@ -47,17 +47,17 @@ import { useToast } from "@/hooks/use-toast";
 // ============================================
 
 const getJobAgeColors = (ageDays: number) => {
-  if (ageDays <= 3) return {
+  if (ageDays <= 7) return {
     bg: 'bg-green-500/5',
     border: 'border-l-green-500',
     badge: 'bg-green-100 text-green-700 border-green-200'
   };
-  if (ageDays <= 7) return {
+  if (ageDays <= 10) return {
     bg: 'bg-yellow-500/5',
     border: 'border-l-yellow-500',
     badge: 'bg-yellow-100 text-yellow-700 border-yellow-200'
   };
-  if (ageDays <= 14) return {
+  if (ageDays <= 20) return {
     bg: 'bg-orange-500/5',
     border: 'border-l-orange-500',
     badge: 'bg-orange-100 text-orange-700 border-orange-200'
