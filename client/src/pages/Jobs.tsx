@@ -513,7 +513,7 @@ export default function Jobs() {
                   return (
                     <div 
                       key={job.id}
-                      className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border} ${colors.bg}`}
+                      className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border}`}
                       onClick={() => setEditingJob(job)}
                     >
                       {/* Customer Info */}
