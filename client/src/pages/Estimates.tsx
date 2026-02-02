@@ -237,24 +237,24 @@ export default function Estimates() {
   // ============================================
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 sm:space-y-6 pb-8">
       {/* ============================================ */}
       {/* HEADER */}
       {/* ============================================ */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 text-white">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-500/20 to-transparent rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-blue-500/20 to-transparent rounded-full blur-3xl" />
         
         <div className="relative">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Estimates</h1>
-              <p className="text-slate-400 mt-1">Create quotes and convert to jobs</p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Estimates</h1>
+              <p className="text-slate-400 text-sm sm:text-base mt-1">Create quotes and convert to jobs</p>
             </div>
             {canCreateEstimates(user) && (
               <Button 
                 onClick={() => setIsDialogOpen(true)}
-                className="bg-white text-slate-900 hover:bg-slate-100 shadow-lg transition-all hover:scale-[1.02]"
+                className="bg-white text-slate-900 hover:bg-slate-100 shadow-lg transition-all hover:scale-[1.02] h-11"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 New Estimate
@@ -267,63 +267,63 @@ export default function Estimates() {
       {/* ============================================ */}
       {/* STATS ROW */}
       {/* ============================================ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer" 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer active:bg-accent/50" 
               onClick={() => setStatusFilter('approved')}>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Hot Leads</p>
-                <p className="text-2xl font-bold mt-1">{stats.hotLeads}</p>
-                <p className="text-xs text-blue-600 mt-1">Ready to convert</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Hot Leads</p>
+                <p className="text-xl sm:text-2xl font-bold mt-1">{stats.hotLeads}</p>
+                <p className="text-[11px] sm:text-xs text-blue-600 mt-1">Ready to convert</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Pipeline Value</p>
-                <p className="text-2xl font-bold mt-1">${(stats.pendingValue / 1000).toFixed(1)}k</p>
-                <p className="text-xs text-muted-foreground mt-1">{stats.pending + stats.sent + stats.approved} estimates</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Pipeline Value</p>
+                <p className="text-xl sm:text-2xl font-bold mt-1">${(stats.pendingValue / 1000).toFixed(1)}k</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">{stats.pending + stats.sent + stats.approved} estimates</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-amber-500" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Conversion Rate</p>
-                <p className="text-2xl font-bold mt-1">{stats.conversionRate}%</p>
-                <p className="text-xs text-green-600 mt-1">{stats.converted} converted</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Conversion Rate</p>
+                <p className="text-xl sm:text-2xl font-bold mt-1">{stats.conversionRate}%</p>
+                <p className="text-[11px] sm:text-xs text-green-600 mt-1">{stats.converted} converted</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Won</p>
-                <p className="text-2xl font-bold mt-1">${(stats.convertedValue / 1000).toFixed(1)}k</p>
-                <p className="text-xs text-muted-foreground mt-1">from estimates</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Total Won</p>
+                <p className="text-xl sm:text-2xl font-bold mt-1">${(stats.convertedValue / 1000).toFixed(1)}k</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">from estimates</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-purple-500" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
               </div>
             </div>
           </CardContent>
@@ -333,23 +333,23 @@ export default function Estimates() {
       {/* ============================================ */}
       {/* SEARCH & FILTERS */}
       {/* ============================================ */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or phone..."
-            className="pl-10"
+            className="pl-10 h-11"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           <Button
             variant={statusFilter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("all")}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap h-9 px-3 text-sm"
           >
             All ({stats.total})
           </Button>
@@ -357,28 +357,28 @@ export default function Estimates() {
             variant={statusFilter === "pending" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("pending")}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap h-9 px-3 text-sm"
           >
-            <Clock className="w-3 h-3 mr-1" />
-            Pending ({stats.pending})
+            <Clock className="w-3.5 h-3.5 mr-1" />
+            Pending
           </Button>
           <Button
             variant={statusFilter === "sent" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("sent")}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap h-9 px-3 text-sm"
           >
-            <Send className="w-3 h-3 mr-1" />
-            Sent ({stats.sent})
+            <Send className="w-3.5 h-3.5 mr-1" />
+            Sent
           </Button>
           <Button
             variant={statusFilter === "approved" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("approved")}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap h-9 px-3 text-sm"
           >
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Approved ({stats.approved})
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+            Approved
           </Button>
         </div>
       </div>
@@ -387,18 +387,18 @@ export default function Estimates() {
       {/* ESTIMATES LIST */}
       {/* ============================================ */}
       {estimates.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Sparkles className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No estimates yet</h3>
-          <p className="text-muted-foreground mb-4">Create your first estimate to start building your pipeline</p>
+        <Card className="p-8 sm:p-12 text-center">
+          <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold mb-2">No estimates yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">Create your first estimate to start building your pipeline</p>
           <div className="flex flex-col sm:flex-row justify-center gap-2">
             <Link href="/services">
-              <Button variant="outline">
+              <Button variant="outline" className="h-11 w-full sm:w-auto">
                 Manage Services
               </Button>
             </Link>
             {canCreateEstimates(user) && (
-              <Button onClick={() => setIsDialogOpen(true)}>
+              <Button onClick={() => setIsDialogOpen(true)} className="h-11">
                 <Plus className="w-4 h-4 mr-2" />
                 Create First Estimate
               </Button>
@@ -406,7 +406,7 @@ export default function Estimates() {
           </div>
         </Card>
       ) : filteredEstimates.length === 0 ? (
-        <Card className="p-8 text-center">
+        <Card className="p-6 sm:p-8 text-center">
           <Search className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
           <p className="text-muted-foreground">No estimates match your filters</p>
         </Card>
@@ -419,73 +419,78 @@ export default function Estimates() {
               const StatusIcon = status.icon;
               const ageColors = getAgeColors(estimate.ageDays);
               const isHotLead = estimate.status === 'approved';
+              const canConvert = estimate.status !== 'converted' && estimate.status !== 'rejected';
 
               return (
                 <Card 
                   key={estimate.id}
                   className={`overflow-hidden border-l-4 ${status.border} ${
-                    isHotLead ? 'ring-2 ring-blue-500/20' : ''
+                    isHotLead ? 'ring-2 ring-blue-500/30' : ''
                   }`}
                 >
-                  <CardContent className="p-3">
-                    {/* Top: Name + Hot Lead Badge */}
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                  <CardContent className="p-4">
+                    {/* Row 1: Name + Price */}
+                    <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-sm truncate">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-base">
                             {estimate.customerName}
                           </h3>
                           {isHotLead && (
-                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-0.5">
                               HOT
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">{estimate.phone}</p>
+                        <p className="text-sm text-muted-foreground">{estimate.phone}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-base font-bold">${parseFloat(estimate.total).toFixed(2)}</p>
+                        <p className="text-lg font-bold">${parseFloat(estimate.total).toFixed(2)}</p>
                       </div>
                     </div>
 
-                    {/* Bottom: Status, Age, Date, Action */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className={`${status.badge} text-[10px] px-1.5 py-0 h-5`}>
-                          <StatusIcon className="w-3 h-3 mr-1" />
-                          {status.label}
+                    {/* Row 2: Status + Age + Date */}
+                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                      <Badge variant="outline" className={`${status.badge} text-xs px-2 py-0.5 h-6`}>
+                        <StatusIcon className="w-3.5 h-3.5 mr-1" />
+                        {status.label}
+                      </Badge>
+                      {canConvert && (
+                        <Badge variant="outline" className={`${ageColors.badge} text-xs px-2 py-0.5 h-6`}>
+                          {estimate.ageDays}d old
                         </Badge>
-                        {estimate.status !== 'converted' && estimate.status !== 'rejected' && (
-                          <Badge variant="outline" className={`${ageColors.badge} text-[10px] px-1.5 py-0 h-5`}>
-                            {estimate.ageDays}d
-                          </Badge>
-                        )}
-                        <span className="text-[10px] text-muted-foreground">
-                          {new Date(estimate.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                      
-                      {estimate.status !== 'converted' && estimate.status !== 'rejected' && (
-                        <Button 
-                          onClick={() => convertToJobMutation.mutate(estimate.id)}
-                          disabled={convertToJobMutation.isPending}
-                          size="sm"
-                          className={`h-7 text-xs ${isHotLead 
-                            ? 'bg-blue-600 hover:bg-blue-700' 
-                            : ''
-                          }`}
-                        >
-                          {convertToJobMutation.isPending ? (
-                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <>
-                              <ArrowRight className="w-3 h-3 mr-1" />
-                              Convert
-                            </>
-                          )}
-                        </Button>
                       )}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(estimate.date).toLocaleDateString()}
+                      </span>
                     </div>
+
+                    {/* Row 3: Convert Button (full width on mobile) */}
+                    {canConvert && (
+                      <Button 
+                        onClick={() => convertToJobMutation.mutate(estimate.id)}
+                        disabled={convertToJobMutation.isPending}
+                        className={`w-full h-11 ${isHotLead 
+                          ? 'bg-blue-600 hover:bg-blue-700' 
+                          : ''
+                        }`}
+                      >
+                        {convertToJobMutation.isPending ? (
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <ArrowRight className="w-4 h-4 mr-2" />
+                            Convert to Job
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    
+                    {!canConvert && (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        {estimate.status === 'converted' ? '✓ Converted to job' : '✗ Rejected'}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -607,7 +612,7 @@ export default function Estimates() {
           createMutation.reset();
         }
       }}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>New Estimate</DialogTitle>
           </DialogHeader>
