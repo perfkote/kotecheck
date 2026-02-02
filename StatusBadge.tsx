@@ -1,6 +1,4 @@
-// REPLACE ENTIRE StatusBadge.tsx FILE
 // client/src/components/StatusBadge.tsx
-
 import { Badge } from "@/components/ui/badge";
 
 interface StatusBadgeProps {
@@ -22,6 +20,8 @@ export function StatusBadge({ status, type = "job" }: StatusBadgeProps) {
           return "bg-yellow-500/15 text-yellow-800 border-yellow-500/30";
         case "received":
           return "bg-slate-500/15 text-slate-800 border-slate-500/30";
+        case "on_hold":
+          return "bg-amber-500/15 text-amber-800 border-amber-500/30";
         case "cancelled":
           return "bg-red-500/15 text-red-800 border-red-500/30";
         default:
@@ -43,13 +43,18 @@ export function StatusBadge({ status, type = "job" }: StatusBadgeProps) {
     }
   };
 
+  const formatStatus = (status: string) => {
+    if (status === "on_hold") return "On Hold";
+    return status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ");
+  };
+
   return (
     <Badge 
       variant="outline" 
       className={`text-xs px-2 py-0.5 font-medium border ${getStyle()}`}
       data-testid={`badge-status-${status}`}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
+      {formatStatus(status)}
     </Badge>
   );
 }
