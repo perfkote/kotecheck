@@ -508,13 +508,12 @@ export default function Jobs() {
               <div className="divide-y">
                 {activeJobs.map((job) => {
                   const colors = getJobAgeColors(job.ageDays);
-                  const isUrgent = job.ageDays > 7;
+                  const isUrgent = job.ageDays > 20;
                   
                   return (
                     <div 
                       key={job.id}
-                      className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border} ${colors.bg} ${
-                      }`}
+                      className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border} ${colors.bg}`}
                       onClick={() => setEditingJob(job)}
                     >
                       {/* Customer Info */}
