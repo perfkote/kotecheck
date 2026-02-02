@@ -456,14 +456,12 @@ export default function Jobs() {
             <div className="md:hidden space-y-2">
               {activeJobs.map((job) => {
                 const colors = getJobAgeColors(job.ageDays);
-                const isUrgent = job.ageDays > 20;
-                
-                return (
-                  <Card 
-                    key={job.id}
-                    className={`overflow-hidden border-l-4 ${colors.border} ${isUrgent ? 'ring-1 ring-red-500/20' : ''}`}
-                    onClick={() => setEditingJob(job)}
-                  >
+               const isUrgent = job.ageDays > 20;
+
+return (
+  <div 
+    key={job.id}
+    className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border}`}
                     <CardContent className="p-3 cursor-pointer">
                       {/* Top: Customer + Price */}
                       <div className="flex items-start justify-between gap-2 mb-2">
