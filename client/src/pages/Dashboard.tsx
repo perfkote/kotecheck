@@ -43,19 +43,19 @@ import {
 // ============================================
 
 const getJobAgeColors = (ageDays: number) => {
-  if (ageDays <= 3) return {
+  if (ageDays <= 7) return {
     bg: 'bg-green-500/5',
     border: 'border-l-green-500',
     badge: 'bg-green-500/15 text-green-700 border-green-500/30',
     dot: 'bg-green-500'
   };
-  if (ageDays <= 7) return {
+  if (ageDays <= 10) return {
     bg: 'bg-yellow-500/5',
     border: 'border-l-yellow-500',
     badge: 'bg-yellow-500/15 text-yellow-700 border-yellow-500/30',
     dot: 'bg-yellow-500'
   };
-  if (ageDays <= 14) return {
+  if (ageDays <= 20) return {
     bg: 'bg-orange-500/5',
     border: 'border-l-orange-500',
     badge: 'bg-orange-500/15 text-orange-700 border-orange-500/30',
@@ -383,7 +383,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={job.id}
-                      className={`p-3 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.bg} ${colors.border}`}
+                      className={`p-3 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border}`}
                       onClick={() => setViewingJob(job)}
                     >
                       <div className="flex items-center justify-between gap-3">
