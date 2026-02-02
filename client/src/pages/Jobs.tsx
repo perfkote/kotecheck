@@ -221,7 +221,7 @@ export default function Jobs() {
   const stats = useMemo(() => {
     const active = jobsWithCustomerNames.filter(j => j.status !== 'paid' && j.status !== 'finished');
     const completed = jobsWithCustomerNames.filter(j => j.status === 'paid' || j.status === 'finished');
-    const urgent = active.filter(j => j.ageDays > 7);
+    const urgent = active.filter(j => j.ageDays > 20);
     const received = active.filter(j => j.status === 'received');
     const inProgress = active.filter(j => j.status === 'prepped' || j.status === 'coated');
     
@@ -428,10 +428,10 @@ export default function Jobs() {
       {/* Age Legend */}
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="font-medium">Age:</span>
-        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> 0-3d</div>
-        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500" /> 4-7d</div>
-        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500" /> 8-14d</div>
-        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /> 15+d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> 0-7d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500" /> 8-10d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500" /> 11-20d</div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /> 21+d</div>
       </div>
 
       {/* ============================================ */}
@@ -456,7 +456,7 @@ export default function Jobs() {
             <div className="md:hidden space-y-2">
               {activeJobs.map((job) => {
                 const colors = getJobAgeColors(job.ageDays);
-                const isUrgent = job.ageDays > 7;
+                const isUrgent = job.ageDays > 20;
                 
                 return (
                   <Card 
