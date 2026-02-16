@@ -157,15 +157,16 @@ export default function Dashboard() {
     // Completed jobs - current year
     const completedJobsCurrentYear = currentYearJobs.filter(j => j.status === 'paid' || j.status === 'finished');
     
-    // Coating type breakdown - derived from actual services
+    // Coating type breakdown - only paid/finished jobs count as earned revenue
     // A job with both powder + ceramic services counts toward BOTH categories
-    const powderJobs = currentYearJobs.filter(j => getJobCoatingTypes(j, serviceMap).has('powder'));
-    const ceramicJobs = currentYearJobs.filter(j => getJobCoatingTypes(j, serviceMap).has('ceramic'));
+    const earnedJobs = completedJobsCurrentYear;
+    const powderJobs = earnedJobs.filter(j => getJobCoatingTypes(j, serviceMap).has('powder'));
+    const ceramicJobs = earnedJobs.filter(j => getJobCoatingTypes(j, serviceMap).has('ceramic'));
     
-    // Revenue calculations
+    // Revenue calculations - only paid/finished
     const powderRevenue = powderJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const ceramicRevenue = ceramicJobs.reduce((sum, j) => sum + Number(j.price), 0);
-    const totalRevenue = currentYearJobs.reduce((sum, j) => sum + Number(j.price), 0);
+    const totalRevenue = earnedJobs.reduce((sum, j) => sum + Number(j.price), 0);
     
     // Average completion time
     const completionTimes = completedJobsCurrentYear
@@ -181,11 +182,12 @@ export default function Dashboard() {
       ? Math.round(completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length)
       : 0;
     
-    // Revenue by month - last 12 months
+    // Revenue by month - last 12 months (paid/finished only)
+    const completedJobs = jobs.filter(j => j.status === 'paid' || j.status === 'finished');
     const revenueByMonth: { month: string; revenue: number; jobs: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(currentYear, now.getMonth() - i, 1);
-      const monthJobs = jobs.filter(j => {
+      const monthJobs = completedJobs.filter(j => {
         const jobDate = new Date(j.receivedDate);
         return jobDate.getMonth() === date.getMonth() && 
                jobDate.getFullYear() === date.getFullYear();
@@ -197,10 +199,10 @@ export default function Dashboard() {
       });
     }
     
-    // Best month - current year
+    // Best month - current year (paid/finished only)
     const currentYearByMonth: { month: string; revenue: number; jobs: number }[] = [];
     for (let i = 0; i <= now.getMonth(); i++) {
-      const monthJobs = currentYearJobs.filter(j => {
+      const monthJobs = completedJobsCurrentYear.filter(j => {
         const jobDate = new Date(j.receivedDate);
         return jobDate.getMonth() === i;
       });
