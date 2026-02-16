@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { JobForm } from "@/components/JobForm";
+import { JobPhotos } from "@/components/JobPhotos";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -480,7 +481,6 @@ export default function Jobs() {
                     onClick={() => setEditingJob(job)}
                   >
                     <CardContent className="p-4 cursor-pointer">
-                      {/* Row 1: Customer + Price */}
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -499,10 +499,8 @@ export default function Jobs() {
                         </div>
                       </div>
 
-                      {/* Row 2: Items description */}
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{job.items || 'No description'}</p>
 
-                      {/* Row 3: Status, Age, Date */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <StatusBadge status={job.status} type="job" />
                         <Badge variant="outline" className={`text-xs px-2 py-0.5 h-6 ${colors.badge}`}>
@@ -531,7 +529,6 @@ export default function Jobs() {
                       className={`p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 ${colors.border}`}
                       onClick={() => setEditingJob(job)}
                     >
-                      {/* Customer Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <h3 className={`font-semibold text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
@@ -552,25 +549,21 @@ export default function Jobs() {
                         </div>
                       </div>
 
-                      {/* Date */}
                       <div className="w-24 text-sm text-muted-foreground hidden lg:flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {new Date(job.receivedDate).toLocaleDateString()}
                       </div>
 
-                      {/* Status */}
                       <div className="w-24">
                         <StatusBadge status={job.status} type="job" />
                       </div>
 
-                      {/* Age */}
                       <div className="w-14">
                         <Badge variant="outline" className={colors.badge}>
                           {job.ageDays}d
                         </Badge>
                       </div>
 
-                      {/* Price */}
                       <div className="w-24 text-right">
                         <p className="text-lg font-bold">${Number(job.price).toFixed(2)}</p>
                       </div>
@@ -602,7 +595,6 @@ export default function Jobs() {
           
           {showOnHold && (
             <>
-              {/* MOBILE VIEW */}
               <div className="md:hidden space-y-3">
                 {onHoldJobs.map((job) => {
                   const colors = getJobAgeColors(job.ageDays);
@@ -614,7 +606,6 @@ export default function Jobs() {
                       onClick={() => setEditingJob(job)}
                     >
                       <CardContent className="p-4 cursor-pointer">
-                        {/* Row 1: Customer + Price */}
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <h3 className={`font-semibold text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
                             {job.customerName}
@@ -622,10 +613,8 @@ export default function Jobs() {
                           <p className="text-lg font-bold flex-shrink-0">${Number(job.price).toFixed(2)}</p>
                         </div>
                         
-                        {/* Row 2: Items */}
                         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{job.items || 'No description'}</p>
                         
-                        {/* Row 3: Status + Age */}
                         <div className="flex items-center gap-2">
                           <StatusBadge status={job.status} type="job" />
                           <Badge variant="outline" className={`text-xs px-2 py-0.5 h-6 ${colors.badge}`}>
@@ -641,7 +630,6 @@ export default function Jobs() {
                 })}
               </div>
 
-              {/* DESKTOP VIEW */}
               <Card className="hidden md:block overflow-hidden">
                 <div className="divide-y">
                   {onHoldJobs.map((job) => {
@@ -709,7 +697,6 @@ export default function Jobs() {
           
           {showCompleted && (
             <>
-              {/* MOBILE VIEW */}
               <div className="md:hidden space-y-3 opacity-75">
                 {completedJobs.slice(0, 20).map((job) => (
                   <Card 
@@ -735,7 +722,6 @@ export default function Jobs() {
                 ))}
               </div>
 
-              {/* DESKTOP VIEW */}
               <Card className="hidden md:block overflow-hidden opacity-75">
                 <div className="divide-y">
                   {completedJobs.slice(0, 20).map((job) => (
@@ -788,7 +774,7 @@ export default function Jobs() {
       </Dialog>
 
       {/* ============================================ */}
-      {/* EDIT DIALOG */}
+      {/* EDIT DIALOG - NOW WITH PHOTOS */}
       {/* ============================================ */}
       <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
         <DialogContent className="max-w-[95vw] sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
@@ -796,25 +782,32 @@ export default function Jobs() {
             <DialogTitle>Edit Job</DialogTitle>
           </DialogHeader>
           {editingJob && (
-            <JobForm
-              customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
-              defaultValues={{
-                customerId: editingJob.customerId || undefined,
-                phoneNumber: editingJob.phoneNumber,
-                receivedDate: new Date(editingJob.receivedDate),
-                serviceIds: editingJob.serviceIds || [],
-                inventoryItems: editingJob.inventoryItems || [],
-                coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc" | undefined,
-                items: editingJob.items || "",
-                detailedNotes: editingJob.detailedNotes || "",
-                price: Number(editingJob.price),
-                status: editingJob.status,
-              }}
-              onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
-              onCancel={() => setEditingJob(null)}
-              isSubmitting={updateMutation.isPending}
-              onDelete={canDeleteJobs(user) ? () => setDeletingJob(editingJob) : undefined}
-            />
+            <div className="space-y-4">
+              {/* Job Photos Section */}
+              <JobPhotos jobId={editingJob.id} />
+              
+              <div className="border-t pt-4">
+                <JobForm
+                  customers={customers.map(c => ({ id: c.id, name: c.name, phone: c.phone }))}
+                  defaultValues={{
+                    customerId: editingJob.customerId || undefined,
+                    phoneNumber: editingJob.phoneNumber,
+                    receivedDate: new Date(editingJob.receivedDate),
+                    serviceIds: editingJob.serviceIds || [],
+                    inventoryItems: editingJob.inventoryItems || [],
+                    coatingType: editingJob.coatingType as "powder" | "ceramic" | "misc" | undefined,
+                    items: editingJob.items || "",
+                    detailedNotes: editingJob.detailedNotes || "",
+                    price: Number(editingJob.price),
+                    status: editingJob.status,
+                  }}
+                  onSubmit={(data) => updateMutation.mutate({ id: editingJob.id, data })}
+                  onCancel={() => setEditingJob(null)}
+                  isSubmitting={updateMutation.isPending}
+                  onDelete={canDeleteJobs(user) ? () => setDeletingJob(editingJob) : undefined}
+                />
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
