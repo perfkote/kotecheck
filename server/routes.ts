@@ -18,11 +18,91 @@ import {
 import { notifyJobReceived, notifyJobFinished } from "./sms";
 import { handleBlandWebhook } from "./bland";
 
+// ============================================================
+// AUTO-DEDUCTION HELPER
+// Handles inventory auto-deduction from service defaults
+// and SMS notifications on status change
+// ============================================================
+async function handleJobStatusChange(jobId: string, newStatus: string, job: any) {
+  // Auto-deduct inventory when job moves to 'coated' or 'finished' (whichever first)
+  // Check the inventoryDeducted flag to prevent double-deduction
+  if ((newStatus === 'coated' || newStatus === 'finished') && !job.inventoryDeducted) {
+    try {
+      // Get all services for this job
+      const jobServiceRecords = await storage.getJobServices(jobId);
+      
+      if (jobServiceRecords.length > 0) {
+        const deductions: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }> = [];
+        
+        for (const jobSvc of jobServiceRecords) {
+          // Get preset defaults for this service
+          const defaults = await storage.getServiceInventoryDefaults(jobSvc.serviceId);
+          
+          for (const def of defaults) {
+            const invItem = await storage.getInventoryItem(def.inventoryId);
+            if (invItem) {
+              // Aggregate: if same inventory item appears from multiple services, sum quantities
+              const existing = deductions.find(d => d.inventoryId === def.inventoryId);
+              if (existing) {
+                existing.quantity += parseFloat(def.quantity);
+              } else {
+                deductions.push({
+                  inventoryId: def.inventoryId,
+                  inventoryName: invItem.name,
+                  quantity: parseFloat(def.quantity),
+                  unit: invItem.unit,
+                });
+              }
+            }
+          }
+        }
+        
+        if (deductions.length > 0) {
+          // Deduct from inventory and log in job_inventory
+          for (const ded of deductions) {
+            const currentItem = await storage.getInventoryItem(ded.inventoryId);
+            if (currentItem) {
+              const newQty = Math.max(0, parseFloat(currentItem.quantity) - ded.quantity);
+              await storage.updateInventoryItem(ded.inventoryId, { quantity: newQty });
+              
+              // Log the deduction in job_inventory for paper trail
+              await storage.addJobInventory({
+                jobId,
+                inventoryId: ded.inventoryId,
+                inventoryName: ded.inventoryName,
+                quantity: ded.quantity.toString(),
+                unit: ded.unit,
+              });
+            }
+          }
+          
+          // Mark job as inventory-deducted to prevent double-deduction
+          await storage.markJobInventoryDeducted(jobId);
+          
+          console.log(`[AUTO-DEDUCT] Job ${jobId}: Deducted ${deductions.length} inventory items`);
+        }
+      }
+    } catch (err) {
+      // Don't fail the job update if inventory deduction fails - just log it
+      console.error(`[AUTO-DEDUCT] Failed for job ${jobId}:`, err);
+    }
+  }
+  
+  // Send SMS notification if status changed to "finished"
+  if (newStatus === 'finished' && job.phoneNumber) {
+    const customer = job.customerId ? await storage.getCustomer(job.customerId) : null;
+    const customerName = customer?.name || 'Customer';
+    notifyJobFinished(customerName, job.phoneNumber).catch(err => {
+      console.error('[SMS] Failed to send job finished notification:', err);
+    });
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Rate limiter for password reset - 5 attempts per 15 minutes per IP
   const passwordResetLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 requests per window
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: { error: "Too many password reset attempts. Please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -47,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User info endpoint - for checking current user
+  // User info endpoint
   app.get("/api/user", isAuthenticated, async (req, res) => {
     try {
       const sessionUser = req.user as any;
@@ -55,7 +135,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!dbUser) {
         return res.status(404).json({ error: "User not found" });
       }
-      // Return user without passwordHash
       const { passwordHash, ...userWithoutPassword } = dbUser;
       res.json(userWithoutPassword);
     } catch (error) {
@@ -67,7 +146,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
-      // Remove password hashes from response
       const sanitizedUsers = users.map(({ passwordHash, ...user }) => user);
       res.json(sanitizedUsers);
     } catch (error) {
@@ -79,7 +157,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // MOBILE AUTH + MOBILE ENDPOINTS
   // ============================================================
   
-  // Mobile login
   app.post("/api/mobile/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -109,7 +186,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mobile job list
   app.get("/api/mobile/jobs", mobileAuth, async (req, res) => {
     try {
       const allJobs = await storage.getAllJobs();
@@ -120,7 +196,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mobile job details
   app.get("/api/mobile/jobs/:id", mobileAuth, async (req, res) => {
     try {
       const job = await storage.getJobWithServices(req.params.id);
@@ -136,7 +211,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mobile job create
   app.post("/api/mobile/jobs", mobileAuth, async (req, res) => {
     try {
       const validationResult = insertJobSchema.safeParse(req.body);
@@ -156,7 +230,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mobile job status update
   app.patch("/api/mobile/jobs/:id/status", mobileAuth, async (req, res) => {
     try {
       const { status } = req.body;
@@ -194,10 +267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
       
-      // Invalidate all sessions for this user to force re-authentication
       await storage.invalidateUserSessions(req.params.id);
       
-      // Remove password hash from response
       const { passwordHash, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
@@ -205,13 +276,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create user endpoint (full admin only)
   app.post("/api/users", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
-      // Validate input using insertUserSchema
       const validationResult = insertUserSchema.safeParse(req.body);
       if (!validationResult.success) {
-        // Sanitize validation errors to remove sensitive field values
         const sanitizedErrors = validationResult.error.errors.map(err => ({
           path: err.path,
           message: err.message,
@@ -224,13 +292,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { username, password, role } = validationResult.data;
 
-      // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ error: "Username already exists" });
       }
       
-      // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
       
       const user = await storage.createUser({
@@ -239,7 +305,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role,
       });
       
-      // Return user without passwordHash
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
@@ -247,10 +312,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete user endpoint (full admin only)
   app.delete("/api/users/:id", isAuthenticated, isFullAdmin, async (req, res) => {
     try {
-      // Invalidate all sessions for this user before deleting
       await storage.invalidateUserSessions(req.params.id);
       
       const success = await storage.deleteUser(req.params.id);
@@ -263,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer routes (read requires manager+, write requires manager+)
+  // Customer routes
   app.get("/api/customers", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const customers = await storage.getAllCustomers();
@@ -329,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Job routes (read: manager+, write: manager+)
+  // Job routes
   app.get("/api/jobs", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const customerId = req.query.customerId as string | undefined;
@@ -359,12 +422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { createJobSchemaWithValidation } = await import("@shared/schema");
       const validated = createJobSchemaWithValidation.parse(req.body);
       
-      // Resolve service IDs to service records
       const serviceRecords = await Promise.all(
         validated.serviceIds.map(id => storage.getService(id))
       );
       
-      // Check if any services are missing
       const missingIndex = serviceRecords.findIndex(s => !s);
       if (missingIndex !== -1) {
         return res.status(404).json({ error: `Service not found: ${validated.serviceIds[missingIndex]}` });
@@ -377,12 +438,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: 1,
       }));
 
-      // Prepare new customer data if provided
       let newCustomer: any = undefined;
       let customerId = validated.customerId;
       
       if (validated.customerName) {
-        // Check if customer already exists
         const existing = await storage.findCustomerByName(validated.customerName);
         if (existing) {
           customerId = existing.id;
@@ -394,14 +453,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Prepare inventory items if provided
       let inventoryItems: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }> | undefined = undefined;
       if (validated.inventoryItems && validated.inventoryItems.length > 0) {
         const inventoryRecords = await Promise.all(
           validated.inventoryItems.map(item => storage.getInventoryItem(item.inventoryId))
         );
         
-        // Check if any inventory items are missing
         const missingInvIndex = inventoryRecords.findIndex(inv => !inv);
         if (missingInvIndex !== -1) {
           return res.status(404).json({ error: `Inventory item not found: ${validated.inventoryItems[missingInvIndex].inventoryId}` });
@@ -415,11 +472,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       }
 
-      // Calculate total price from services (can be overridden by user input)
       const serviceTotal = services.reduce((sum, svc) => sum + (Number(svc.servicePrice) * svc.quantity), 0);
       const finalPrice = validated.price ?? serviceTotal;
 
-      // Create job with services and inventory
       const job = await storage.createJobWithServices({
         job: {
           customerId,
@@ -456,162 +511,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch("/api/jobs/:id", isAuthenticated, isAdmin, async (req, res) => {
-  try {
-    const { updateJobSchema } = await import("@shared/schema");
-    
-    // LOG what we're receiving
-    console.log(`[UPDATE JOB ${req.params.id}] Received data:`, JSON.stringify(req.body, null, 2));
-    
-    const validated = updateJobSchema.parse(req.body);
-    console.log(`[UPDATE JOB ${req.params.id}] Validated data:`, JSON.stringify(validated, null, 2));
-    
-    // Check if serviceIds or inventoryItems are being explicitly updated
-    const hasServiceUpdate = Array.isArray(req.body.serviceIds);
-    const hasInventoryUpdate = Array.isArray(req.body.inventoryItems);
-    
-    if (hasServiceUpdate || hasInventoryUpdate) {
-      // Prepare service updates
-      let serviceUpdates = { toAdd: [] as any[], toRemove: [] as string[] };
-      if (hasServiceUpdate) {
-        const currentServices = await storage.getJobServices(req.params.id);
-        const currentServiceIds = new Set(currentServices.map(s => s.serviceId));
-        const newServiceIds = new Set(validated.serviceIds || []);
-        
-        serviceUpdates.toRemove = currentServices
-          .filter(s => !newServiceIds.has(s.serviceId))
-          .map(s => s.id);
-        
-        const toAddIds = (validated.serviceIds || []).filter(id => !currentServiceIds.has(id));
-        const toAddRecords = await Promise.all(
-          toAddIds.map(id => storage.getService(id))
-        );
-        
-        const missingIndex = toAddRecords.findIndex(s => !s);
-        if (missingIndex !== -1) {
-          console.error(`[UPDATE JOB ${req.params.id}] Service not found: ${toAddIds[missingIndex]}`);
-          return res.status(404).json({ error: `Service not found: ${toAddIds[missingIndex]}` });
+    try {
+      const { updateJobSchema } = await import("@shared/schema");
+      
+      console.log(`[UPDATE JOB ${req.params.id}] Received data:`, JSON.stringify(req.body, null, 2));
+      
+      const validated = updateJobSchema.parse(req.body);
+      console.log(`[UPDATE JOB ${req.params.id}] Validated data:`, JSON.stringify(validated, null, 2));
+      
+      const hasServiceUpdate = Array.isArray(req.body.serviceIds);
+      const hasInventoryUpdate = Array.isArray(req.body.inventoryItems);
+      
+      if (hasServiceUpdate || hasInventoryUpdate) {
+        let serviceUpdates = { toAdd: [] as any[], toRemove: [] as string[] };
+        if (hasServiceUpdate) {
+          const currentServices = await storage.getJobServices(req.params.id);
+          const currentServiceIds = new Set(currentServices.map(s => s.serviceId));
+          const newServiceIds = new Set(validated.serviceIds || []);
+          
+          serviceUpdates.toRemove = currentServices
+            .filter(s => !newServiceIds.has(s.serviceId))
+            .map(s => s.id);
+          
+          const toAddIds = (validated.serviceIds || []).filter(id => !currentServiceIds.has(id));
+          const toAddRecords = await Promise.all(
+            toAddIds.map(id => storage.getService(id))
+          );
+          
+          const missingIndex = toAddRecords.findIndex(s => !s);
+          if (missingIndex !== -1) {
+            console.error(`[UPDATE JOB ${req.params.id}] Service not found: ${toAddIds[missingIndex]}`);
+            return res.status(404).json({ error: `Service not found: ${toAddIds[missingIndex]}` });
+          }
+          
+          serviceUpdates.toAdd = toAddRecords.map(service => ({
+            serviceId: service!.id,
+            serviceName: service!.name,
+            servicePrice: service!.price.toString(),
+            quantity: 1,
+          }));
         }
         
-        serviceUpdates.toAdd = toAddRecords.map(service => ({
-          serviceId: service!.id,
-          serviceName: service!.name,
-          servicePrice: service!.price.toString(),
-          quantity: 1,
-        }));
-      }
-      
-      // Prepare inventory updates
-      let inventoryUpdates: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] } | undefined = undefined;
-      if (hasInventoryUpdate) {
-        const currentInventory = await storage.getJobInventory(req.params.id);
-        const currentInventoryIds = new Set(currentInventory.map(i => i.inventoryId));
-        const newInventoryIds = new Set((validated.inventoryItems || []).map(i => i.inventoryId));
-        
-        const toRemove = currentInventory
-          .filter(i => !newInventoryIds.has(i.inventoryId))
-          .map(i => i.id);
-        
-        const toAddItems = (validated.inventoryItems || []).filter(item => !currentInventoryIds.has(item.inventoryId));
-        const toAddRecords = await Promise.all(
-          toAddItems.map(item => storage.getInventoryItem(item.inventoryId))
-        );
-        
-        const missingInvIndex = toAddRecords.findIndex(inv => !inv);
-        if (missingInvIndex !== -1) {
-          console.error(`[UPDATE JOB ${req.params.id}] Inventory not found: ${toAddItems[missingInvIndex].inventoryId}`);
-          return res.status(404).json({ error: `Inventory item not found: ${toAddItems[missingInvIndex].inventoryId}` });
+        let inventoryUpdates: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] } | undefined = undefined;
+        if (hasInventoryUpdate) {
+          const currentInventory = await storage.getJobInventory(req.params.id);
+          const currentInventoryIds = new Set(currentInventory.map(i => i.inventoryId));
+          const newInventoryIds = new Set((validated.inventoryItems || []).map(i => i.inventoryId));
+          
+          const toRemove = currentInventory
+            .filter(i => !newInventoryIds.has(i.inventoryId))
+            .map(i => i.id);
+          
+          const toAddItems = (validated.inventoryItems || []).filter(item => !currentInventoryIds.has(item.inventoryId));
+          const toAddRecords = await Promise.all(
+            toAddItems.map(item => storage.getInventoryItem(item.inventoryId))
+          );
+          
+          const missingInvIndex = toAddRecords.findIndex(inv => !inv);
+          if (missingInvIndex !== -1) {
+            console.error(`[UPDATE JOB ${req.params.id}] Inventory not found: ${toAddItems[missingInvIndex].inventoryId}`);
+            return res.status(404).json({ error: `Inventory item not found: ${toAddItems[missingInvIndex].inventoryId}` });
+          }
+          
+          const toAdd = toAddItems.map((item, idx) => ({
+            inventoryId: toAddRecords[idx]!.id,
+            inventoryName: toAddRecords[idx]!.name,
+            quantity: item.quantity,
+            unit: toAddRecords[idx]!.unit,
+          }));
+          
+          inventoryUpdates = { toAdd, toRemove };
         }
         
-        const toAdd = toAddItems.map((item, idx) => ({
-          inventoryId: toAddRecords[idx]!.id,
-          inventoryName: toAddRecords[idx]!.name,
-          quantity: item.quantity,
-          unit: toAddRecords[idx]!.unit,
-        }));
+        let finalPrice: number | undefined;
+        if (validated.price !== undefined) {
+          finalPrice = validated.price;
+        } else if (hasServiceUpdate && (validated.serviceIds || []).length > 0) {
+          const allServices = await Promise.all(
+            (validated.serviceIds || []).map(id => storage.getService(id))
+          );
+          finalPrice = allServices.reduce((sum, svc) => sum + (svc ? Number(svc.price) : 0), 0);
+        } else if (hasServiceUpdate && (validated.serviceIds || []).length === 0) {
+          finalPrice = 0;
+        }
         
-        inventoryUpdates = { toAdd, toRemove };
+        const { serviceIds, inventoryItems, price, ...otherUpdates } = validated;
+        const jobUpdates = finalPrice !== undefined ? { ...otherUpdates, price: finalPrice } : otherUpdates;
+        
+        console.log(`[UPDATE JOB ${req.params.id}] Calling updateJobWithServices with:`, JSON.stringify(jobUpdates, null, 2));
+        
+        const job = await storage.updateJobWithServices(req.params.id, jobUpdates, serviceUpdates, inventoryUpdates);
+        
+        if (!job) {
+          console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
+          return res.status(404).json({ error: "Job not found" });
+        }
+        
+        // Handle status change: auto-deduct inventory + SMS notifications
+        if (validated.status) {
+          await handleJobStatusChange(req.params.id, validated.status, job);
+        }
+        
+        console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
+        res.json(job);
+      } else {
+        const { serviceIds, inventoryItems, ...jobUpdates } = validated;
+        
+        console.log(`[UPDATE JOB ${req.params.id}] Simple update (no services/inventory):`, JSON.stringify(jobUpdates, null, 2));
+        
+        const job = await storage.updateJob(req.params.id, jobUpdates);
+        if (!job) {
+          console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
+          return res.status(404).json({ error: "Job not found" });
+        }
+        
+        // Handle status change: auto-deduct inventory + SMS notifications
+        if (validated.status) {
+          await handleJobStatusChange(req.params.id, validated.status, job);
+        }
+        
+        console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
+        res.json(job);
       }
+    } catch (error) {
+      console.error(`[UPDATE JOB ${req.params.id}] ERROR:`, error);
       
-      // Calculate price from services if not explicitly provided
-      let finalPrice: number | undefined;
-      if (validated.price !== undefined) {
-        finalPrice = validated.price;
-      } else if (hasServiceUpdate && (validated.serviceIds || []).length > 0) {
-        const allServices = await Promise.all(
-          (validated.serviceIds || []).map(id => storage.getService(id))
-        );
-        finalPrice = allServices.reduce((sum, svc) => sum + (svc ? Number(svc.price) : 0), 0);
-      } else if (hasServiceUpdate && (validated.serviceIds || []).length === 0) {
-        finalPrice = 0;
-      }
-      
-      // Extract job updates (excluding serviceIds, inventoryItems, and price)
-      const { serviceIds, inventoryItems, price, ...otherUpdates } = validated;
-      const jobUpdates = finalPrice !== undefined ? { ...otherUpdates, price: finalPrice } : otherUpdates;
-      
-      console.log(`[UPDATE JOB ${req.params.id}] Calling updateJobWithServices with:`, JSON.stringify(jobUpdates, null, 2));
-      
-      const job = await storage.updateJobWithServices(req.params.id, jobUpdates, serviceUpdates, inventoryUpdates);
-      
-      if (!job) {
-        console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
-        return res.status(404).json({ error: "Job not found" });
-      }
-      
-      // Send SMS notification if status changed to "finished"
-      if (validated.status === 'finished' && job.phoneNumber) {
-        const customer = job.customerId ? await storage.getCustomer(job.customerId) : null;
-        const customerName = customer?.name || 'Customer';
-        notifyJobFinished(customerName, job.phoneNumber).catch(err => {
-          console.error('[SMS] Failed to send job finished notification:', err);
+      if (error instanceof Error && error.name === "ZodError") {
+        const zodError = error as any;
+        console.error(`[UPDATE JOB ${req.params.id}] Validation errors:`, JSON.stringify(zodError.errors, null, 2));
+        return res.status(400).json({ 
+          error: "Invalid job data", 
+          details: zodError.errors 
         });
       }
       
-      console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
-      res.json(job);
-    } else {
-      // Neither serviceIds nor inventoryItems provided - preserve existing, just update job fields
-      const { serviceIds, inventoryItems, ...jobUpdates } = validated;
-      
-      console.log(`[UPDATE JOB ${req.params.id}] Simple update (no services/inventory):`, JSON.stringify(jobUpdates, null, 2));
-      
-      const job = await storage.updateJob(req.params.id, jobUpdates);
-      if (!job) {
-        console.error(`[UPDATE JOB ${req.params.id}] Job not found in database`);
-        return res.status(404).json({ error: "Job not found" });
-      }
-      
-      // Send SMS notification if status changed to "finished"
-      if (validated.status === 'finished' && job.phoneNumber) {
-        const customer = job.customerId ? await storage.getCustomer(job.customerId) : null;
-        const customerName = customer?.name || 'Customer';
-        notifyJobFinished(customerName, job.phoneNumber).catch(err => {
-          console.error('[SMS] Failed to send job finished notification:', err);
-        });
-      }
-      
-      console.log(`[UPDATE JOB ${req.params.id}] Success! Updated job:`, job.id);
-      res.json(job);
-    }
-  } catch (error) {
-    console.error(`[UPDATE JOB ${req.params.id}] ERROR:`, error);
-    
-    if (error instanceof Error && error.name === "ZodError") {
-      // Return detailed validation errors
-      const zodError = error as any;
-      console.error(`[UPDATE JOB ${req.params.id}] Validation errors:`, JSON.stringify(zodError.errors, null, 2));
-      return res.status(400).json({ 
-        error: "Invalid job data", 
-        details: zodError.errors 
+      res.status(500).json({ 
+        error: "Failed to update job",
+        message: error instanceof Error ? error.message : String(error)
       });
     }
-    
-    res.status(500).json({ 
-      error: "Failed to update job",
-      message: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+  });
 
   app.delete("/api/jobs/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -625,7 +664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Service routes (read: manager+, write: manager+)
+  // Service routes
   app.get("/api/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
@@ -654,7 +693,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertServiceSchema.parse(req.body);
       
-      // Check for duplicate service name
       const allServices = await storage.getAllServices();
       const duplicate = allServices.find(
         s => s.name.toLowerCase().trim() === validated.name.toLowerCase().trim()
@@ -675,7 +713,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertServiceSchema.partial().parse(req.body);
       
-      // Check for duplicate service name (excluding current service)
       if (validated.name) {
         const serviceName = validated.name;
         const allServices = await storage.getAllServices();
@@ -710,6 +747,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================
+  // SERVICE INVENTORY DEFAULTS
+  // ============================================================
+
+  app.get("/api/services/:id/inventory-defaults", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const defaults = await storage.getServiceInventoryDefaults(req.params.id);
+      res.json(defaults);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service inventory defaults" });
+    }
+  });
+
+  app.put("/api/services/:id/inventory-defaults", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { defaults } = req.body;
+      
+      if (!Array.isArray(defaults)) {
+        return res.status(400).json({ error: "defaults must be an array" });
+      }
+
+      for (const item of defaults) {
+        if (!item.inventoryId || !item.quantity || item.quantity <= 0) {
+          return res.status(400).json({ error: "Each default needs inventoryId and quantity > 0" });
+        }
+        const inv = await storage.getInventoryItem(item.inventoryId);
+        if (!inv) {
+          return res.status(404).json({ error: `Inventory item not found: ${item.inventoryId}` });
+        }
+      }
+
+      await storage.replaceServiceInventoryDefaults(req.params.id, defaults);
+      
+      const updated = await storage.getServiceInventoryDefaults(req.params.id);
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to update service inventory defaults:", error);
+      res.status(500).json({ error: "Failed to update service inventory defaults" });
+    }
+  });
+
+  app.delete("/api/services/:id/inventory-defaults/:defaultId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteServiceInventoryDefault(req.params.defaultId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete service inventory default" });
+    }
+  });
+
+  // ============================================================
+
   app.get("/api/analytics/most-popular-service", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const service = await storage.getMostPopularService();
@@ -722,7 +811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Estimate routes (read: all auth, write: manager+)
+  // Estimate routes
   app.get("/api/estimates", isAuthenticated, async (req, res) => {
     try {
       const estimates = await storage.getAllEstimates();
@@ -746,36 +835,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/estimates", isAuthenticated, isManagerOrAbove, async (req, res) => {
     try {
-      // Extract serviceIds and total from request (not part of estimate schema)
       const { serviceIds, total, ...estimateData } = req.body;
       
       if (!serviceIds || !Array.isArray(serviceIds) || serviceIds.length === 0) {
         return res.status(400).json({ error: "At least one service is required" });
       }
       
-      // Get all selected services and calculate total
       const selectedServices = await Promise.all(
         serviceIds.map((id: string) => storage.getService(id))
       );
       
-      // Check if any service is not found
       const missingService = selectedServices.findIndex((s) => !s);
       if (missingService !== -1) {
         return res.status(400).json({ error: "One or more selected services not found" });
       }
       
-      // Calculate total from services (or use provided total if given)
       const calculatedTotal = selectedServices.reduce(
         (sum, service) => sum + parseFloat(service!.price),
         0
       );
       const finalTotal = total !== undefined ? total : calculatedTotal;
       
-      // Derive serviceType from first service category
       const firstService = selectedServices[0]!;
       const serviceType = firstService.category === "prep" ? "misc" : firstService.category;
       
-      // Create estimate with derived serviceType and calculated total
       const validated = insertEstimateSchema.parse({
         ...estimateData,
         serviceType,
@@ -784,7 +867,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const estimate = await storage.createEstimate(validated);
       
-      // Link all services to the estimate
       await Promise.all(
         selectedServices.map((service) =>
           storage.addEstimateService({
@@ -829,7 +911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Estimate Services routes (read: all auth, write: manager+)
+  // Estimate Services routes
   app.get("/api/estimates/:estimateId/services", isAuthenticated, async (req, res) => {
     try {
       const services = await storage.getEstimateServices(req.params.estimateId);
@@ -847,10 +929,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const estimateService = await storage.addEstimateService(validated);
       
-      // Recalculate total for the estimate
       const allServices = await storage.getEstimateServices(req.params.estimateId);
       const total = allServices.reduce((sum, s) => sum + parseFloat(s.servicePrice), 0);
-      // Update total directly via database query (bypass schema validation)
       const { db } = await import("./db");
       const { estimates } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
@@ -871,10 +951,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Estimate service not found" });
       }
       
-      // Recalculate total for the estimate
       const allServices = await storage.getEstimateServices(req.params.estimateId);
       const total = allServices.reduce((sum, s) => sum + parseFloat(s.servicePrice), 0);
-      // Update total directly via database query (bypass schema validation)
       const { db } = await import("./db");
       const { estimates } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
@@ -888,29 +966,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Convert estimate to job (manager+)
+  // Convert estimate to job
   app.post("/api/estimates/:id/convert-to-job", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const estimateId = req.params.id;
       
-      // Get the estimate
       const estimate = await storage.getEstimate(estimateId);
       if (!estimate) {
         return res.status(404).json({ error: "Estimate not found" });
       }
       
-      // Check if already converted
       if (estimate.status === "converted") {
         return res.status(400).json({ error: "Estimate has already been converted to a job" });
       }
       
-      // Get estimate services to include in job details
       const estimateServices = await storage.getEstimateServices(estimateId);
       const servicesText = estimateServices
         .map(s => `${s.serviceName} - $${parseFloat(s.servicePrice).toFixed(2)}`)
         .join('\n');
       
-      // Find or create customer
       let customerId: string;
       const existingCustomer = await storage.findCustomerByName(estimate.customerName);
       
@@ -924,14 +998,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId = newCustomer.id;
       }
       
-      // Determine coating type based on services
       let coatingType: "powder" | "ceramic" | "misc" = "powder";
       const serviceCategories = new Set(estimateServices.map(s => {
-        // Try to infer category from service name if not available
         const serviceName = s.serviceName.toLowerCase();
         if (serviceName.includes("ceramic")) return "ceramic";
         if (serviceName.includes("powder")) return "powder";
-        return "powder"; // default
+        return "powder";
       }));
       
       if (serviceCategories.has("powder") && serviceCategories.has("ceramic")) {
@@ -940,7 +1012,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         coatingType = "ceramic";
       }
       
-      // Create the job
       const job = await storage.createJob({
         customerId,
         phoneNumber: estimate.phone,
@@ -952,7 +1023,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "received",
       });
       
-      // Update estimate status to "converted"
       await storage.updateEstimate(estimateId, { status: "converted" });
       
       res.status(201).json(job);
@@ -962,7 +1032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Note routes (read: manager+, create: manager+, delete: manager+)
+  // Note routes
   app.get("/api/notes", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const jobId = req.query.jobId as string | undefined;
@@ -1004,7 +1074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Inventory routes (admin only)
+  // Inventory routes
   app.get("/api/inventory", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
