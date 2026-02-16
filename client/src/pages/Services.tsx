@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Service, InsertService } from "@shared/schema";
+import type { Service, InsertService, InventoryItem } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { canCreateServices, canAccessServices } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import {
   DollarSign,
   Layers,
   SparklesIcon,
+  Package,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -102,6 +104,13 @@ const CATEGORIES = {
 
 type CategoryKey = keyof typeof CATEGORIES;
 
+// Type for inventory defaults
+interface InventoryDefault {
+  id?: string;
+  inventoryId: string;
+  quantity: number;
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -113,6 +122,8 @@ export default function Services() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [deletingService, setDeletingService] = useState<Service | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [inventoryDefaults, setInventoryDefaults] = useState<InventoryDefault[]>([]);
+  const [defaultsSaving, setDefaultsSaving] = useState(false);
   const { toast } = useToast();
 
   // Redirect employees away from this page
@@ -126,6 +137,10 @@ export default function Services() {
     queryKey: ["/api/services"],
   });
 
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
+    queryKey: ["/api/inventory"],
+  });
+
   const form = useForm<InsertService>({
     resolver: zodResolver(insertServiceSchema),
     defaultValues: {
@@ -134,6 +149,26 @@ export default function Services() {
       price: 0,
     },
   });
+
+  // Load inventory defaults when editing a service
+  useEffect(() => {
+    if (editingService) {
+      apiRequest("GET", `/api/services/${editingService.id}/inventory-defaults`)
+        .then((res) => res.json())
+        .then((data) => {
+          setInventoryDefaults(
+            data.map((d: any) => ({
+              id: d.id,
+              inventoryId: d.inventoryId,
+              quantity: parseFloat(d.quantity),
+            }))
+          );
+        })
+        .catch(() => setInventoryDefaults([]));
+    } else {
+      setInventoryDefaults([]);
+    }
+  }, [editingService]);
 
   // ============================================
   // MUTATIONS
@@ -158,16 +193,27 @@ export default function Services() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<InsertService> }) =>
-      apiRequest("PATCH", `/api/services/${id}`, {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertService> }) => {
+      // Update service
+      await apiRequest("PATCH", `/api/services/${id}`, {
         ...data,
         price: data.price ? data.price.toString() : undefined,
-      }),
+      });
+      
+      // Save inventory defaults
+      await apiRequest("PUT", `/api/services/${id}/inventory-defaults`, {
+        defaults: inventoryDefaults.map(d => ({
+          inventoryId: d.inventoryId,
+          quantity: d.quantity,
+        })),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({ title: "Success", description: "Service updated successfully" });
       setIsDialogOpen(false);
       setEditingService(null);
+      setInventoryDefaults([]);
       form.reset();
     },
     onError: (error: any) => {
@@ -230,6 +276,12 @@ export default function Services() {
     };
   }, [services, searchQuery]);
 
+  // Inventory items not yet added as defaults
+  const availableInventory = useMemo(() => {
+    const usedIds = new Set(inventoryDefaults.map(d => d.inventoryId));
+    return inventoryItems.filter(i => !usedIds.has(i.id));
+  }, [inventoryItems, inventoryDefaults]);
+
   // ============================================
   // HANDLERS
   // ============================================
@@ -278,6 +330,7 @@ export default function Services() {
       return;
     }
     setEditingService(null);
+    setInventoryDefaults([]);
     form.reset({ name: "", category: "powder", price: 0 });
     setIsDialogOpen(true);
   };
@@ -286,6 +339,25 @@ export default function Services() {
     if (editingService) {
       setDeletingService(editingService);
     }
+  };
+
+  // Inventory default handlers
+  const addInventoryDefault = (inventoryId: string) => {
+    if (!inventoryId) return;
+    const existing = inventoryDefaults.find(d => d.inventoryId === inventoryId);
+    if (!existing) {
+      setInventoryDefaults([...inventoryDefaults, { inventoryId, quantity: 1 }]);
+    }
+  };
+
+  const removeInventoryDefault = (inventoryId: string) => {
+    setInventoryDefaults(inventoryDefaults.filter(d => d.inventoryId !== inventoryId));
+  };
+
+  const updateDefaultQuantity = (inventoryId: string, quantity: number) => {
+    setInventoryDefaults(inventoryDefaults.map(d =>
+      d.inventoryId === inventoryId ? { ...d, quantity } : d
+    ));
   };
 
   // ============================================
@@ -343,7 +415,9 @@ export default function Services() {
                   }
                 } : undefined}
               >
-                <span className="font-medium text-sm">{service.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">{service.name}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-base">
                     ${parseFloat(service.price).toFixed(2)}
@@ -392,7 +466,6 @@ export default function Services() {
       {/* HEADER */}
       {/* ============================================ */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white">
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-500/20 to-transparent rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-orange-500/20 to-transparent rounded-full blur-3xl" />
         
@@ -496,7 +569,6 @@ export default function Services() {
           {renderCategorySection('ceramic', filteredServices.ceramic)}
           {renderCategorySection('prep', filteredServices.prep)}
 
-          {/* No search results */}
           {filteredServices.powder.length === 0 && 
            filteredServices.ceramic.length === 0 && 
            filteredServices.prep.length === 0 && 
@@ -512,8 +584,14 @@ export default function Services() {
       {/* ============================================ */}
       {/* ADD/EDIT DIALOG */}
       {/* ============================================ */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-full sm:max-w-md p-4 sm:p-6">
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+          setEditingService(null);
+          setInventoryDefaults([]);
+        }
+      }}>
+        <DialogContent className="max-w-full sm:max-w-lg p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingService ? "Edit Service" : "Add Service"}
@@ -587,6 +665,95 @@ export default function Services() {
                   </FormItem>
                 )}
               />
+
+              {/* ============================================ */}
+              {/* INVENTORY DEFAULTS SECTION (edit only) */}
+              {/* ============================================ */}
+              {editingService && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-semibold text-sm">Auto-Deduct Inventory</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    When a job using this service is marked as coated or finished, these inventory items will be automatically deducted.
+                  </p>
+
+                  {/* Current defaults */}
+                  {inventoryDefaults.length > 0 && (
+                    <div className="space-y-2">
+                      {inventoryDefaults.map((def) => {
+                        const item = inventoryItems.find(i => i.id === def.inventoryId);
+                        if (!item) return null;
+                        return (
+                          <div 
+                            key={def.inventoryId} 
+                            className="flex items-center gap-2 p-2 rounded-lg border bg-card"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium text-sm truncate block">{item.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {item.category.replace(/_/g, ' ')} · {parseFloat(item.quantity).toFixed(1)} {item.unit} on hand
+                              </span>
+                            </div>
+                            <Input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={def.quantity}
+                              onChange={(e) => updateDefaultQuantity(def.inventoryId, parseFloat(e.target.value) || 0)}
+                              className="w-20 h-8 text-center text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground w-14 text-center">
+                              {item.unit}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeInventoryDefault(def.inventoryId)}
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Add new default */}
+                  {availableInventory.length > 0 && (
+                    <Select onValueChange={addInventoryDefault} value="">
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="+ Add inventory item..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableInventory.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            <span className="flex items-center gap-2">
+                              {item.name}
+                              <span className="text-muted-foreground text-xs">
+                                ({item.category.replace(/_/g, ' ')})
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {inventoryDefaults.length === 0 && availableInventory.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">
+                      No inventory items available. Add items in Inventory first.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ============================================ */}
+              {/* FORM ACTIONS */}
+              {/* ============================================ */}
               <div className="flex gap-3 pt-4">
                 {editingService && (
                   <Button
