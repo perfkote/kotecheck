@@ -129,6 +129,15 @@ export const serviceInventoryDefaults = pgTable("service_inventory_defaults", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const jobPhotos = pgTable("job_photos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  filePath: text("file_path").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+});
+
 // ============================================================
 // ZOD SCHEMAS
 // ============================================================
@@ -149,7 +158,6 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0, "Price must be 0 or greater")),
 });
 
-// API schema for creating jobs with multiple services
 export const createJobSchema = insertJobSchema.omit({ customerId: true, price: true }).extend({
   customerId: z.string().optional(),
   customerName: z.string().optional(),
@@ -215,7 +223,13 @@ export const insertServiceInventoryDefaultSchema = z.object({
   quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
 });
 
-// API schema for updating jobs with service mutations
+export const insertJobPhotoSchema = z.object({
+  jobId: z.string(),
+  filePath: z.string(),
+  fileName: z.string(),
+  fileSize: z.number().optional(),
+});
+
 export const updateJobSchema = insertJobSchema.partial().extend({
   serviceIds: z.array(z.string()).optional(),
   price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
@@ -332,7 +346,9 @@ export type JobInventory = typeof jobInventory.$inferSelect;
 export type ServiceInventoryDefault = typeof serviceInventoryDefaults.$inferSelect;
 export type InsertServiceInventoryDefault = z.infer<typeof insertServiceInventoryDefaultSchema>;
 
-// Enriched job type that includes associated services and inventory
+export type JobPhoto = typeof jobPhotos.$inferSelect;
+export type InsertJobPhoto = z.infer<typeof insertJobPhotoSchema>;
+
 export type JobWithServices = Job & {
   services: JobService[];
   serviceIds: string[];
