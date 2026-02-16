@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import type { Job, JobWithServices, Customer, Estimate } from "@shared/schema";
+import type { Job, JobWithServices, Customer, Estimate, Service } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,42 @@ const getJobAgeColors = (ageDays: number) => {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/**
+ * Determine a job's coating category from its attached services.
+ * Uses the service records fetched separately for accurate category lookup.
+ * Falls back to coatingType field, then "other".
+ */
+function getJobCoatingCategory(job: JobWithServices, serviceMap: Map<string, Service>): 'powder' | 'ceramic' | 'mixed' | 'other' {
+  // Look at actual services attached to the job
+  if (job.services && job.services.length > 0) {
+    const categories = new Set<string>();
+    for (const js of job.services) {
+      const svc = serviceMap.get(js.serviceId);
+      if (svc) {
+        if (svc.category === 'powder' || svc.category === 'ceramic') {
+          categories.add(svc.category);
+        }
+      } else {
+        // Fallback: try to infer from service name
+        const name = js.serviceName.toLowerCase();
+        if (name.includes('powder')) categories.add('powder');
+        else if (name.includes('ceramic')) categories.add('ceramic');
+      }
+    }
+    
+    if (categories.has('powder') && categories.has('ceramic')) return 'mixed';
+    if (categories.has('powder')) return 'powder';
+    if (categories.has('ceramic')) return 'ceramic';
+  }
+  
+  // Fallback to coatingType field
+  if (job.coatingType === 'powder') return 'powder';
+  if (job.coatingType === 'ceramic') return 'ceramic';
+  if (job.coatingType === 'misc') return 'mixed';
+  
+  return 'other';
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -92,6 +128,19 @@ export default function Dashboard() {
     queryKey: ["/api/estimates"],
   });
 
+  const { data: allServices = [] } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+  });
+
+  // Build a lookup map for services
+  const serviceMap = useMemo(() => {
+    const map = new Map<string, Service>();
+    for (const svc of allServices) {
+      map.set(svc.id, svc);
+    }
+    return map;
+  }, [allServices]);
+
   // ============================================
   // COMPUTED DATA
   // ============================================
@@ -100,30 +149,32 @@ export default function Dashboard() {
     const now = new Date();
     const currentYear = now.getFullYear();
     
-    // Filter jobs for current year (for revenue/metrics)
+    // Filter jobs for current year
     const currentYearJobs = jobs.filter(j => {
       const jobDate = new Date(j.receivedDate);
       return jobDate.getFullYear() === currentYear;
     });
     
-    // Active jobs (not paid/finished) - all time for work tracking
+    // Active jobs (not paid/finished)
     const activeJobs = jobs.filter(j => j.status !== 'paid' && j.status !== 'finished');
     
-    // Completed jobs - current year only for avg turnaround
+    // Completed jobs - current year
     const completedJobsCurrentYear = currentYearJobs.filter(j => j.status === 'paid' || j.status === 'finished');
     
-    // Coating type breakdown - current year only
-    const ceramicJobs = currentYearJobs.filter(j => j.coatingType === 'ceramic');
-    const powderJobs = currentYearJobs.filter(j => j.coatingType === 'powder');
-    const miscJobs = currentYearJobs.filter(j => j.coatingType === 'misc' || !j.coatingType);
+    // Coating type breakdown - derived from actual services
+    const ceramicJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'ceramic');
+    const powderJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'powder');
+    const mixedJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'mixed');
+    const otherJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'other');
     
-    // Revenue calculations - current year only
+    // Revenue calculations
     const ceramicRevenue = ceramicJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const powderRevenue = powderJobs.reduce((sum, j) => sum + Number(j.price), 0);
-    const miscRevenue = miscJobs.reduce((sum, j) => sum + Number(j.price), 0);
+    const mixedRevenue = mixedJobs.reduce((sum, j) => sum + Number(j.price), 0);
+    const otherRevenue = otherJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const totalRevenue = currentYearJobs.reduce((sum, j) => sum + Number(j.price), 0);
     
-    // Average completion time - current year completed jobs only
+    // Average completion time
     const completionTimes = completedJobsCurrentYear
       .filter(j => j.receivedDate)
       .map(j => {
@@ -137,7 +188,7 @@ export default function Dashboard() {
       ? Math.round(completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length)
       : 0;
     
-    // Revenue by month - last 12 months for chart
+    // Revenue by month - last 12 months
     const revenueByMonth: { month: string; revenue: number; jobs: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date(currentYear, now.getMonth() - i, 1);
@@ -153,7 +204,7 @@ export default function Dashboard() {
       });
     }
     
-    // Best month - current year only
+    // Best month - current year
     const currentYearByMonth: { month: string; revenue: number; jobs: number }[] = [];
     for (let i = 0; i <= now.getMonth(); i++) {
       const monthJobs = currentYearJobs.filter(j => {
@@ -182,10 +233,12 @@ export default function Dashboard() {
       completedJobs: completedJobsCurrentYear,
       ceramicJobs,
       powderJobs,
-      miscJobs,
+      mixedJobs,
+      otherJobs,
       ceramicRevenue,
       powderRevenue,
-      miscRevenue,
+      mixedRevenue,
+      otherRevenue,
       totalRevenue,
       avgCompletionDays,
       revenueByMonth,
@@ -195,7 +248,7 @@ export default function Dashboard() {
       pendingEstimates: estimates.filter(e => e.status === 'pending').length,
       currentYear,
     };
-  }, [jobs, customers, estimates]);
+  }, [jobs, customers, estimates, serviceMap]);
 
   // Active jobs with customer names, sorted newest first
   const activeJobsWithDetails = useMemo(() => {
@@ -213,11 +266,12 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime());
   }, [stats.activeJobs, customers]);
 
-  // Pie chart data for coating types
+  // Pie chart data for coating types - now with 4 categories
   const coatingData = [
-    { name: 'Ceramic', value: stats.ceramicRevenue, count: stats.ceramicJobs.length, color: '#f97316' },
     { name: 'Powder', value: stats.powderRevenue, count: stats.powderJobs.length, color: '#3b82f6' },
-    { name: 'Other', value: stats.miscRevenue, count: stats.miscJobs.length, color: '#8b5cf6' },
+    { name: 'Ceramic', value: stats.ceramicRevenue, count: stats.ceramicJobs.length, color: '#f97316' },
+    { name: 'Mixed', value: stats.mixedRevenue, count: stats.mixedJobs.length, color: '#10b981' },
+    { name: 'Other', value: stats.otherRevenue, count: stats.otherJobs.length, color: '#8b5cf6' },
   ].filter(d => d.value > 0);
 
   if (jobsLoading) {
@@ -234,7 +288,6 @@ export default function Dashboard() {
       {/* HEADER WITH QUICK ACTIONS */}
       {/* ============================================ */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 text-white">
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-500/20 to-transparent rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-blue-500/20 to-transparent rounded-full blur-3xl" />
         
@@ -249,7 +302,6 @@ export default function Dashboard() {
             </div>
           </div>
           
-          {/* Quick Action Buttons */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <Button 
               onClick={() => setLocation("/jobs?action=create")}
@@ -286,7 +338,6 @@ export default function Dashboard() {
       {/* STATS CARDS ROW */}
       {/* ============================================ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        {/* Active Jobs */}
         <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
@@ -307,7 +358,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Avg Completion Time */}
         <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
@@ -322,7 +372,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Best Month */}
         <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
@@ -340,7 +389,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Total Revenue */}
         <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
@@ -348,7 +396,7 @@ export default function Dashboard() {
                 <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">{stats.currentYear} Revenue</p>
                 <p className="text-xl sm:text-2xl font-bold mt-1">${(stats.totalRevenue / 1000).toFixed(1)}k</p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
-                  {stats.ceramicJobs.length + stats.powderJobs.length + stats.miscJobs.length} jobs
+                  {stats.ceramicJobs.length + stats.powderJobs.length + stats.mixedJobs.length + stats.otherJobs.length} jobs
                 </p>
               </div>
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
@@ -364,7 +412,6 @@ export default function Dashboard() {
       {/* ============================================ */}
       <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         
-        {/* ACTIVE JOBS LIST - Takes 2 columns on large screens */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
             <div className="flex items-center justify-between">
@@ -381,7 +428,6 @@ export default function Dashboard() {
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
             </div>
-            {/* Age Legend */}
             <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-muted-foreground mt-2">
               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> 0-7d</div>
               <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500" /> 8-10d</div>
@@ -397,7 +443,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="max-h-[400px] overflow-y-auto">
-                {/* MOBILE VIEW - Stacked cards */}
+                {/* MOBILE VIEW */}
                 <div className="sm:hidden divide-y">
                   {activeJobsWithDetails.slice(0, 10).map((job) => {
                     const colors = getJobAgeColors(job.ageDays);
@@ -408,7 +454,6 @@ export default function Dashboard() {
                         className={`p-4 active:bg-accent/70 cursor-pointer transition-colors border-l-4 ${colors.border}`}
                         onClick={() => setViewingJob(job)}
                       >
-                        {/* Row 1: Customer name + Price */}
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div className={`font-semibold text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
                             {job.customerName}
@@ -418,12 +463,10 @@ export default function Dashboard() {
                           </span>
                         </div>
                         
-                        {/* Row 2: Items description */}
                         <div className="text-sm text-muted-foreground mb-3 line-clamp-1">
                           {job.items || 'No description'}
                         </div>
                         
-                        {/* Row 3: Status + Age badge */}
                         <div className="flex items-center gap-2">
                           <StatusBadge status={job.status} type="job" />
                           <Badge variant="outline" className={`text-xs px-2 py-0.5 h-6 font-medium border ${colors.badge}`}>
@@ -435,7 +478,7 @@ export default function Dashboard() {
                   })}
                 </div>
 
-                {/* DESKTOP VIEW - Compact rows */}
+                {/* DESKTOP VIEW */}
                 <div className="hidden sm:block divide-y">
                   {activeJobsWithDetails.slice(0, 10).map((job) => {
                     const colors = getJobAgeColors(job.ageDays);
@@ -490,7 +533,6 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                {/* Mini Pie Chart */}
                 <div className="h-36 sm:h-40 mb-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -520,7 +562,6 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </div>
                 
-                {/* Legend */}
                 <div className="space-y-2">
                   {coatingData.map((item) => (
                     <div key={item.name} className="flex items-center justify-between text-sm">
@@ -659,7 +700,9 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Coating Type</p>
-                  <Badge variant="outline" className="capitalize mt-1">{viewingJob.coatingType || 'Not set'}</Badge>
+                  <Badge variant="outline" className="capitalize mt-1">
+                    {getJobCoatingCategory(viewingJob, serviceMap)}
+                  </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Received</p>
