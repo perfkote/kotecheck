@@ -31,6 +31,8 @@ import {
   FileText,
   Check,
   Loader2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 // ============================================
@@ -68,6 +70,7 @@ const CATEGORIES = {
     color: 'text-orange-500',
     bg: 'bg-orange-500/10',
     border: 'border-orange-200',
+    headerBg: 'bg-orange-50 dark:bg-orange-950/30',
   },
   ceramic: {
     label: 'Ceramic Coating',
@@ -75,6 +78,7 @@ const CATEGORIES = {
     color: 'text-blue-500',
     bg: 'bg-blue-500/10',
     border: 'border-blue-200',
+    headerBg: 'bg-blue-50 dark:bg-blue-950/30',
   },
   prep: {
     label: 'Prep Services',
@@ -82,6 +86,7 @@ const CATEGORIES = {
     color: 'text-green-500',
     bg: 'bg-green-500/10',
     border: 'border-green-200',
+    headerBg: 'bg-green-50 dark:bg-green-950/30',
   },
 } as const;
 
@@ -94,6 +99,7 @@ type CategoryKey = keyof typeof CATEGORIES;
 export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: EstimateFormProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [manuallyEditedTotal, setManuallyEditedTotal] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<CategoryKey>>(new Set());
 
   const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
@@ -162,6 +168,18 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceTotal, selectedServices.length, manuallyEditedTotal]);
 
+  const toggleCategory = (categoryKey: CategoryKey) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryKey)) {
+        next.delete(categoryKey);
+      } else {
+        next.add(categoryKey);
+      }
+      return next;
+    });
+  };
+
   const toggleService = (serviceId: string) => {
     if (selectedServices.includes(serviceId)) {
       setSelectedServices(selectedServices.filter(id => id !== serviceId));
@@ -181,7 +199,7 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
   const isPending = isSubmitting || form.formState.isSubmitting;
 
   // ============================================
-  // RENDER SERVICE CATEGORY
+  // RENDER SERVICE CATEGORY (COLLAPSIBLE)
   // ============================================
 
   const renderServiceCategory = (categoryKey: CategoryKey) => {
@@ -192,56 +210,73 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
     const Icon = cat.icon;
     const categoryTotal = selectedByCategory[categoryKey] || 0;
     const selectedCount = categoryServices.filter(s => selectedServices.includes(s.id)).length;
+    const isExpanded = expandedCategories.has(categoryKey);
 
     return (
-      <div key={categoryKey} className="space-y-2">
-        <div className="flex items-center justify-between">
+      <div key={categoryKey} className={`rounded-lg border ${selectedCount > 0 ? cat.border : 'border-border'} overflow-hidden`}>
+        {/* Category Header - Always Visible, Click to Expand */}
+        <button
+          type="button"
+          onClick={() => toggleCategory(categoryKey)}
+          className={`w-full flex items-center justify-between p-3 ${cat.headerBg} hover:opacity-90 transition-all`}
+        >
           <div className="flex items-center gap-2">
+            {isExpanded ? (
+              <ChevronDown className={`w-4 h-4 ${cat.color}`} />
+            ) : (
+              <ChevronRight className={`w-4 h-4 ${cat.color}`} />
+            )}
             <Icon className={`w-4 h-4 ${cat.color}`} />
             <span className="font-medium text-sm">{cat.label}</span>
+            <Badge variant="secondary" className="text-xs">
+              {categoryServices.length}
+            </Badge>
             {selectedCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge className={`text-xs ${cat.bg} ${cat.color} border ${cat.border}`}>
                 {selectedCount} selected
               </Badge>
             )}
           </div>
           {categoryTotal > 0 && (
-            <span className={`text-sm font-medium ${cat.color}`}>
+            <span className={`text-sm font-semibold ${cat.color}`}>
               ${categoryTotal.toFixed(2)}
             </span>
           )}
-        </div>
-        
-        <div className="grid gap-2">
-          {categoryServices.map((service) => {
-            const isSelected = selectedServices.includes(service.id);
-            return (
-              <div
-                key={service.id}
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                  isSelected 
-                    ? `${cat.bg} ${cat.border} border-2` 
-                    : 'bg-card hover:bg-accent/50 border-border'
-                }`}
-                onClick={() => toggleService(service.id)}
-              >
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                  isSelected 
-                    ? 'bg-primary border-primary' 
-                    : 'border-muted-foreground/30'
-                }`}>
-                  {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+        </button>
+
+        {/* Expanded Service List */}
+        {isExpanded && (
+          <div className="p-2 space-y-1">
+            {categoryServices.map((service) => {
+              const isSelected = selectedServices.includes(service.id);
+              return (
+                <div
+                  key={service.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    isSelected 
+                      ? `${cat.bg} ${cat.border} border-2` 
+                      : 'bg-card hover:bg-accent/50 border-border'
+                  }`}
+                  onClick={() => toggleService(service.id)}
+                >
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                    isSelected 
+                      ? 'bg-primary border-primary' 
+                      : 'border-muted-foreground/30'
+                  }`}>
+                    {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-sm">{service.name}</span>
+                  </div>
+                  <span className={`font-semibold flex-shrink-0 ${isSelected ? cat.color : 'text-muted-foreground'}`}>
+                    ${parseFloat(service.price).toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="font-medium text-sm">{service.name}</span>
-                </div>
-                <span className={`font-semibold ${isSelected ? cat.color : 'text-muted-foreground'}`}>
-                  ${parseFloat(service.price).toFixed(2)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -389,7 +424,7 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
                     </p>
                   </Card>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-2">
                     {renderServiceCategory('powder')}
                     {renderServiceCategory('ceramic')}
                     {renderServiceCategory('prep')}
