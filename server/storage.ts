@@ -10,6 +10,7 @@ import {
   notes,
   inventory,
   jobInventory,
+  serviceInventoryDefaults,
   users,
   sessions,
   type Customer, 
@@ -32,7 +33,8 @@ import {
   type InventoryItem,
   type InsertInventory,
   type User,
-  type NewUserInsert
+  type NewUserInsert,
+  type ServiceInventoryDefault,
 } from "@shared/schema";
 
 export interface CustomerWithMetrics extends Customer {
@@ -112,7 +114,13 @@ export interface IStorage {
   updateInventoryItem(id: string, item: Partial<InsertInventory>): Promise<InventoryItem | undefined>;
   deleteInventoryItem(id: string): Promise<boolean>;
 
-  // User operations - Simple username/password authentication
+  // Service Inventory Defaults
+  getServiceInventoryDefaults(serviceId: string): Promise<ServiceInventoryDefault[]>;
+  replaceServiceInventoryDefaults(serviceId: string, defaults: Array<{ inventoryId: string; quantity: number }>): Promise<void>;
+  deleteServiceInventoryDefault(id: string): Promise<void>;
+  markJobInventoryDeducted(jobId: string): Promise<void>;
+
+  // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -206,25 +214,21 @@ export class DatabaseStorage implements IStorage {
     return enriched[0];
   }
 
-  // Helper to efficiently enrich jobs with their services and inventory (avoids N+1)
   private async enrichJobsWithServices(jobsList: Job[]): Promise<JobWithServices[]> {
     if (jobsList.length === 0) return [];
     
     const jobIds = jobsList.map(j => j.id);
     
-    // Fetch all job services
     const allJobServices = await db
       .select()
       .from(jobServices)
       .where(inArray(jobServices.jobId, jobIds));
     
-    // Fetch all job inventory
     const allJobInventory = await db
       .select()
       .from(jobInventory)
       .where(inArray(jobInventory.jobId, jobIds));
     
-    // Group services by jobId
     const servicesByJobId = new Map<string, JobService[]>();
     for (const svc of allJobServices) {
       if (!servicesByJobId.has(svc.jobId)) {
@@ -233,7 +237,6 @@ export class DatabaseStorage implements IStorage {
       servicesByJobId.get(svc.jobId)!.push(svc);
     }
     
-    // Group inventory by jobId
     const inventoryByJobId = new Map<string, JobInventory[]>();
     for (const inv of allJobInventory) {
       if (!inventoryByJobId.has(inv.jobId)) {
@@ -242,7 +245,6 @@ export class DatabaseStorage implements IStorage {
       inventoryByJobId.get(inv.jobId)!.push(inv);
     }
     
-    // Enrich each job with its services and inventory
     return jobsList.map(job => {
       const jobInv = inventoryByJobId.get(job.id) || [];
       return {
@@ -271,11 +273,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    // Generate tracking ID based on MAX existing tracking ID to ensure uniqueness
     const allJobs = await db.select().from(jobs);
     let maxNumber = 0;
     
-    // Find the highest tracking number
     for (const job of allJobs) {
       const match = job.trackingId.match(/JOB-(\d+)/);
       if (match) {
@@ -306,17 +306,14 @@ export class DatabaseStorage implements IStorage {
     inventory?: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; 
     newCustomer?: InsertCustomer 
   }): Promise<Job> {
-    // Transaction: optionally create customer, create job, then create job_services and job_inventory
     return await db.transaction(async (tx) => {
       let customerId = payload.job.customerId;
 
-      // Create new customer if provided
       if (payload.newCustomer) {
         const [customer] = await tx.insert(customers).values(payload.newCustomer).returning();
         customerId = customer.id;
       }
 
-      // Generate tracking ID
       const allJobs = await tx.select().from(jobs);
       let maxNumber = 0;
       for (const job of allJobs) {
@@ -331,7 +328,6 @@ export class DatabaseStorage implements IStorage {
       const jobNumber = maxNumber + 1;
       const trackingId = `JOB-${jobNumber.toString().padStart(4, '0')}`;
 
-      // Create job
       const [job] = await tx
         .insert(jobs)
         .values({
@@ -342,7 +338,6 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      // Create job_services entries
       if (payload.services.length > 0) {
         await tx.insert(jobServices).values(
           payload.services.map(svc => ({
@@ -353,7 +348,6 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
-      // Create job_inventory entries
       if (payload.inventory && payload.inventory.length > 0) {
         await tx.insert(jobInventory).values(
           payload.inventory.map(inv => ({
@@ -372,18 +366,15 @@ export class DatabaseStorage implements IStorage {
 
   async updateJobWithServices(id: string, updates: Partial<InsertJob>, services: { toAdd: Array<Omit<InsertJobService, "jobId" | "id" | "createdAt">>; toRemove: string[] }, inventoryChanges?: { toAdd: Array<{ inventoryId: string; inventoryName: string; quantity: number; unit: string }>; toRemove: string[] }): Promise<Job | undefined> {
     return await db.transaction(async (tx) => {
-      // Get current job to check status transition
       const [currentJob] = await tx.select().from(jobs).where(eq(jobs.id, id));
       if (!currentJob) return undefined;
 
-      // Update job
       const { price, ...rest } = updates;
       const dbUpdates: any = {
         ...rest,
         ...(price !== undefined && { price: price.toString() }),
       };
 
-      // Only update completedAt when status actually changes
       if (updates.status) {
         if (updates.status === "paid" && currentJob.status !== "paid") {
           dbUpdates.completedAt = new Date();
@@ -399,49 +390,6 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       if (!job) return undefined;
-
-      // IMPORTANT: Deduct inventory when status changes to "finished"
-      if (updates.status === "finished" && currentJob.status !== "finished") {
-        const jobInvItems = await tx.select().from(jobInventory).where(eq(jobInventory.jobId, id));
-        
-        // Aggregate required quantities by inventoryId (in case same item appears multiple times)
-        const requiredByInventoryId = new Map<string, { name: string; totalRequired: number; unit: string }>();
-        for (const item of jobInvItems) {
-          const existing = requiredByInventoryId.get(item.inventoryId);
-          const qty = parseFloat(item.quantity);
-          if (existing) {
-            existing.totalRequired += qty;
-          } else {
-            requiredByInventoryId.set(item.inventoryId, {
-              name: item.inventoryName,
-              totalRequired: qty,
-              unit: item.unit,
-            });
-          }
-        }
-        
-        // Validate that all inventory items have sufficient quantities
-        for (const [invId, required] of Array.from(requiredByInventoryId.entries())) {
-          const [invItem] = await tx.select().from(inventory).where(eq(inventory.id, invId));
-          if (!invItem) {
-            throw new Error(`Inventory item ${required.name} not found`);
-          }
-          const available = parseFloat(invItem.quantity);
-          if (available < required.totalRequired) {
-            throw new Error(`Insufficient inventory: ${required.name} (available: ${available} ${required.unit}, required: ${required.totalRequired} ${required.unit})`);
-          }
-        }
-        
-        // If all validations pass, perform the deductions
-        for (const item of jobInvItems) {
-          await tx
-            .update(inventory)
-            .set({
-              quantity: sql`${inventory.quantity} - ${item.quantity}`,
-            })
-            .where(eq(inventory.id, item.inventoryId));
-        }
-      }
 
       // Remove specified services
       if (services.toRemove.length > 0) {
@@ -492,17 +440,13 @@ export class DatabaseStorage implements IStorage {
       ...(price !== undefined && { price: price.toString() }),
     };
     
-    // Only update completedAt when status actually changes
     if (updates.status) {
-      // Fetch current job to check for status transition
       const [currentJob] = await db.select().from(jobs).where(eq(jobs.id, id));
       
       if (currentJob) {
-        // Transitioning TO paid: set completedAt if not already set
         if (updates.status === "paid" && currentJob.status !== "paid") {
           dbUpdates.completedAt = new Date();
         }
-        // Transitioning AWAY FROM paid: clear completedAt
         else if (updates.status !== "paid" && currentJob.status === "paid") {
           dbUpdates.completedAt = null;
         }
@@ -682,10 +626,8 @@ export class DatabaseStorage implements IStorage {
 
   async deductInventoryForJob(jobId: string): Promise<void> {
     await db.transaction(async (tx) => {
-      // Get all inventory items assigned to this job
       const jobInvItems = await tx.select().from(jobInventory).where(eq(jobInventory.jobId, jobId));
 
-      // Deduct quantity from each inventory item
       for (const item of jobInvItems) {
         await tx
           .update(inventory)
@@ -727,7 +669,53 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  // User operations - Simple username/password authentication
+  // ============================================
+  // SERVICE INVENTORY DEFAULTS
+  // ============================================
+
+  async getServiceInventoryDefaults(serviceId: string): Promise<ServiceInventoryDefault[]> {
+    return await db
+      .select()
+      .from(serviceInventoryDefaults)
+      .where(eq(serviceInventoryDefaults.serviceId, serviceId));
+  }
+
+  async replaceServiceInventoryDefaults(
+    serviceId: string, 
+    defaults: Array<{ inventoryId: string; quantity: number }>
+  ): Promise<void> {
+    await db
+      .delete(serviceInventoryDefaults)
+      .where(eq(serviceInventoryDefaults.serviceId, serviceId));
+    
+    if (defaults.length > 0) {
+      await db.insert(serviceInventoryDefaults).values(
+        defaults.map(d => ({
+          serviceId,
+          inventoryId: d.inventoryId,
+          quantity: d.quantity.toString(),
+        }))
+      );
+    }
+  }
+
+  async deleteServiceInventoryDefault(id: string): Promise<void> {
+    await db
+      .delete(serviceInventoryDefaults)
+      .where(eq(serviceInventoryDefaults.id, id));
+  }
+
+  async markJobInventoryDeducted(jobId: string): Promise<void> {
+    await db
+      .update(jobs)
+      .set({ inventoryDeducted: true } as any)
+      .where(eq(jobs.id, jobId));
+  }
+
+  // ============================================
+  // USER OPERATIONS
+  // ============================================
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
@@ -769,8 +757,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async invalidateUserSessions(userId: string): Promise<void> {
-    // Delete all sessions for the given user by querying the session data
-    // The sess column contains passport.user.id in the session object
     await db.execute(
       sql`DELETE FROM ${sessions} WHERE sess->'passport'->'user'->>'id' = ${userId}`
     );
