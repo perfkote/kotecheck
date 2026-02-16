@@ -11,6 +11,7 @@ import {
   inventory,
   jobInventory,
   serviceInventoryDefaults,
+  jobPhotos,
   users,
   sessions,
   type Customer, 
@@ -35,6 +36,7 @@ import {
   type User,
   type NewUserInsert,
   type ServiceInventoryDefault,
+  type JobPhoto,
 } from "@shared/schema";
 
 export interface CustomerWithMetrics extends Customer {
@@ -119,6 +121,12 @@ export interface IStorage {
   replaceServiceInventoryDefaults(serviceId: string, defaults: Array<{ inventoryId: string; quantity: number }>): Promise<void>;
   deleteServiceInventoryDefault(id: string): Promise<void>;
   markJobInventoryDeducted(jobId: string): Promise<void>;
+
+
+  // Job Photos
+  getJobPhotos(jobId: string): Promise<JobPhoto[]>;
+  addJobPhoto(data: { jobId: string; filePath: string; fileName: string; fileSize?: number }): Promise<JobPhoto>;
+  deleteJobPhoto(id: string): Promise<boolean>;
 
   // User operations
   getUser(id: string): Promise<User | undefined>;
@@ -710,6 +718,37 @@ export class DatabaseStorage implements IStorage {
       .update(jobs)
       .set({ inventoryDeducted: true } as any)
       .where(eq(jobs.id, jobId));
+  }
+
+
+  // ============================================
+  // JOB PHOTOS
+  // ============================================
+
+  async getJobPhotos(jobId: string): Promise<JobPhoto[]> {
+    return await db
+      .select()
+      .from(jobPhotos)
+      .where(eq(jobPhotos.jobId, jobId))
+      .orderBy(desc(jobPhotos.uploadedAt));
+  }
+
+  async addJobPhoto(data: { jobId: string; filePath: string; fileName: string; fileSize?: number }): Promise<JobPhoto> {
+    const [photo] = await db
+      .insert(jobPhotos)
+      .values({
+        jobId: data.jobId,
+        filePath: data.filePath,
+        fileName: data.fileName,
+        fileSize: data.fileSize || null,
+      })
+      .returning();
+    return photo;
+  }
+
+  async deleteJobPhoto(id: string): Promise<boolean> {
+    const result = await db.delete(jobPhotos).where(eq(jobPhotos.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // ============================================
