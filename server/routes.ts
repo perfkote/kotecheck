@@ -392,6 +392,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // ============================================================
+  // JOB PHOTOS
+  // ============================================================
+
+  app.get("/api/jobs/:id/photos", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const photos = await storage.getJobPhotos(req.params.id);
+      res.json(photos);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch job photos" });
+    }
+  });
+
+  app.post("/api/jobs/:id/photos", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { filePath, fileName, fileSize } = req.body;
+      if (!filePath || !fileName) {
+        return res.status(400).json({ error: "filePath and fileName are required" });
+      }
+      const photo = await storage.addJobPhoto({
+        jobId: req.params.id,
+        filePath,
+        fileName,
+        fileSize: fileSize || undefined,
+      });
+      res.status(201).json(photo);
+    } catch (error) {
+      console.error("Failed to save photo metadata:", error);
+      res.status(500).json({ error: "Failed to save photo" });
+    }
+  });
+
+  app.delete("/api/jobs/:id/photos/:photoId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteJobPhoto(req.params.photoId);
+      if (!success) {
+        return res.status(404).json({ error: "Photo not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete photo" });
+    }
+  });
   // Job routes
   app.get("/api/jobs", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -665,53 +709,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-
-  // ============================================================
-  // JOB PHOTOS
-  // ============================================================
-
-  app.get("/api/jobs/:id/photos", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-      const photos = await storage.getJobPhotos(req.params.id);
-      res.json(photos);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch job photos" });
-    }
-  });
-
-  app.post("/api/jobs/:id/photos", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-      const { filePath, fileName, fileSize } = req.body;
-      
-      if (!filePath || !fileName) {
-        return res.status(400).json({ error: "filePath and fileName are required" });
-      }
-
-      const photo = await storage.addJobPhoto({
-        jobId: req.params.id,
-        filePath,
-        fileName,
-        fileSize: fileSize || undefined,
-      });
-
-      res.status(201).json(photo);
-    } catch (error) {
-      console.error("Failed to save photo metadata:", error);
-      res.status(500).json({ error: "Failed to save photo" });
-    }
-  });
-
-  app.delete("/api/jobs/:id/photos/:photoId", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-      const success = await storage.deleteJobPhoto(req.params.photoId);
-      if (!success) {
-        return res.status(404).json({ error: "Photo not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete photo" });
-    }
-  });
 
   // Service routes
   app.get("/api/services", isAuthenticated, isManagerOrAbove, async (req, res) => {
