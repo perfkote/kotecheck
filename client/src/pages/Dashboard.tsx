@@ -72,39 +72,35 @@ const getJobAgeColors = (ageDays: number) => {
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * Determine a job's coating category from its attached services.
- * Uses the service records fetched separately for accurate category lookup.
- * Falls back to coatingType field, then "other".
+ * Determine which coating types a job involves.
+ * Returns a set containing 'powder' and/or 'ceramic'.
+ * A mixed job will have both in the set — its revenue counts toward both categories.
  */
-function getJobCoatingCategory(job: JobWithServices, serviceMap: Map<string, Service>): 'powder' | 'ceramic' | 'mixed' | 'other' {
-  // Look at actual services attached to the job
+function getJobCoatingTypes(job: JobWithServices, serviceMap: Map<string, Service>): Set<'powder' | 'ceramic'> {
+  const types = new Set<'powder' | 'ceramic'>();
+  
   if (job.services && job.services.length > 0) {
-    const categories = new Set<string>();
     for (const js of job.services) {
       const svc = serviceMap.get(js.serviceId);
       if (svc) {
-        if (svc.category === 'powder' || svc.category === 'ceramic') {
-          categories.add(svc.category);
-        }
+        if (svc.category === 'powder') types.add('powder');
+        if (svc.category === 'ceramic') types.add('ceramic');
       } else {
-        // Fallback: try to infer from service name
         const name = js.serviceName.toLowerCase();
-        if (name.includes('powder')) categories.add('powder');
-        else if (name.includes('ceramic')) categories.add('ceramic');
+        if (name.includes('powder')) types.add('powder');
+        if (name.includes('ceramic')) types.add('ceramic');
       }
     }
-    
-    if (categories.has('powder') && categories.has('ceramic')) return 'mixed';
-    if (categories.has('powder')) return 'powder';
-    if (categories.has('ceramic')) return 'ceramic';
   }
   
-  // Fallback to coatingType field
-  if (job.coatingType === 'powder') return 'powder';
-  if (job.coatingType === 'ceramic') return 'ceramic';
-  if (job.coatingType === 'misc') return 'mixed';
+  // Fallback to coatingType field if no services matched
+  if (types.size === 0) {
+    if (job.coatingType === 'powder') types.add('powder');
+    if (job.coatingType === 'ceramic') types.add('ceramic');
+    if (job.coatingType === 'misc') { types.add('powder'); types.add('ceramic'); }
+  }
   
-  return 'other';
+  return types;
 }
 
 // ============================================
@@ -162,16 +158,13 @@ export default function Dashboard() {
     const completedJobsCurrentYear = currentYearJobs.filter(j => j.status === 'paid' || j.status === 'finished');
     
     // Coating type breakdown - derived from actual services
-    const ceramicJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'ceramic');
-    const powderJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'powder');
-    const mixedJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'mixed');
-    const otherJobs = currentYearJobs.filter(j => getJobCoatingCategory(j, serviceMap) === 'other');
+    // A job with both powder + ceramic services counts toward BOTH categories
+    const powderJobs = currentYearJobs.filter(j => getJobCoatingTypes(j, serviceMap).has('powder'));
+    const ceramicJobs = currentYearJobs.filter(j => getJobCoatingTypes(j, serviceMap).has('ceramic'));
     
     // Revenue calculations
-    const ceramicRevenue = ceramicJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const powderRevenue = powderJobs.reduce((sum, j) => sum + Number(j.price), 0);
-    const mixedRevenue = mixedJobs.reduce((sum, j) => sum + Number(j.price), 0);
-    const otherRevenue = otherJobs.reduce((sum, j) => sum + Number(j.price), 0);
+    const ceramicRevenue = ceramicJobs.reduce((sum, j) => sum + Number(j.price), 0);
     const totalRevenue = currentYearJobs.reduce((sum, j) => sum + Number(j.price), 0);
     
     // Average completion time
@@ -233,12 +226,8 @@ export default function Dashboard() {
       completedJobs: completedJobsCurrentYear,
       ceramicJobs,
       powderJobs,
-      mixedJobs,
-      otherJobs,
       ceramicRevenue,
       powderRevenue,
-      mixedRevenue,
-      otherRevenue,
       totalRevenue,
       avgCompletionDays,
       revenueByMonth,
@@ -266,12 +255,10 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime());
   }, [stats.activeJobs, customers]);
 
-  // Pie chart data for coating types - now with 4 categories
+  // Pie chart data - just powder vs ceramic
   const coatingData = [
     { name: 'Powder', value: stats.powderRevenue, count: stats.powderJobs.length, color: '#3b82f6' },
     { name: 'Ceramic', value: stats.ceramicRevenue, count: stats.ceramicJobs.length, color: '#f97316' },
-    { name: 'Mixed', value: stats.mixedRevenue, count: stats.mixedJobs.length, color: '#10b981' },
-    { name: 'Other', value: stats.otherRevenue, count: stats.otherJobs.length, color: '#8b5cf6' },
   ].filter(d => d.value > 0);
 
   if (jobsLoading) {
@@ -396,7 +383,7 @@ export default function Dashboard() {
                 <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">{stats.currentYear} Revenue</p>
                 <p className="text-xl sm:text-2xl font-bold mt-1">${(stats.totalRevenue / 1000).toFixed(1)}k</p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
-                  {stats.ceramicJobs.length + stats.powderJobs.length + stats.mixedJobs.length + stats.otherJobs.length} jobs
+                  {stats.ceramicJobs.length + stats.powderJobs.length} jobs
                 </p>
               </div>
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
@@ -701,7 +688,13 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-muted-foreground">Coating Type</p>
                   <Badge variant="outline" className="capitalize mt-1">
-                    {getJobCoatingCategory(viewingJob, serviceMap)}
+                    {(() => {
+                      const types = getJobCoatingTypes(viewingJob, serviceMap);
+                      if (types.has('powder') && types.has('ceramic')) return 'Powder + Ceramic';
+                      if (types.has('powder')) return 'Powder';
+                      if (types.has('ceramic')) return 'Ceramic';
+                      return 'N/A';
+                    })()}
                   </Badge>
                 </div>
                 <div>
