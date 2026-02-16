@@ -1,10 +1,9 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, numeric, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, numeric, timestamp, integer, jsonb, index, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Session storage table for Replit Auth
-// Reference: blueprint:javascript_log_in_with_replit
 export const sessions = pgTable(
   "sessions",
   {
@@ -47,6 +46,7 @@ export const jobs = pgTable("jobs", {
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("received"),
   completedAt: timestamp("completed_at"),
+  inventoryDeducted: boolean("inventory_deducted").default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -121,6 +121,18 @@ export const jobInventory = pgTable("job_inventory", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const serviceInventoryDefaults = pgTable("service_inventory_defaults", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: "cascade" }),
+  inventoryId: varchar("inventory_id").notNull().references(() => inventory.id, { onDelete: "cascade" }),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================================
+// ZOD SCHEMAS
+// ============================================================
+
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
   createdAt: true,
@@ -130,6 +142,7 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   trackingId: true,
   createdAt: true,
+  inventoryDeducted: true,
 }).extend({
   receivedDate: z.coerce.date().optional(),
   coatingType: z.enum(["powder", "ceramic", "misc"]).nullable().optional(),
@@ -196,6 +209,12 @@ export const insertJobInventorySchema = createInsertSchema(jobInventory).omit({
   createdAt: true,
 });
 
+export const insertServiceInventoryDefaultSchema = z.object({
+  serviceId: z.string(),
+  inventoryId: z.string(),
+  quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
+});
+
 // API schema for updating jobs with service mutations
 export const updateJobSchema = insertJobSchema.partial().extend({
   serviceIds: z.array(z.string()).optional(),
@@ -205,8 +224,6 @@ export const updateJobSchema = insertJobSchema.partial().extend({
     quantity: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0.01, "Quantity must be greater than 0")),
   })).optional(),
 });
-// ADD THIS TO shared/schema.ts after the updateJobSchema definition (around line 207)
-// This allows editing jobs that have no services
 
 export const updateJobSchemaWithValidation = insertJobSchema
   .partial()
@@ -215,7 +232,7 @@ export const updateJobSchemaWithValidation = insertJobSchema
     customerId: z.string().optional(),
     customerName: z.string().optional(),
     customerEmail: z.string().email().optional().or(z.literal("")),
-    serviceIds: z.array(z.string()).optional(), // NO .min(1) requirement for updates
+    serviceIds: z.array(z.string()).optional(),
     price: z.union([z.string(), z.number()]).pipe(z.coerce.number().min(0)).optional(),
     inventoryItems: z.array(z.object({
       inventoryId: z.string(),
@@ -223,7 +240,6 @@ export const updateJobSchemaWithValidation = insertJobSchema
     })).optional(),
   })
   .superRefine((data, ctx) => {
-    // Trim string fields
     if (data.customerName) {
       data.customerName = data.customerName.trim();
     }
@@ -231,7 +247,6 @@ export const updateJobSchemaWithValidation = insertJobSchema
       data.customerEmail = data.customerEmail.trim();
     }
     
-    // Enforce XOR: either customerId OR customerName, not both
     const hasCustomerId = Boolean(data.customerId);
     const hasCustomerName = Boolean(data.customerName);
     
@@ -251,9 +266,8 @@ export const updateJobSchemaWithValidation = insertJobSchema
       });
     }
   });
-// Add validation to createJobSchema for customer selection
+
 export const createJobSchemaWithValidation = createJobSchema.superRefine((data, ctx) => {
-  // Trim string fields
   if (data.customerName) {
     data.customerName = data.customerName.trim();
   }
@@ -261,7 +275,6 @@ export const createJobSchemaWithValidation = createJobSchema.superRefine((data, 
     data.customerEmail = data.customerEmail.trim();
   }
   
-  // Enforce XOR: either customerId OR customerName, not both
   const hasCustomerId = Boolean(data.customerId);
   const hasCustomerName = Boolean(data.customerName && data.customerName.length > 0);
   
@@ -281,7 +294,6 @@ export const createJobSchemaWithValidation = createJobSchema.superRefine((data, 
     });
   }
   
-  // If creating a new customer, require a non-empty name
   if (hasCustomerName && data.customerName!.length === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -290,6 +302,10 @@ export const createJobSchemaWithValidation = createJobSchema.superRefine((data, 
     });
   }
 });
+
+// ============================================================
+// TYPES
+// ============================================================
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
@@ -313,6 +329,9 @@ export type JobService = typeof jobServices.$inferSelect;
 export type InsertJobInventory = z.infer<typeof insertJobInventorySchema>;
 export type JobInventory = typeof jobInventory.$inferSelect;
 
+export type ServiceInventoryDefault = typeof serviceInventoryDefaults.$inferSelect;
+export type InsertServiceInventoryDefault = z.infer<typeof insertServiceInventoryDefaultSchema>;
+
 // Enriched job type that includes associated services and inventory
 export type JobWithServices = Job & {
   services: JobService[];
@@ -327,8 +346,7 @@ export type Note = typeof notes.$inferSelect;
 export type InsertInventory = z.infer<typeof insertInventorySchema>;
 export type InventoryItem = typeof inventory.$inferSelect;
 
-// User types for simple username/password authentication
-// API layer schema (for validating incoming requests with password)
+// User types
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -340,7 +358,6 @@ export const insertUserSchema = createInsertSchema(users).omit({
   passwordHash: true,
 });
 
-// Storage layer schema (for creating users with hashed password)
 export const newUserInsertSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
