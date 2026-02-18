@@ -5,6 +5,16 @@ interface StatusBadgeProps {
   type?: "job" | "estimate";
 }
 
+const JOB_STATUS_LABELS: Record<string, string> = {
+  received: "Received",
+  prepped: "Prepped",
+  coated: "Coated",
+  finished: "Ready for Pickup",
+  on_hold: "On Hold",
+  paid: "Paid",
+  cancelled: "Cancelled",
+};
+
 export function StatusBadge({ status, type = "job" }: StatusBadgeProps) {
   const getVariant = () => {
     if (type === "job") {
@@ -18,6 +28,8 @@ export function StatusBadge({ status, type = "job" }: StatusBadgeProps) {
         case "prepped":
           return "outline";
         case "received":
+          return "outline";
+        case "on_hold":
           return "outline";
         case "cancelled":
           return "destructive";
@@ -40,9 +52,13 @@ export function StatusBadge({ status, type = "job" }: StatusBadgeProps) {
     }
   };
 
+  const label = type === "job" && JOB_STATUS_LABELS[status]
+    ? JOB_STATUS_LABELS[status]
+    : status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ").replace("-", " ");
+
   return (
     <Badge variant={getVariant()} data-testid={`badge-status-${status}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
+      {label}
     </Badge>
   );
 }
