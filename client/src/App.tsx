@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { Switch, Route, Link, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
@@ -81,10 +83,19 @@ function Router() {
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
+  const [location] = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
+
+  // Scroll main content to top on route change
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo(0, 0);
+    }
+  }, [location]);
 
   const initials = user
     ? user.username.substring(0, 2).toUpperCase()
@@ -124,7 +135,7 @@ function AuthenticatedApp() {
               </Button>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-8">
+          <main ref={mainRef} className="flex-1 overflow-auto p-8">
             <Router />
           </main>
         </div>
