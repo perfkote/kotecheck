@@ -751,8 +751,21 @@ export function JobForm({
               control={form.control}
               name="price"
               render={({ field }) => {
-                const displayValue = field.value ?? (selectedServices.length > 0 ? serviceTotal : undefined);
-                
+                const [priceInput, setPriceInput] = useState<string>(
+                  field.value !== undefined && field.value !== null
+                    ? String(field.value)
+                    : selectedServices.length > 0
+                    ? serviceTotal.toFixed(2)
+                    : ""
+                );
+
+                // Sync from outside changes (like service selection)
+                useEffect(() => {
+                  if (!manuallyEditedPrice && selectedServices.length > 0) {
+                    setPriceInput(serviceTotal.toFixed(2));
+                  }
+                }, [serviceTotal, manuallyEditedPrice, selectedServices.length]);
+
                 return (
                   <FormItem>
                     <FormLabel>Price {selectedServices.length > 0 && "(adjustable)"}</FormLabel>
@@ -760,16 +773,29 @@ export function JobForm({
                       <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
-                          type="number"
-                          step="0.01"
+                          type="text"
+                          inputMode="decimal"
                           placeholder="0.00"
                           className="pl-10 text-lg font-semibold"
-                          {...field}
+                          value={priceInput}
                           onChange={(e) => {
-                            field.onChange(e.target.value ? parseFloat(e.target.value) : undefined);
-                            setManuallyEditedPrice(true);
+                            const val = e.target.value;
+                            // Allow empty, digits, and one decimal point
+                            if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                              setPriceInput(val);
+                              setManuallyEditedPrice(true);
+                              const num = parseFloat(val);
+                              field.onChange(isNaN(num) ? undefined : num);
+                            }
                           }}
-                          value={displayValue ?? ""}
+                          onBlur={() => {
+                            // Clean up on blur — format to 2 decimals if there's a value
+                            const num = parseFloat(priceInput);
+                            if (!isNaN(num)) {
+                              setPriceInput(num.toFixed(2));
+                              field.onChange(num);
+                            }
+                          }}
                         />
                       </div>
                     </FormControl>
