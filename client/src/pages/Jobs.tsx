@@ -41,6 +41,7 @@ import {
   Calendar,
   Sparkles,
   PauseCircle,
+  PackageCheck,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -98,6 +99,7 @@ export default function Jobs() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCompleted, setShowCompleted] = useState(false);
   const [showOnHold, setShowOnHold] = useState(true);
+  const [showReadyForPickup, setShowReadyForPickup] = useState(true);
   const { toast } = useToast();
 
   // Redirect employees away from this page
@@ -222,19 +224,25 @@ export default function Jobs() {
   }, [jobs, customers]);
 
   const stats = useMemo(() => {
+    // Active = not paid, not finished, not on_hold
     const active = jobsWithCustomerNames.filter(j => j.status !== 'paid' && j.status !== 'finished' && j.status !== 'on_hold');
-    const completed = jobsWithCustomerNames.filter(j => j.status === 'paid' || j.status === 'finished');
+    // Completed = only paid
+    const completed = jobsWithCustomerNames.filter(j => j.status === 'paid');
     const onHold = jobsWithCustomerNames.filter(j => j.status === 'on_hold');
+    const readyForPickup = jobsWithCustomerNames.filter(j => j.status === 'finished');
     const urgent = active.filter(j => j.ageDays > 20);
     const received = active.filter(j => j.status === 'received');
     const inProgress = active.filter(j => j.status === 'prepped' || j.status === 'coated');
     
     const activeValue = active.reduce((sum, j) => sum + Number(j.price), 0);
+    const readyForPickupValue = readyForPickup.reduce((sum, j) => sum + Number(j.price), 0);
 
     return {
       active: active.length,
       completed: completed.length,
       onHold: onHold.length,
+      readyForPickup: readyForPickup.length,
+      readyForPickupValue,
       urgent: urgent.length,
       received: received.length,
       inProgress: inProgress.length,
@@ -254,6 +262,17 @@ export default function Jobs() {
       .sort((a, b) => b.ageDays - a.ageDays);
   }, [jobsWithCustomerNames, searchQuery, statusFilter]);
 
+  const readyForPickupJobs = useMemo(() => {
+    return jobsWithCustomerNames
+      .filter(job => job.status === 'finished')
+      .filter(job => {
+        const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+      })
+      .sort((a, b) => b.ageDays - a.ageDays);
+  }, [jobsWithCustomerNames, searchQuery]);
+
   const onHoldJobs = useMemo(() => {
     return jobsWithCustomerNames
       .filter(job => job.status === 'on_hold')
@@ -267,7 +286,7 @@ export default function Jobs() {
 
   const completedJobs = useMemo(() => {
     return jobsWithCustomerNames
-      .filter(job => job.status === 'paid' || job.status === 'finished')
+      .filter(job => job.status === 'paid')
       .filter(job => {
         const matchesSearch = job.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
           job.customerName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -359,17 +378,19 @@ export default function Jobs() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow cursor-pointer active:bg-accent/50"
-              onClick={() => setStatusFilter('received')}>
+        <Card className="border-l-4 border-l-cyan-500 hover:shadow-md transition-shadow cursor-pointer active:bg-accent/50"
+              onClick={() => setShowReadyForPickup(!showReadyForPickup)}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Received</p>
-                <p className="text-xl sm:text-2xl font-bold mt-1">{stats.received}</p>
-                <p className="text-[11px] sm:text-xs text-amber-600 mt-1">awaiting prep</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Ready for Pickup</p>
+                <p className="text-xl sm:text-2xl font-bold mt-1">{stats.readyForPickup}</p>
+                <p className="text-[11px] sm:text-xs text-cyan-600 mt-1">
+                  ${(stats.readyForPickupValue / 1000).toFixed(1)}k pending
+                </p>
               </div>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                <PackageCheck className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-500" />
               </div>
             </div>
           </CardContent>
@@ -381,7 +402,7 @@ export default function Jobs() {
               <div>
                 <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wide">Completed</p>
                 <p className="text-xl sm:text-2xl font-bold mt-1">{stats.completed}</p>
-                <p className="text-[11px] sm:text-xs text-green-600 mt-1">total finished</p>
+                <p className="text-[11px] sm:text-xs text-green-600 mt-1">total paid</p>
               </div>
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-green-500/10 flex items-center justify-center">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
@@ -577,6 +598,111 @@ export default function Jobs() {
       </div>
 
       {/* ============================================ */}
+      {/* READY FOR PICKUP JOBS */}
+      {/* ============================================ */}
+      {readyForPickupJobs.length > 0 && (
+        <div>
+          <Button
+            variant="ghost"
+            className="w-full justify-between mb-3 text-base font-semibold h-12"
+            onClick={() => setShowReadyForPickup(!showReadyForPickup)}
+          >
+            <span className="flex items-center gap-2">
+              <PackageCheck className="w-5 h-5 text-cyan-500" />
+              Ready for Pickup ({readyForPickupJobs.length})
+              <span className="text-sm font-normal text-muted-foreground">
+                — ${readyForPickupJobs.reduce((sum, j) => sum + Number(j.price), 0).toLocaleString()}
+              </span>
+            </span>
+            {showReadyForPickup ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </Button>
+          
+          {showReadyForPickup && (
+            <>
+              <div className="md:hidden space-y-3">
+                {readyForPickupJobs.map((job) => {
+                  const colors = getJobAgeColors(job.ageDays);
+                  
+                  return (
+                    <Card 
+                      key={job.id}
+                      className="overflow-hidden border-l-4 border-l-cyan-500 active:bg-accent/50"
+                      onClick={() => setEditingJob(job)}
+                    >
+                      <CardContent className="p-4 cursor-pointer">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <h3 className={`font-semibold text-base ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                            {job.customerName}
+                          </h3>
+                          <p className="text-lg font-bold flex-shrink-0">${Number(job.price).toFixed(2)}</p>
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{job.items || 'No description'}</p>
+                        
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={job.status} type="job" />
+                          <Badge variant="outline" className={`text-xs px-2 py-0.5 h-6 ${colors.badge}`}>
+                            {job.ageDays}d old
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(job.receivedDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <Card className="hidden md:block overflow-hidden">
+                <div className="divide-y">
+                  {readyForPickupJobs.map((job) => {
+                    const colors = getJobAgeColors(job.ageDays);
+                    
+                    return (
+                      <div 
+                        key={job.id}
+                        className="p-4 flex items-center gap-6 hover:bg-accent/50 cursor-pointer transition-colors border-l-4 border-l-cyan-500"
+                        onClick={() => setEditingJob(job)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`font-semibold text-sm ${job.customerDeleted ? 'text-muted-foreground line-through' : ''}`}>
+                            {job.customerName}
+                          </h3>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span className="truncate max-w-[200px]">{job.items || 'No description'}</span>
+                            <span className="flex items-center gap-1 flex-shrink-0">
+                              <Phone className="w-3 h-3" />
+                              {job.phoneNumber}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-24 text-sm text-muted-foreground hidden lg:flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(job.receivedDate).toLocaleDateString()}
+                        </div>
+                        <div className="w-24">
+                          <StatusBadge status={job.status} type="job" />
+                        </div>
+                        <div className="w-14">
+                          <Badge variant="outline" className={colors.badge}>
+                            {job.ageDays}d
+                          </Badge>
+                        </div>
+                        <div className="w-24 text-right">
+                          <p className="text-lg font-bold">${Number(job.price).toFixed(2)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ============================================ */}
       {/* ON HOLD JOBS */}
       {/* ============================================ */}
       {onHoldJobs.length > 0 && (
@@ -679,7 +805,7 @@ export default function Jobs() {
       )}
 
       {/* ============================================ */}
-      {/* COMPLETED JOBS */}
+      {/* COMPLETED JOBS (PAID ONLY) */}
       {/* ============================================ */}
       {completedJobs.length > 0 && (
         <div>
