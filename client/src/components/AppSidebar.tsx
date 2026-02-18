@@ -18,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -39,6 +40,7 @@ import logoLight from "@assets/Kote_light.png";
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { setOpenMobile } = useSidebar();
   
   // Track theme state for logo switching
   const [isDark, setIsDark] = useState(() => {
@@ -61,6 +63,11 @@ export function AppSidebar() {
     observer.observe(document.documentElement, { attributes: true });
     return () => observer.disconnect();
   }, []);
+
+  // Close mobile sidebar when route changes
+  useEffect(() => {
+    setOpenMobile(false);
+  }, [location, setOpenMobile]);
 
   return (
     <Sidebar>
