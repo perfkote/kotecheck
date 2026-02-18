@@ -123,6 +123,8 @@ export default function Customers() {
       apiRequest("POST", "/api/customers", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       setIsDialogOpen(false);
       toast({ title: "Success", description: "Customer created successfully" });
     },
