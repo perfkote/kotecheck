@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { insertEstimateSchema, type Service } from "@shared/schema";
+import { insertEstimateSchema, type Service, type Customer } from "@shared/schema";
 import { z } from "zod";
 import {
   Form,
@@ -18,7 +18,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatPhoneNumber } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 import { 
   User, 
   Phone, 
@@ -30,6 +44,7 @@ import {
   DollarSign,
   FileText,
   Check,
+  ChevronsUpDown,
   Loader2,
   ChevronDown,
   ChevronRight,
@@ -100,9 +115,15 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [manuallyEditedTotal, setManuallyEditedTotal] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryKey>>(new Set());
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
     queryKey: ["/api/services"],
+  });
+
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
   });
 
   const form = useForm<FormData>({
@@ -120,6 +141,19 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
       total: undefined,
     },
   });
+
+  // Customer combobox logic
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  const exactMatch = customers.find(
+    (c) => c.name.toLowerCase() === customerSearch.trim().toLowerCase()
+  );
+
+  const showCreateOption = customerSearch.trim().length > 0 && !exactMatch;
+
+  const currentCustomerName = form.watch("customerName");
 
   // Group services by category
   const servicesByCategory = useMemo(() => {
@@ -214,7 +248,6 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
 
     return (
       <div key={categoryKey} className={`rounded-lg border ${selectedCount > 0 ? cat.border : 'border-border'} overflow-hidden`}>
-        {/* Category Header - Always Visible, Click to Expand */}
         <button
           type="button"
           onClick={() => toggleCategory(categoryKey)}
@@ -244,7 +277,6 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
           )}
         </button>
 
-        {/* Expanded Service List */}
         {isExpanded && (
           <div className="p-2 space-y-1">
             {categoryServices.map((service) => {
@@ -298,24 +330,98 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
             Customer Information
           </h3>
           
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="customerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="John Smith" 
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          {/* Customer Name - Combobox with create option */}
+          <FormField
+            control={form.control}
+            name="customerName"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Customer *</FormLabel>
+                <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={customerOpen}
+                        className="justify-between h-10"
+                      >
+                        <span className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          {currentCustomerName || "Select or create customer..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search or type new name..."
+                        value={customerSearch}
+                        onValueChange={setCustomerSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {customerSearch.trim().length > 0
+                            ? "No customers found."
+                            : "Start typing to search..."}
+                        </CommandEmpty>
+                        {filteredCustomers.length > 0 && (
+                          <CommandGroup heading="Existing Customers">
+                            {filteredCustomers.map((customer) => (
+                              <CommandItem
+                                key={customer.id}
+                                value={customer.name}
+                                onSelect={() => {
+                                  form.setValue("customerName", customer.name);
+                                  const formattedPhone = customer.phone ? formatPhoneNumber(customer.phone) : "";
+                                  form.setValue("phone", formattedPhone);
+                                  if (customer.email) {
+                                    form.setValue("email", customer.email);
+                                  }
+                                  setCustomerOpen(false);
+                                  setCustomerSearch("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === customer.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {customer.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                        {showCreateOption && (
+                          <CommandGroup heading="Create New">
+                            <CommandItem
+                              value={`create-${customerSearch}`}
+                              onSelect={() => {
+                                form.setValue("customerName", customerSearch.trim());
+                                form.setValue("phone", "");
+                                form.setValue("email", "");
+                                setCustomerOpen(false);
+                                setCustomerSearch("");
+                              }}
+                            >
+                              <Check className="mr-2 h-4 w-4 opacity-0" />
+                              Create "{customerSearch.trim()}"
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="phone"
@@ -340,9 +446,7 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
                 </FormItem>
               )}
             />
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="email"
@@ -367,34 +471,34 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="desiredFinishDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Desired Finish Date</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        type="date"
-                        className="pl-10"
-                        value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                        onChange={(e) => {
-                          field.onChange(e.target.value ? new Date(e.target.value) : null);
-                        }}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    When does the customer need this done?
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
+
+          <FormField
+            control={form.control}
+            name="desiredFinishDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Desired Finish Date</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      type="date"
+                      className="pl-10"
+                      value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        field.onChange(e.target.value ? new Date(e.target.value) : null);
+                      }}
+                    />
+                  </div>
+                </FormControl>
+                <FormDescription className="text-xs">
+                  When does the customer need this done?
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* ============================================ */}
@@ -445,7 +549,6 @@ export function EstimateForm({ onSubmit, onCancel, isSubmitting = false }: Estim
             Pricing & Notes
           </h3>
 
-          {/* Running Total Card */}
           {selectedServices.length > 0 && (
             <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
               <CardContent className="p-4">
