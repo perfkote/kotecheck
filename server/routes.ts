@@ -428,6 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/jobs/:id/photos/:photoId", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const success = await storage.deleteJobPhoto(req.params.photoId);
+      console.log("[PHOTO DELETE] photoId:", req.params.photoId, "success:", success);
       if (!success) {
         return res.status(404).json({ error: "Photo not found" });
       }
