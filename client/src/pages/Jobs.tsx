@@ -1003,7 +1003,7 @@ export default function Jobs() {
       </Dialog>
 
       {/* ============================================ */}
-      {/* DELETE CONFIRMATION */}
+      {/* DELETE CONFIRMATION  */}
       {/* ============================================ */}
       <AlertDialog open={!!deletingJob} onOpenChange={(open) => !open && setDeletingJob(null)}>
         <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
