@@ -659,7 +659,7 @@ export function JobForm({
         </div>
 
         {/* ============================================ */}
-        {/* ITEMS & NOTES SECTION */}
+        {/* ITEMS & NOTES SECTION  */}
         {/* ============================================ */}
         <div className="space-y-4">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
