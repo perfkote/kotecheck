@@ -423,7 +423,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* JOB DETAILS DIALOG */}
+      {/* JOB DETAILS DIALOG  */}
       <Dialog open={!!viewingJob} onOpenChange={(open) => !open && setViewingJob(null)}>
         <DialogContent className="max-w-[95vw] sm:max-w-lg p-4 sm:p-6">
           <DialogHeader><DialogTitle>Job Details</DialogTitle></DialogHeader>
